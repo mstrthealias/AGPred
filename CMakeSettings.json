@@ -1,0 +1,22 @@
+﻿{
+  "configurations": [
+    {
+      "name": "x64-Debug",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "-DASIO_STANDALONE=1 -DOPENSSL_ROOT_DIR=C:/share/OpenSSL-Win64-1.1.1l",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "PYTHON_EXECUTABLE",
+          "value": "C:\\share\\Python39\\python.exe",
+          "type": "PATH"
+        }
+      ]
+    }
+  ]
+}
