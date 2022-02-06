@@ -6,9 +6,6 @@
 #include "common.h"
 
 
-xt::xarray<double> _xt_nonans(const xt::xarray<double>& a_in, const int index);
-
-
 // void prepare_market_inputs();
 
 xt::xarray<double> process_step1_single(const char* symbol, const xt::xarray<double>& a_orig, const int timeframe, const int interval, const bool ext_hours);
