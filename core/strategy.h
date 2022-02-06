@@ -1,39 +1,132 @@
 #ifndef STRATEGY_H
 #define STRATEGY_H
 
-#include <xtensor/xarray.hpp>
+#include <string>
 
 #include "core.h"
+#include "position.h"
 
 
 namespace agpred {
-	class AlgoBase {
-		const char* name;
 
-		virtual bool operator () (const Snapshot& snapshot, const xt::xarray<double>& a_inputs) const = 0;  // TODO xt::xarray<> or specific class??
+
+	class AlgoBase {
+	public:
+		explicit AlgoBase(const std::string& name) : id_(next_algo_id_++), name_(name)
+		{
+		}
+		virtual ~AlgoBase() = default;
+
+		virtual bool operator() (const Snapshot& snapshot, const xtensor_raw& raw, const xtensor_processed& processed) const = 0;
+
+		[[nodiscard]] const std::string& name() const
+		{
+			return name_;
+		}
+
+	public:
+		const size_t id_;
+		const std::string name_;
+
+	private:
+		inline static size_t next_algo_id_ = 1;
 	};
 
 
 	class EntryBase {
-		const char* name;
-		const unsigned int frequency;  // TODO ?
+	public:
+		explicit EntryBase(const std::string& name, const unsigned int frequency, const AlgoBase& algo) : name_(name), frequency_(frequency), algo_(algo)
+		{
+		}
+		virtual ~EntryBase() = default;
+		
+		virtual agpred::EntryData operator() (const Symbol& symbol, const Snapshot& snapshot) const = 0;
+
+		[[nodiscard]] const std::string& name() const
+		{
+			return name_;
+		}
+
+	public:
+		const std::string name_;
+		const unsigned int frequency_;  // TODO ?
 		//const bool allow_exit;  // allowExit // TODO
 
-		const AlgoBase& algo;  // TODO reference into a algos table ??
-
-
-		virtual agpred::EntryData operator () (Symbol symbol, const Snapshot& snapshot) const = 0;
+		const AlgoBase& algo_;  // TODO reference into a algos table ??
 	};
 
 
 	class ExitBase {
-		const char* name;
+	public:
+		explicit ExitBase(const std::string& name) : name_(name)
+		{
+		}
+		virtual ~ExitBase() = default;
 
-		const AlgoBase& algo;  // TODO reference into a algos table ??
+		virtual agpred::ExitData operator() (const Symbol& symbol, const Snapshot& snapshot) const = 0;
 
+		[[nodiscard]] const std::string& name() const
+		{
+			return name_;
+		}
 
-		virtual agpred::ExitData operator () (Symbol symbol, const Snapshot& snapshot) const = 0;
+	private:
+		const std::string name_;
 	};
+
+
+	// TODO call these SnapshotExitBase and IntervalExitBase ?
+	
+	/**
+	 * Calls an algo to determine if exit should occur.
+	 * The algo may be shared with other entries/exits, and will be called once/in bulk.
+	 */
+	class AlgoExitBase : public ExitBase {
+	public:
+		explicit AlgoExitBase(const std::string& name, const AlgoBase& algo) : ExitBase(name), algo_(algo)
+		{
+		}
+		virtual ~AlgoExitBase() = default;
+
+	public:
+		const AlgoBase& algo_;
+	};
+
+
+	/**
+	 * Calls the exit directly to determine if exit should occur.
+	 */
+	class SnapshotExitBase : public ExitBase {
+	public:
+		explicit SnapshotExitBase(const std::string& name) : ExitBase(name)
+		{
+		}
+		virtual ~SnapshotExitBase() = default;
+
+		virtual bool operator() (const Position& position, const Snapshot& snapshot) const = 0;
+	};
+
+
+	class StopLossExit final : public SnapshotExitBase {
+	public:
+		explicit StopLossExit(const std::string& name) : SnapshotExitBase(name)
+		{
+		}
+		~StopLossExit() = default;
+
+		bool operator() (const Position& position, const Snapshot& snapshot) const override
+		{
+			// TODO
+			return false;
+		}
+
+		ExitData operator() (const Symbol& symbol, const Snapshot & snapshot) const override
+		{
+			std::cout << "StopLossExit: ExitData CALL()" << std::endl;
+			return ExitData{ PositionType::LONG, 0.0 };  // symbol, 
+		}
+	};
+
 
 }
 
