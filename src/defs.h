@@ -12,6 +12,11 @@ constexpr int NUM_COLUMNS = 101;
 constexpr int NUM_TIMESTEMPS = 17;  // 73;  //33  //27
 constexpr int NUM_INTERVALS = 7;
 
+// TODO place elsewhere ?
+constexpr unsigned int NUM_QUOTES = 15000;
+constexpr unsigned int NUM_TRADES = 15000;
+
+
 static const int TIMEFRAME = 10080;
 
 [[clang::no_destroy]]

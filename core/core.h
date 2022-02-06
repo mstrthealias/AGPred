@@ -95,14 +95,72 @@ namespace agpred {
 
 
 	struct EntryData {
-		const Symbol symbol;
+		//const Symbol& symbol;
 
+		const PositionType type;
+
+		const size_t size;
+		const double limit_price;
+
+		/*
+            'target': self.target,
+            'loss': self.loss,
+            'min_time': self.min_time,
+            'max_time': self.max_time,
+            'size': self.size,
+            'limit_price': self.limit_price,
+            */
 	};
-
+		
 	struct ExitData {
-		const Symbol symbol;
+		//const Symbol& symbol;
 
+		const PositionType type;
+
+		const double limit_price;
 	};
+
+
+	struct PendingOrder {
+		const id_t order_id = 0;
+		json data;
+
+	protected:
+		inline static id_t next_order_id = 1;
+	};
+
+	struct PendingEntry : PendingOrder {
+		const EntryData entry_data = { PositionType::LONG, 0, 0.0 };
+
+		static PendingEntry fromEntryData(const EntryData& entry_data)
+		{
+			return {
+				{
+					next_order_id++,
+				{}
+				},
+				entry_data
+			};
+		}
+	};
+
+	struct PendingExit : PendingOrder {
+		const id_t position_id = 0;
+		const ExitData exit_data = {PositionType::LONG, 0.0};
+
+		static PendingExit fromExitData(const id_t& position_id, const ExitData& exit_data)
+		{
+			return {
+				{
+					next_order_id++,
+				{}
+				},
+				position_id,
+				exit_data
+			};
+		}
+	};
+
 
 	struct Snapshot {
 		const NBBO nbbo;  // TODO NBBO or just pass latest 1min Bar?
@@ -119,6 +177,27 @@ namespace agpred {
 		//Bar daily;  // TODO ? prev_daily?
 		//Bar weekly;  // TODO ?
 	};
+
+
+	// TODO
+	struct QuoteData {
+		//const Symbol symbol;  // TODO symbol for DataAdapter?
+
+		/*const */Quote quote = { 0, 0.0, 0.0, 0, 0 };
+
+		// TODO array?
+		/*const */QuoteCondition cond[3] = { QuoteCondition::Invalid, QuoteCondition::Invalid, QuoteCondition::Invalid };
+	};
+
+	struct TradeData {
+		//const Symbol symbol;  // TODO symbol for DataAdapter?
+
+		/*const */Trade trade = {0, 0.0, 0};
+
+		/*const */TradeCondition cond[3] = {TradeCondition::PLACEHOLDER, TradeCondition::PLACEHOLDER, TradeCondition::PLACEHOLDER };
+	};
+
+	
 
 
 

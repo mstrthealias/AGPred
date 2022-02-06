@@ -10,6 +10,10 @@
 #include <xtensor/xarray.hpp>
 
 
+constexpr bool DEBUG_PRINT_DATA = false;
+constexpr bool DEBUG_PRINT_REQUESTS = true;
+
+
 using timestamp_t = size_t;
 
 
@@ -282,16 +286,12 @@ struct bar_t
 
 	Size bid_size = 0;
 	Size ask_size = 0;
-
+	
 	void zero()
 	{
 		memset(this, 0, sizeof *this);
 	}
 
-	[[nodiscard]] NBBO nbbo() const
-	{
-		return { timestamp, bid, ask, bid_size, ask_size };
-	}
 };
 
 typedef bar_t<double, uint64_t, double, uint32_t> Bar;
