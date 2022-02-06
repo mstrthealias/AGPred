@@ -100,6 +100,31 @@ target_link_libraries(agpred PRIVATE cpr::cpr C:/share/OpenSSL-Win64-1.1.1l/lib/
 
 
 
+### Copy package assets into build dir ###
+add_custom_command(TARGET agpred POST_BUILD        # Adds a post-build event to agpred
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
+        "${cpr_BINARY_DIR}/cpr/cpr.dll"
+        $<TARGET_FILE_DIR:agpred>)
+#add_custom_command(TARGET agpred POST_BUILD        # Adds a post-build event to agpred
+#    COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
+#        "${cpr_BINARY_DIR}/cpr/cpr.lib"
+#        $<TARGET_FILE_DIR:agpred>)
+add_custom_command(TARGET agpred POST_BUILD        # Adds a post-build event to agpred
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
+        "${CURL_BINARY_DIR}/lib/libcurl.dll"
+        $<TARGET_FILE_DIR:agpred>)
+add_custom_command(TARGET agpred POST_BUILD        # Adds a post-build event to agpred
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
+        "${zlib_BINARY_DIR}/zlib.dll"
+        $<TARGET_FILE_DIR:agpred>)
+#add_custom_command(TARGET agpred POST_BUILD        # Adds a post-build event to agpred
+#    COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
+#        "${zlib_BINARY_DIR}/zlib.lib"
+#        $<TARGET_FILE_DIR:agpred>)
+# TODO libcrypto-1_1-x64.dll libssl-1_1-x64.dll cacert.pem
+# TODO dl.lib ?
+
+
 ### agpred_sys executable ###
 
 add_executable(agpred_sys main_sys.cpp "src/common.h" "src/common.cpp" "src/preprocess.h" "src/preprocess.cpp" "src/defs.h" "src/consolidate.h" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp"
