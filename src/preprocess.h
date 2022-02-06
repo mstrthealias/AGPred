@@ -8,7 +8,7 @@
 
 // void prepare_market_inputs();
 
-xt::xarray<double> process_step1_single(const char* symbol, const xt::xarray<double>& a_orig, const int timeframe, const int interval, const bool ext_hours);
+xt::xarray<double> process_step1_single(const char* symbol, const xt::xarray<double>& a_orig, const bool training, const int timeframe, const int interval, const bool ext_hours);
 
 void process_step1(const char* symbol, dfs_map_t& dfs, const int timeframe, const bool ext_hours, const interval_map_t& interval_map);
 

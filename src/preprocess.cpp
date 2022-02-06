@@ -455,20 +455,23 @@ const auto vec_subtract = xt::vectorize(mk_subtract);
 const auto vec_mk_divide_by_80 = xt::vectorize(mk_divide_by_80);
 
 
-xt::xarray<double> process_step1_single(const char* symbol, const xt::xarray<double>& a_orig, const int timeframe, const int interval, const bool ext_hours)
+xt::xarray<double> process_step1_single(const char* symbol, const xt::xarray<double>& a_orig, const bool training, const int timeframe, const int interval, const bool ext_hours)
 {
 
 	const size_t df_len_orig = a_orig.shape().at(1);
-
-	// TODO actually sort intervals dataset...
-	//dfinterval = dfs[interval].sort_index(ascending = True)
-
+	
+	const auto a_orig_close = xt::xarray<double>(xt::row(a_orig, ColPos::In::close));
+	
 	// copy to new array with no nans
 	//cleanup_pre_step1()
 	xt::xarray<double> a_new = _xt_nonans(a_orig, ColPos::In::close);
-
-	// reverse order if needed
-	//_xt_2d_sort(a_new, ColPos::In::timestamp);
+	
+	// reverse order if needed (a_new must be ASC order)
+	const bool was_sorted = _xt_2d_sort(a_new, ColPos::In::timestamp);
+	//// TODO actually sort intervals dataset...
+	////dfinterval = dfs[interval].sort_index(ascending = True)
+	if (was_sorted && DEBUG_PRINT_DATA)
+		std::cout << "process_step1_single() interval=" << interval << " sorted" << std::endl;
 
 	// allocate the results array
 	xt::xarray<double> o_results = xt::zeros<double>({ 101, static_cast<int>(a_new.shape().at(1)) });
@@ -486,16 +489,18 @@ xt::xarray<double> process_step1_single(const char* symbol, const xt::xarray<dou
 
 	apply_candles(symbol, o_results, a_new);  // +61 cols
 
-	// TODO training
-	const bool training = timeframe == interval;
-
 	apply_step2(symbol, o_results, timeframe, interval, training, ext_hours);
 
 	// create a copy, removing initial nan values
 	o_results = do_cleanup_initial(o_results, interval);
 
-	// reverse order
-	//_xt_2d_sort(o_results, 0, true);
+	/*
+	// TODO restore original order?
+	if (was_sorted)
+	{
+		// restore order
+		_xt_2d_sort(o_results, 0, true);
+	}*/
 
 	return o_results;
 }
@@ -510,7 +515,10 @@ void process_step1(const char* symbol, dfs_map_t& dfs, const int timeframe, cons
 
 		auto& a_orig = dfs.at(interval);
 
-		auto o_results = process_step1_single(symbol, a_orig, timeframe, interval, ext_hours);
+		// TODO training
+		const bool training = timeframe == interval;
+
+		auto o_results = process_step1_single(symbol, a_orig, training, timeframe, interval, ext_hours);
 
 		dfs[interval] = o_results;
 		

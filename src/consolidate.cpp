@@ -98,11 +98,11 @@ void process_trade(const json& trade, const int interval, double& tsStep, Bar& b
 	bool updates_open_close = false;
 	if (!trade.contains("c") || !trade["c"].is_array() || trade["c"].empty())
 	{
-		if (regular_trade_condition.updates_volume)
+		if (REGULAR_TRADE_CONDITION.updates_volume)
 			updates_volume = true;
-		if (regular_trade_condition.updates_high_low)
+		if (REGULAR_TRADE_CONDITION.updates_high_low)
 			updates_high_low = true;
-		if (regular_trade_condition.updates_open_close)
+		if (REGULAR_TRADE_CONDITION.updates_open_close)
 			updates_open_close = true;
 	}
 	else
@@ -113,9 +113,9 @@ void process_trade(const json& trade, const int interval, double& tsStep, Bar& b
 			//if (!cond.is_number_integer())
 			//	continue;
 			const uint32_t c = (cond.is_number_integer() ? cond.get<uint32_t>() : 0);
-			if (c < conditions_len)
+			if (c < CONDITIONS_LEN)
 			{
-				const trade_condition_t& tradeCond = conditions.at(c);
+				const trade_condition_t& tradeCond = CONDITIONS.at(c);
 				if (tradeCond.updates_volume)
 					updates_volume = true;
 				else

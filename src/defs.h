@@ -6,8 +6,10 @@
 
 #include "common.h"
 
-constexpr int NUM_COLUMNS = 97;
-constexpr int NUM_TIMESTEMPS = 73;  //33  //27
+
+// TODO move into core.h?
+constexpr int NUM_COLUMNS = 101;
+constexpr int NUM_TIMESTEMPS = 17;  // 73;  //33  //27
 constexpr int NUM_INTERVALS = 7;
 
 static const int TIMEFRAME = 10080;

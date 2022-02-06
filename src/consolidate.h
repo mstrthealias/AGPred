@@ -15,82 +15,6 @@
 using json = nlohmann::json;
 
 
-
-enum class TradeCondition : uint32_t
-{
-	Regular_Sale = 0,
-	Acquisition = 1,
-	Average_Price_Trade = 2,
-	Automatic_Execution = 3,
-	Bunched_Trade = 4,
-	Bunched_Sold_Trade = 5,
-	CAP_Election = 6,
-	Cash_Sale = 7,
-	Closing_Prints = 8,
-	Cross_Trade = 9,
-	Derivatively_Priced = 10,
-	Distribution = 11,
-	Form_T_Extended_Hours = 12,
-	Extended_Hours_Sold_Out_Of_Sequence = 13,
-	Intermarket_Sweep = 14,
-	Market_Center_Official_Close = 15,
-	Market_Center_Official_Open = 16,
-	Market_Center_Opening_Trade = 17,
-	Market_Center_Reopening_Trade = 18,
-	Market_Center_Closing_Trade = 19,
-	Next_Day = 20,
-	Price_Variation_Trade = 21,
-	Prior_Reference_Price = 22,
-	Rule_155_Trade_AMEX = 23,
-	Rule_127_NYSE_Only = 24,
-	Opening_Prints = 25,
-	Stopped_Stock_Regular_Trade = 27,
-	ReOpening_Prints = 28,
-	Seller = 29,
-	Sold_Last = 30,
-	Sold_Last_and_Stopped_Stock = 31,
-	Sold_Out_Of_Sequence = 32,
-	Sold_Out_of_Sequence_and_Stopped_Stock = 33,
-	Split_Trade = 34,
-	Stock_Option = 35,
-	Yellow_Flag_Regular_Trade = 36,
-	Odd_Lot_Trade = 37,
-	Corrected_Consolidated_Close_per_listing_market = 38,
-	Held = 40,
-	Trade_Thru_Exempt = 41,
-	PLACEHOLDER = 49,  // PLACEHOLDER use for trade_condition_t[] placeholders
-	Contingent_Trade = 52,
-	Qualified_Contingent_Trade = 53,
-	Opening_Reopening_Trade_Detail = 55,
-	Short_Sale_Restriction_Activated = 57,
-	Short_Sale_Restriction_Continued = 58,
-	Short_Sale_Restriction_Deactivated = 59,
-	Short_Sale_Restriction_In_Effect = 60,
-	Financial_Status_Bankrupt = 62,
-	Financial_Status_Deficient = 63,
-	Financial_Status_Delinquent = 64,
-	Financial_Status_Bankrupt_and_Deficient = 65,
-	Financial_Status_Bankrupt_and_Delinquent = 66,
-	Financial_Status_Deficient_and_Delinquent = 67,
-	Financial_Status_Deficient_Delinquent_and_Bankrupt = 68,
-	Financial_Status_Liquidation = 69,
-	Financial_Status_Creations_Suspended = 70,
-	Financial_Status_Redemptions_Suspended = 71,
-};
-
-enum class TradeConditionType : uint16_t
-{
-	sale_condition,
-	quote_condition,
-	sip_generated_flag,
-	financial_status_indicator,
-	short_sale_restriction_indicator,
-	settlement_condition,
-	market_condition,
-	trade_thru_exempt,
-	PLACEHOLDER,  // PLACEHOLDER use for trade_condition_t[] placeholders
-};
-
 struct trade_condition_t
 {
 	TradeCondition id;
@@ -107,7 +31,7 @@ struct trade_condition_t
 };
 
 
-const static std::array<const trade_condition_t, 72> conditions = {
+const static std::array<const trade_condition_t, 72> CONDITIONS = {
 	trade_condition_t({TradeCondition::Regular_Sale, TradeConditionType::sale_condition, true, true, true, true, true, false, "Regular Sale"}),
 	{TradeCondition::Acquisition, TradeConditionType::sale_condition, true, true, true, true, true, false, "Acquisition"},
 	{TradeCondition::Average_Price_Trade, TradeConditionType::sale_condition, true, false, false, false, false, false, "Average Price Trade"},
@@ -183,9 +107,9 @@ const static std::array<const trade_condition_t, 72> conditions = {
 	{TradeCondition::Financial_Status_Creations_Suspended, TradeConditionType::financial_status_indicator, false, false, false, false, false, false, "Financial Status - Creations Suspended"},
 	{TradeCondition::Financial_Status_Redemptions_Suspended, TradeConditionType::financial_status_indicator, false, false, false, false, false, false, "Financial Status - Redemptions Suspended"},
 };
-static const uint32_t conditions_len = conditions.size();
+static constexpr uint32_t CONDITIONS_LEN = CONDITIONS.size();
 
-static const trade_condition_t& regular_trade_condition = conditions.at(0);
+static const trade_condition_t& REGULAR_TRADE_CONDITION = CONDITIONS.at(0);
 
 
 enum class SIPMapping : char

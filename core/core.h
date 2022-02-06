@@ -14,59 +14,74 @@
 namespace agpred {
 	using json = nlohmann::json;
 
-	using id_t = unsigned int;
+	using id_t = unsigned int;  // TODO size_t?
 
+	constexpr int NUM_RAW_COLUMNS = 14;
 	constexpr int RT_MAX_TIMESTEPS = 255;
+	constexpr int RT_REPORT_TIMESTEPS = 11;  // TODO NUM_TIMESTEMPS ?
 
 	// this is how much raw data is tracked for each symbol; note that not all timestamps fill 255 rows
-	using shape_raw_interval_255_t = xt::xshape<RT_MAX_TIMESTEPS, 14>;  // (timesteps, cols)
-	using shape_raw_255_t = xt::xshape<NUM_INTERVALS, RT_MAX_TIMESTEPS, 14>;  // (timeframe, timesteps, cols)
+	using shape_raw_interval_255_t = xt::xshape<RT_MAX_TIMESTEPS, NUM_RAW_COLUMNS>;  // (timesteps, cols)
+	using shape_raw_255_t = xt::xshape<NUM_INTERVALS, RT_MAX_TIMESTEPS, NUM_RAW_COLUMNS>;  // (timeframe, timesteps, cols)
+	using shape_raw_t = xt::xshape<NUM_INTERVALS, RT_REPORT_TIMESTEPS, NUM_RAW_COLUMNS>;  // (timeframe, timesteps, cols)
 
 	using xtensor_raw_interval = xt::xtensor_fixed<double, shape_raw_interval_255_t>;
-	using xtensor_raw = xt::xtensor_fixed<double, shape_raw_255_t>;
+	using xtensor_raw_255 = xt::xtensor_fixed<double, shape_raw_255_t>;
+	using xtensor_raw = xt::xtensor_fixed<double, shape_raw_t>;
 
 	// TODO processed
-	// this is how much processed data is tracked for each symbol; note that not all timestamps fill 255 rows
+	// this is how much processed data is tracked for each symbol
 	// shape: (timesteps, columns/features, timeframes)
-	using shape_processed_255_t = xt::xshape<RT_MAX_TIMESTEPS, NUM_TIMESTEMPS, NUM_COLUMNS, NUM_INTERVALS>;
+	using shape_processed_interval_t = xt::xshape<RT_MAX_TIMESTEPS, NUM_COLUMNS>;
+	using shape_processed_t = xt::xshape<NUM_INTERVALS, NUM_TIMESTEMPS, NUM_COLUMNS>;  // TODO move NUM_INTERVALS to end?
 	
+	using xtensor_processed_interval = xt::xtensor_fixed<double, shape_processed_interval_t>;
+	using xtensor_processed = xt::xtensor_fixed<double, shape_processed_t>;
 
-	enum class Market {
+	enum class AGMode
+	{
+		BACK_TEST,
+		LIVE_TEST,
+		LIVE_TRADE,
+		DOWNLOAD_ONLY,
+	};
+
+	enum class Market
+	{
 		NYSE,
 		AMEX,
 		NASDAQ,
 	};
 
-	enum class OrderType : uint8_t {
+	enum class OrderType : uint8_t
+	{
 		BUY = 1,
 		SELL = 2,
 	};
 
-	enum class PositionType : uint8_t {
+	enum class OrderStatus : uint8_t
+	{
+		FILLED = 1,
+		PARTIAL = 2,
+		REJECT = 3,  // TODO ERROR and REJECT?
+		ERR = 4,  // TODO ERROR and REJECT?
+	};
+
+	enum class PositionType : uint8_t
+	{
 		LONG = 1,
 		SHORT = 2,
 	};
-	
+
+
 	struct Symbol {
 		const std::string symbol;
-		const Market market = Market::NASDAQ;
+		const Market market = Market::NASDAQ;  // TODO
 		
-		bool operator== (const Symbol& b) const
-		{
-			return symbol == b.symbol;
-		}
+		bool operator== (const Symbol& b) const;
 
 		// TODO
-		static const Symbol& get_symbol(const std::string& ticker)
-		{
-			if (symbol_cache.find(ticker) == symbol_cache.end())
-			{
-				// TODO statically implement list of all Symbol to consider ?
-				// TODO use REST to download market/symbol data?
-				symbol_cache.emplace(ticker, Symbol{ ticker.c_str(), Market::NASDAQ });
-			}
-			return symbol_cache[ticker];
-		}
+		static const Symbol& get_symbol(const std::string& ticker);
 	private:
 		inline static std::map<std::string, Symbol> symbol_cache;
 	};
@@ -90,7 +105,7 @@ namespace agpred {
 	};
 
 	struct Snapshot {
-		NBBO nbbo;  // TODO NBBO or just pass latest 1min Bar?
+		const NBBO nbbo;  // TODO NBBO or just pass latest 1min Bar?
 
 		const double& price;  // last price
 
@@ -104,6 +119,11 @@ namespace agpred {
 		//Bar daily;  // TODO ? prev_daily?
 		//Bar weekly;  // TODO ?
 	};
+
+
+
+	//std::ostream& operator<< (std::ostream& out, const QuoteData& quote);
+	//std::ostream& operator<< (std::ostream& out, const TradeData& trade);
 
 }
 

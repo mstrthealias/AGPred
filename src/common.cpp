@@ -29,6 +29,40 @@ std::ostream& operator<< (std::ostream& out, const xt::svector<size_t>& s)
     return out;
 }
 
+std::ostream& operator<< (std::ostream& out, const std::vector<std::vector<size_t>>& v)
+{
+	out << '[';
+	if (!v.empty()) {
+		const auto vSize = v.size();
+		for (std::vector<std::vector<size_t>>::size_type i = 0; i < vSize; ++i)
+			std::cout << v[i] << (i == vSize - 1 ? "" : ", ");
+	}
+	out << ']';
+	return out;
+}
+
+std::ostream& operator<< (std::ostream& out, const Quote& quote)
+{
+	out << '{' << std::endl;
+	out << '\t' << "timestamp: " << quote.timestamp << std::endl;
+	out << '\t' << "ask: " << quote.ask << std::endl;
+	out << '\t' << "ask_size: " << quote.ask_size << std::endl;
+	out << '\t' << "bid: " << quote.bid << std::endl;
+	out << '\t' << "bid_size: " << quote.bid_size << std::endl;
+	out << '}' << std::endl;
+	return out;
+}
+
+std::ostream& operator<< (std::ostream& out, const Trade& trade)
+{
+	out << '{' << std::endl;
+	out << '\t' << "timestamp: " << trade.timestamp << std::endl;
+	out << '\t' << "price: " << trade.price << std::endl;
+	out << '\t' << "size: " << trade.size << std::endl;
+	out << '}' << std::endl;
+	return out;
+}
+
 std::ostream& operator<< (std::ostream& out, const Bar& bar)
 {
 	out << '{' << std::endl;
@@ -48,16 +82,4 @@ std::ostream& operator<< (std::ostream& out, const Bar& bar)
 	out << '\t' << "bid_size: " << bar.bid_size << std::endl;
 	out << '}' << std::endl;
 	return out;
-}
-
-std::ostream& operator<< (std::ostream& out, const std::vector<std::vector<size_t>>& v)
-{
-    out << '[';
-    if (!v.empty()) {
-        const auto vSize = v.size();
-        for (std::vector<std::vector<size_t>>::size_type i = 0; i < vSize; ++i)
-            std::cout << v[i] << (i == vSize - 1 ? "" : ", ");
-    }
-    out << ']';
-    return out;
 }
