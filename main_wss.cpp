@@ -1,11 +1,46 @@
+#define NOMINMAX  // do not define min/max macro
+
+
+#include <ta_libc.h>
+
 #include "src/consolidate.h"
 #include "src/wsclient.h"
 #include "src/wsclient_ssl.h"
 
 #include "core/data_controller.h"
+#include "core/account_controller.h"
+
+#include "algos/ma3_ema9.h"
+#include "sim/simulated_account_adapter.h"
+#include "sim/simulator.h"  // TODO not directly include this?
+
+
+using namespace agpred;
+
+
+// TODO abstract this...
+MA3EMA9Algo algo_ma_above("ma3_ema9", false);
+MA3EMA9Algo algo_ma_below("ma3_ema9", true);
+
+MA3EMA9Entry entry_ma("ma3_ema9 entry", 1, algo_ma_above);
+
+MA3EMA9Exit exit_ma("ma3_ema9 exit", algo_ma_below);
+
+StopLossExit exit_stop_loss("stop_loss exit");
+
+
+const std::array<AlgoBase* const, 2> algos({ &algo_ma_above, &algo_ma_below });
+
+const std::array<EntryBase* const, 1> entries({ &entry_ma });
+const std::array<ExitBase* const, 2> exits({ &exit_ma, &exit_stop_loss });
+
+
+using Ctrl = AccountController<2, 1, 2>;
+
 
 
 client c;
+
 
 
 void on_timer(client* c, websocketpp::lib::error_code const& ec) {
@@ -63,13 +98,43 @@ int main(int argc, char* argv[])
         std::cout << "Signal Handler registered..." << std::endl;
     else
         std::cout << "ERROR Unable to register Signal Handler." << std::endl;
-    
+
+
+    TA_RetCode retCode = TA_Initialize();
+    if (retCode != TA_SUCCESS)
+    {
+        std::cout << "TA-Lib initialize error: " << retCode << std::endl;
+        return retCode;
+    }
+    std::cout << "TA-Lib initialized.\n";
+
+
+    //// print numbers with 9 digit precision
+    //std::cout.precision(9);
+
     std::string hostname = "*.polygon.io";
     std::string uri = "wss://socket.polygon.io/stocks";
+
+    // TODO use lambda and call simulator and account in onSnapshot
+    Simulator simulator;
+    //SimulatedAccountAdapter account_adapter(simulator);
+
+    const AGMode mode = AGMode::LIVE_TEST;
+
+    Ctrl account(simulator, mode, algos, entries, exits);
+    DataController ctrl(
+        mode,
+        [AccountPtr = &account, SimPtr = &simulator](const Symbol& symbol, const Snapshot& snapshot)
+        {
+            AccountPtr->onSnapshot(symbol, snapshot);
+        },
+        [AccountPtr = &account](const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades)
+        {
+            AccountPtr->onUpdate(symbol, snapshot, data, data_processed, quotes, trades);
+        }
+    );
     
-    agpred::DataController ctrl;
-    
-    const agpred::Symbol& symbol = agpred::Symbol::get_symbol("AAPL");
+    const Symbol& symbol = Symbol::get_symbol("AAPL");
     ctrl.initSymbol(symbol);
 
     std::cout << "Symbol: " << std::string(symbol.symbol) << std::endl;
@@ -118,6 +183,14 @@ int main(int argc, char* argv[])
     }
     catch (websocketpp::exception const& e) {
         std::cout << e.what() << std::endl;
+    }
+
+
+    retCode = TA_Shutdown();
+    if (retCode != TA_SUCCESS)
+    {
+        std::cout << "TA-Lib shutdown error: " << retCode << std::endl;
+        return retCode;
     }
 
     return 0;

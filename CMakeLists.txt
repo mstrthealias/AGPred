@@ -89,8 +89,8 @@ FetchContent_MakeAvailable(cpr)
 
 ### agpred executable ###
 
-add_executable(agpred main.cpp "main_pred.cpp" "src/common.h" "src/common.cpp" "src/preprocess.h" "src/preprocess.cpp" "src/defs.h" "src/consolidate.h" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp"
-	"core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp" "adapters/polygon_io.cpp"
+add_executable(agpred main.cpp "main_pred.cpp" "src/common.cpp" "src/preprocess.cpp" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp" "src/util.cpp"
+	"core/core.cpp" "core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp" "adapters/polygon_io.cpp"
 	)
 
 target_include_directories(agpred PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/share/OpenSSL-Win64-1.1.1l/include ${cpr_INCLUDE_DIRS} C:/src/tensorflow/bazel-bin/tensorflow/include)
@@ -131,8 +131,8 @@ add_custom_command(TARGET agpred POST_BUILD        # Adds a post-build event to 
 
 ### agpred_sys executable ###
 
-add_executable(agpred_sys main_sys.cpp "src/common.h" "src/common.cpp" "src/preprocess.h" "src/preprocess.cpp" "src/defs.h" "src/consolidate.h" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp"
-	"core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp" "adapters/polygon_io.cpp"
+add_executable(agpred_sys main_sys.cpp "src/common.cpp" "src/preprocess.cpp" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp" "src/util.cpp"
+	"core/core.cpp" "core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp" "adapters/polygon_io.cpp"
 	)
 
 target_include_directories(agpred_sys PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/share/OpenSSL-Win64-1.1.1l/include ${cpr_INCLUDE_DIRS})
@@ -145,8 +145,9 @@ target_link_libraries(agpred_sys PRIVATE cpr::cpr C:/share/OpenSSL-Win64-1.1.1l/
 ### agpred_wss executable ###
 
 add_executable(agpred_wss main_wss.cpp 
-	"src/common.cpp" "src/preprocess.cpp" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp"
-	"core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp" "adapters/polygon_io.cpp"
+	"src/common.cpp" "src/preprocess.cpp" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp" "src/util.cpp"
+	"core/core.cpp" "core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp"
+	"adapters/polygon_io.cpp" "algos/ma3_ema9.cpp"
 	)
 
 target_include_directories(agpred_wss PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/share/OpenSSL-Win64-1.1.1l/include ${cpr_INCLUDE_DIRS})
@@ -158,8 +159,9 @@ target_link_libraries(agpred_wss PRIVATE cpr::cpr C:/share/OpenSSL-Win64-1.1.1l/
 
 ### agpred_dl executable ###
 
-add_executable(agpred_dl main_dl.cpp "src/common.h" "src/common.cpp" "src/preprocess.h" "src/preprocess.cpp" "src/defs.h" "src/consolidate.h" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp"
-	"core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp" "adapters/polygon_io.cpp"
+add_executable(agpred_dl main_dl.cpp "src/common.cpp" "src/preprocess.cpp" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp" "src/util.cpp"
+	"core/core.cpp" "core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp"
+	"adapters/polygon_io.cpp" "algos/ma3_ema9.cpp" "sim/downloader.cpp"
 	)
 
 target_include_directories(agpred_dl PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/src/pybind11/include C:/share/Python39/include C:/share/Python39/Lib/site-packages/numpy/core/include C:/share/OpenSSL-Win64-1.1.1l/include ${cpr_INCLUDE_DIRS})
@@ -168,13 +170,27 @@ target_include_directories(agpred_dl PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/
 target_link_libraries(agpred_dl PRIVATE cpr::cpr C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libssl64MD.lib C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libcrypto64MD.lib PUBLIC xtensor dlfcn-win32::dl C:/src/tensorflow/bazel-bin/tensorflow/libtensorflow_cc.so.2.5.2.if.lib Python::Python C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib)
 
 
+### agpred_backtest executable ###
+
+add_executable(agpred_backtest main_backtest.cpp "src/common.cpp" "src/preprocess.cpp" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp" "src/util.cpp"
+	"core/core.cpp" "core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp"
+	"adapters/polygon_io.cpp" "algos/ma3_ema9.cpp"
+	)
+
+target_include_directories(agpred_backtest PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/src/pybind11/include C:/share/Python39/include C:/share/Python39/Lib/site-packages/numpy/core/include C:/share/OpenSSL-Win64-1.1.1l/include ${cpr_INCLUDE_DIRS})
+
+# TensorflowCC::TensorflowCC
+target_link_libraries(agpred_backtest PRIVATE cpr::cpr C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libssl64MD.lib C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libcrypto64MD.lib PUBLIC xtensor dlfcn-win32::dl C:/src/tensorflow/bazel-bin/tensorflow/libtensorflow_cc.so.2.5.2.if.lib Python::Python C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib)
+
+
 
 ### test_kml executable ###
 
 add_executable(test_kml "test_kml.cu"
 	"src/data_generator.cpp" 
-	"src/common.h" "src/common.cpp" "src/preprocess.h" "src/preprocess.cpp" "src/defs.h" "src/consolidate.h" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp"
-	"core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp" "adapters/polygon_io.cpp"
+	"src/common.cpp" "src/preprocess.cpp" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp" "src/util.cpp"
+	"core/core.cpp" "core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp"
+	"adapters/polygon_io.cpp"
 	"deps/glob/glob_win32.cpp"
 	)
 
@@ -188,14 +204,11 @@ target_compile_options(test_kml PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${CUDA_NVCC_F
 #message(STATUS "updating options for target: " test_kml)
 
 
-
 ### pybind11 module ###
 
-pybind11_add_module(agen_xt_api "src/agen_xt_api.cpp" "src/consolidate.cpp" "src/preprocess.cpp")
+pybind11_add_module(agen_xt_api "src/agen_xt_api.cpp" "src/common.cpp" "src/consolidate.cpp" "src/preprocess.cpp" "src/util.cpp")
 
 target_include_directories(agen_xt_api PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/share/Python39/Lib/site-packages/numpy/core/include)
 
 target_link_libraries(agen_xt_api PUBLIC xtensor C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib)
-
-
 
