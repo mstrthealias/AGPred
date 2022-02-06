@@ -785,7 +785,7 @@ TA_RetCode add_regr(xt::xarray<double>& o_results, const unsigned int interval)
 	// copy rows for TALib
 	const auto& r_close = xt::xarray<double>(xt::row(o_results, ColPos::In::close));
 
-	const int regrPeriod = INTERVAL_REGR_WINDOWS.at(static_cast<const int>(interval));
+	const int regrPeriod = INTERVAL_REGR_WINDOW;  // INTERVAL_REGR_WINDOWS.at(static_cast<const int>(interval));
 
 	int outBegIdx = 0;
 	int outNBElement = 0;
@@ -1095,7 +1095,7 @@ void apply_regr(xt::xarray<double>& o_results, const unsigned int interval)
 		// copy rows for TALib
 		const auto& r_hlc3 = xt::xarray<double>(xt::row(o_results, ColPos::Dep::hlc3));
 
-		const int regrPeriod = INTERVAL_REGR_WINDOWS.at(interval);
+		const int regrPeriod = INTERVAL_REGR_WINDOW;  // INTERVAL_REGR_WINDOWS.at(interval);
 
 		int outBegIdx = 0;
 		int outNBElement = 0;
@@ -1236,7 +1236,7 @@ void do_norm(xt::xarray<double>& o_results, const unsigned int interval)
 xt::xarray<double> do_cleanup_initial(const xt::xarray<double>& a_in, const unsigned int interval)
 {
 	const int n_cols = a_in.shape().at(0);
-	const int window = INTERVAL_REGR_WINDOWS.at(static_cast<const int>(interval));
+	const int window = INTERVAL_REGR_WINDOW;  // INTERVAL_REGR_WINDOWS.at(static_cast<const int>(interval));
 	const auto trim_first = window + 50;
 	auto a_view = xt::view(a_in, xt::all(), xt::range(trim_first, a_in.shape().at(1)));
 	return xt::xarray<double>(a_view);

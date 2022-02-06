@@ -53,6 +53,7 @@ static const int LEN_DEPTH = NUM_TIMESTEMPS;
 static const int CHECK_FUTURE_CNT = 7;
 static const int CHECK_PAST_CNT = 5;
 
+constexpr int INTERVAL_REGR_WINDOW = 31;
 [[clang::no_destroy]]
 static const std::map<const int, const int> INTERVAL_REGR_WINDOWS = {
 	{0, 195},
