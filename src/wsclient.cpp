@@ -67,13 +67,13 @@ void on_message(client* c, DataController* ctrl, websocketpp::connection_hdl hdl
                     // SUBSCRIBE!
                     std::cout << "> AUTHENTICATED" << std::endl;
 
-                    c->send(hdl, "{\"action\":\"subscribe\", \"params\":\"T.AAPL\"}", websocketpp::frame::opcode::text, ec);
+                    c->send(hdl, R"({"action":"subscribe", "params":"T.AAPL"})", websocketpp::frame::opcode::text, ec);
                     if (ec) {
                         std::cout << "> Error sending message: " << ec.message() << std::endl;
                         return;
                     }
 
-                    c->send(hdl, "{\"action\":\"subscribe\", \"params\":\"Q.AAPL\"}", websocketpp::frame::opcode::text, ec);
+                    c->send(hdl, R"({"action":"subscribe", "params":"Q.AAPL"})", websocketpp::frame::opcode::text, ec);
                     if (ec) {
                         std::cout << "> Error sending message: " << ec.message() << std::endl;
                         return;
@@ -82,7 +82,8 @@ void on_message(client* c, DataController* ctrl, websocketpp::connection_hdl hdl
             }
             else
             {
-                ctrl->onPayloads(msg->get_payload().c_str());
+                // TODO use a data adapter in polygon_io, and pass a 'normalized' object to DataController
+                ctrl->onPayloads(payload);
             }
         }
     }
@@ -93,7 +94,7 @@ void on_message(client* c, DataController* ctrl, websocketpp::connection_hdl hdl
 void on_conn_open(client* c, websocketpp::connection_hdl hdl) {
     std::cout << "> ON CONN OPEN" << std::endl;
 
-    std::string authPayload = "{\"action\":\"auth\",\"params\":\"" + POLYGON_API_KEY + "\"}";
+    std::string authPayload = R"({"action":"auth","params":")" + POLYGON_API_KEY + R"("})";
 
     websocketpp::lib::error_code ec;
     c->send(hdl, authPayload, websocketpp::frame::opcode::text, ec);

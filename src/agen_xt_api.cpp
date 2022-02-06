@@ -18,7 +18,9 @@ xt::pyarray<double> py_process_trades_json(const char* json_str, const int inter
 
 xt::pyarray<double> py_preprocess_single(const char* symbol, const xt::pyarray<double>& a_orig, const int timeframe, const int interval, const bool ext_hours)
 {
-	return process_step1_single(symbol, a_orig, timeframe, interval, ext_hours);
+	const bool training = timeframe == interval;
+
+	return process_step1_single(symbol, a_orig, training, timeframe, interval, ext_hours);
 }
 
 

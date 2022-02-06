@@ -16,6 +16,8 @@ typedef websocketpp::lib::shared_ptr<websocketpp::lib::asio::ssl::context> conte
 
 using websocketpp::lib::placeholders::_1;
 using websocketpp::lib::placeholders::_2;
+using websocketpp::lib::placeholders::_3;
+using websocketpp::lib::placeholders::_4;
 using websocketpp::lib::bind;
 
 

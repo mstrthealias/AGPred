@@ -41,6 +41,7 @@ static const size_t POS_WK = 6;
 
 
 static const std::map<const int, const int> INPUTS_PER_CHUNK_MAP = {
+	{1, 10240},
 	{5, 10240},
 	{15, 10240},
 	{60, 4864},
