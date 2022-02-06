@@ -37,6 +37,9 @@ set(CMAKE_CUDA_ARCHITECTURES off)
 list(APPEND CUDA_NVCC_FLAGS "--extended-lambda")
 list(APPEND CUDA_NVCC_FLAGS "--expt-relaxed-constexpr")
 
+# TODO verify:
+## Optimize the CUDA build
+#list(APPEND CUDA_NVCC_FLAGS "-Xptxas -O3,-v")
 
 ###############################################################################
 # Include files
@@ -60,7 +63,7 @@ find_library(
 # Packages
 ###############################################################################
 
-find_package(CUDAToolkit 11.4 REQUIRED)
+find_package(CUDAToolkit 11.6 REQUIRED)
 
 find_package(dlfcn-win32 REQUIRED)
 find_package(TensorflowCC REQUIRED)
