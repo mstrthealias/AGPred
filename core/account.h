@@ -1,21 +1,29 @@
 #ifndef ACCOUNT_H
 #define ACCOUNT_H
 
+
+#include <string>
+
+
 namespace agpred {
+
+
 	class Account {
 		//id?
 
-		const char* name;
+		const std::string name = "";
 
 		//backend?
 
-		float pl = 0;
+		double pl = 0;
 
 		//activity
 
 		//positions
 
 	};
+
+
 }
 
 #endif // ACCOUNT_H

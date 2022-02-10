@@ -269,6 +269,11 @@ std::ostream& operator<< (std::ostream& out, const Trade& trade);
 template <typename Real, typename Volume, typename Time, typename Size>
 struct bar_t
 {
+	using time_type = Time;
+	using real_type = Real;
+	using volume_type = Volume;
+	using size_type = Size;
+
 	Time timestamp = 0;
 	Real open = 0.0;
 	Real high = 0.0;

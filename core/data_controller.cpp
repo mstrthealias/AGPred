@@ -348,16 +348,16 @@ void copy_bar_5(Bar& dest, const Bar& b1, const Bar& b2, const Bar& b3, const Ba
 inline void insert_candle(xtensor_raw_interval& data_latest, const Bar& bar)
 {
 	// TODO better way to insert these?
-	data_latest(0, ColPos::In::timestamp) = bar.timestamp;
+	data_latest(0, ColPos::In::timestamp) = static_cast<Bar::real_type>(bar.timestamp);
 	data_latest(0, ColPos::In::open) = bar.open;
 	data_latest(0, ColPos::In::high) = bar.high;
 	data_latest(0, ColPos::In::low) = bar.low;
 	data_latest(0, ColPos::In::close) = bar.close;
-	data_latest(0, ColPos::In::volume) = static_cast<double>(bar.volume);  // TODO divide by 100 to match IB data?
+	data_latest(0, ColPos::In::volume) = static_cast<Bar::real_type>(bar.volume);  // TODO divide by 100 to match IB data?
 
 	// TODO this order?
-	data_latest(0, ColPos::In::ask_size) = bar.ask_size;
-	data_latest(0, ColPos::In::bid_size) = bar.bid_size;
+	data_latest(0, ColPos::In::ask_size) = static_cast<Bar::real_type>(bar.ask_size);
+	data_latest(0, ColPos::In::bid_size) = static_cast<Bar::real_type>(bar.bid_size);
 	data_latest(0, ColPos::In::ask) = bar.ask;
 	data_latest(0, ColPos::In::ask_high) = bar.ask_high;
 	data_latest(0, ColPos::In::ask_low) = bar.ask_low;
@@ -380,12 +380,12 @@ void copy_candles(std::array<Bar, Size>& bars, const xtensor_raw_interval& data)
 	{
 		Bar& bar = bars[i];
 
-		bar.timestamp = data(i, ColPos::In::timestamp);
+		bar.timestamp = static_cast<Bar::time_type>(data(i, ColPos::In::timestamp));
 		bar.open = data(i, ColPos::In::open);
 		bar.high = data(i, ColPos::In::high);
 		bar.low = data(i, ColPos::In::low);
 		bar.close = data(i, ColPos::In::close);
-		bar.volume = static_cast<uint64_t>(data(i, ColPos::In::volume));
+		bar.volume = static_cast<Bar::volume_type>(data(i, ColPos::In::volume));
 
 		bar.bid = data(i, ColPos::In::bid);
 		bar.bid_high = data(i, ColPos::In::bid_high);
@@ -395,8 +395,8 @@ void copy_candles(std::array<Bar, Size>& bars, const xtensor_raw_interval& data)
 		bar.ask_high = data(i, ColPos::In::ask_high);
 		bar.ask_low = data(i, ColPos::In::ask_low);
 
-		bar.ask_size = static_cast<unsigned>(data(i, ColPos::In::ask_size));
-		bar.bid_size = static_cast<unsigned>(data(i, ColPos::In::bid_size));
+		bar.ask_size = static_cast<Bar::size_type>(data(i, ColPos::In::ask_size));
+		bar.bid_size = static_cast<Bar::size_type>(data(i, ColPos::In::bid_size));
 	}
 }
 
@@ -889,7 +889,7 @@ void DataController::process_quote_finish(const size_t& pos, const double& ts, c
 		const auto price = bar.close;
 
 		// reset this bar
-		bar.timestamp = static_cast<double>(static_cast<uint64_t>(ts / interval_seconds) * interval_seconds);  // TODO verify
+		bar.timestamp = static_cast<Bar::time_type>(static_cast<uint64_t>(ts / interval_seconds) * interval_seconds);  // TODO verify
 		//bar.timestamp = next_ts;
 		if (static_cast<timestamp_t>(bar.timestamp) != next_ts && next_ts > interval_seconds) {
 			std::cout << "Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
