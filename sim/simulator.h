@@ -64,9 +64,7 @@ namespace agpred {
 				// TODO 
 				// TODO only do this for symbol pending orders
 				// TODO
-
-				//std::cout << "sim.onSnapshot(" << symbol.symbol << ") price=" << market.price << ", ask=" << market.ask << std::endl;
-
+				
 				// fill any limit orders within price
 				for (WaitingOrder& order : pending_limit_orders_)
 				{
@@ -121,6 +119,13 @@ namespace agpred {
 
 		void onOrder(const id_t& order_id, const Symbol& symbol, const OrderType& order_type, const size_t& size) override
 		{
+			if (DEBUG_ORDERS)
+			{
+				const SymbolSimMarket& market = symbols_market_[symbol.symbol];
+				// TODO order_type/BUY/SELL
+				std::cout << "onOrder(" << symbol.symbol << ") MARKET, close=" << market.price << ", ask=" << market.ask << ", bid=" << market.bid << std::endl;
+			}
+
 			// MARKET order
 			pending_market_orders_.emplace_back(WaitingOrder{
 				order_id,
@@ -136,6 +141,13 @@ namespace agpred {
 
 		void onOrder(const id_t& order_id, const Symbol& symbol, const OrderType& order_type, const size_t& size, const double& limit_price) override
 		{
+			if (DEBUG_ORDERS)
+			{
+				const SymbolSimMarket& market = symbols_market_[symbol.symbol];
+				// TODO order_type/BUY/SELL
+				std::cout << "onOrder(" << symbol.symbol << ") LIMIT limit_price=" << limit_price << ", close=" << market.price << ", ask=" << market.ask << ", bid=" << market.bid << std::endl;
+			}
+
 			// LIMIT order
 			pending_limit_orders_.emplace_back(WaitingOrder{
 				order_id,

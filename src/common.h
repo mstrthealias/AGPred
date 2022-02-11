@@ -11,7 +11,9 @@
 
 
 constexpr bool DEBUG_PRINT_DATA = false;
+constexpr bool DEBUG_PRINT_PROCESSED_DATA = false;
 constexpr bool DEBUG_PRINT_REQUESTS = true;
+constexpr bool DEBUG_ORDERS = false;
 
 
 using timestamp_t = size_t;

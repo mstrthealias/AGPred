@@ -59,7 +59,7 @@ inline void run_preprocess(xtensor_processed_interval& data_processed, const Sym
 	const xt::xarray<double> processed_transposed = xt::transpose(processed, { 1, 0 });
 	std::copy(processed_transposed.crbegin(), processed_transposed.crend(), data_processed.rbegin());
 
-	if (DEBUG_PRINT_DATA)
+	if (DEBUG_PRINT_PROCESSED_DATA)
 	{
 		std::cout << interval << "min processed (heap):" << std::endl << data_processed << std::endl;
 		std::cout << interval << "min processed (heap) shape: " << data_processed.shape() << std::endl;
