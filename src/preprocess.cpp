@@ -550,10 +550,10 @@ void apply_candles(const char* symbol, xt::xarray<double>& o_results, const xt::
 	const size_t n_len = o_results.shape().at(1);
 	
 	// Note: apparently need to copy from views, in order for TA_ functions to work properly
-	const auto& r_open = xt::xarray<double>(xt::row(a_in, ColPos::In::open));
-	const auto& r_high = xt::xarray<double>(xt::row(a_in, ColPos::In::high));
-	const auto& r_low = xt::xarray<double>(xt::row(a_in, ColPos::In::low));
-	const auto& r_close = xt::xarray<double>(xt::row(a_in, ColPos::In::close));
+	const auto r_open = xt::xarray<double>(xt::row(a_in, ColPos::In::open));
+	const auto r_high = xt::xarray<double>(xt::row(a_in, ColPos::In::high));
+	const auto r_low = xt::xarray<double>(xt::row(a_in, ColPos::In::low));
+	const auto r_close = xt::xarray<double>(xt::row(a_in, ColPos::In::close));
 	const auto& rows_open = r_open.data();
 	const auto& rows_high = r_high.data();
 	const auto& rows_low = r_low.data();
@@ -734,9 +734,9 @@ TA_RetCode do_dep_columns(xt::xarray<double>& o_results, const bool training)
 	const size_t n_len = o_results.shape().at(1);
 
 	// Note: apparently need to copy from views, in order for TA_ functions to work properly
-	const auto& r_high = xt::xarray<double>(xt::row(o_results, ColPos::In::high));
-	const auto& r_low = xt::xarray<double>(xt::row(o_results, ColPos::In::low));
-	const auto& r_close = xt::xarray<double>(xt::row(o_results, ColPos::In::close));
+	const auto r_high = xt::xarray<double>(xt::row(o_results, ColPos::In::high));
+	const auto r_low = xt::xarray<double>(xt::row(o_results, ColPos::In::low));
+	const auto r_close = xt::xarray<double>(xt::row(o_results, ColPos::In::close));
 
 	// add hlc3 / related dependent columns now
 	xt::row(o_results, ColPos::Dep::hlc3) = vec_hlc3(r_high, r_low, r_close);  //:hlc3
@@ -791,7 +791,7 @@ TA_RetCode add_regr(xt::xarray<double>& o_results, const unsigned int interval)
 	const int n_rows = static_cast<int>(o_results.shape().at(1));
 
 	// copy rows for TALib
-	const auto& r_close = xt::xarray<double>(xt::row(o_results, ColPos::In::close));
+	const auto r_close = xt::xarray<double>(xt::row(o_results, ColPos::In::close));
 
 	const int regrPeriod = INTERVAL_REGR_WINDOW;  // INTERVAL_REGR_WINDOWS.at(static_cast<const int>(interval));
 
@@ -838,10 +838,10 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 	const int n_rows = static_cast<int>(o_results.shape().at(1));
 
 	// copy rows for TALib
-	const auto& r_high= xt::xarray<double>(xt::row(o_results, ColPos::In::high));
-	const auto& r_low = xt::xarray<double>(xt::row(o_results, ColPos::In::low));
-	const auto& r_close = xt::xarray<double>(xt::row(o_results, ColPos::In::close));
-	const auto& r_volume = xt::xarray<double>(xt::row(o_results, ColPos::In::volume));
+	const auto r_high = xt::xarray<double>(xt::row(o_results, ColPos::In::high));
+	const auto r_low = xt::xarray<double>(xt::row(o_results, ColPos::In::low));
+	const auto r_close = xt::xarray<double>(xt::row(o_results, ColPos::In::close));
+	const auto r_volume = xt::xarray<double>(xt::row(o_results, ColPos::In::volume));
 	// const auto& r_hlc3 = xt::row(o_results, ColPos::Dep::hlc3);
 	const auto& r_regr = xt::row(o_results, ColPos::Regr::regr);
 	const auto& r_stddev = xt::row(o_results, ColPos::Regr::stddev);
@@ -1101,7 +1101,7 @@ void apply_regr(xt::xarray<double>& o_results, const unsigned int interval)
 		const int n_rows = static_cast<int>(o_results.shape().at(1));
 
 		// copy rows for TALib
-		const auto& r_hlc3 = xt::xarray<double>(xt::row(o_results, ColPos::Dep::hlc3));
+		const auto r_hlc3 = xt::xarray<double>(xt::row(o_results, ColPos::Dep::hlc3));
 
 		const int regrPeriod = INTERVAL_REGR_WINDOW;  // INTERVAL_REGR_WINDOWS.at(interval);
 
