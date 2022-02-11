@@ -33,7 +33,7 @@ const std::array<EntryBase* const, 1> entries({ &entry_ma });
 const std::array<ExitBase* const, 2> exits({ &exit_ma, &exit_stop_loss });
 
 
-using Ctrl = AccountController<2, 1, 2>;
+using Ctrl = AccountController<algos.size(), entries.size(), exits.size()>;
 
 
 

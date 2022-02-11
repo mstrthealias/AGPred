@@ -42,12 +42,12 @@ inline void process_agg(Bar& dest, const json& agg)
 
 inline void process_agg2(xtensor_raw_interval& dest, const uint32_t i, const json& agg)
 {
-	dest(i, 0) = static_cast<double>(agg["t"].get<uint64_t>()) / 1.0e3;
-	dest(i, 1) = agg["o"].get<double>();
-	dest(i, 2) = agg["h"].get<double>();
-	dest(i, 3) = agg["l"].get<double>();
-	dest(i, 4) = agg["c"].get<double>();
-	dest(i, 5) = agg["v"].get<uint32_t>();
+	dest(i, ColPos::In::timestamp) = static_cast<double>(agg["t"].get<uint64_t>()) / 1.0e3;
+	dest(i, ColPos::In::open) = agg["o"].get<double>();
+	dest(i, ColPos::In::high) = agg["h"].get<double>();
+	dest(i, ColPos::In::low) = agg["l"].get<double>();
+	dest(i, ColPos::In::close) = agg["c"].get<double>();
+	dest(i, ColPos::In::volume) = static_cast<double>(agg["v"].get<uint32_t>());
 
 	/*
 	agg["o"];  // open
