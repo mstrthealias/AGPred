@@ -22,7 +22,7 @@ int agpred::calc_raw_signal(const xtensor_raw& raw)
 
 	// transpose that-way sorts correct order
 	data_1min = xt::transpose(data_1min, { 1, 0 });
-
+	
 	// reverse order
 	if (_xt_2d_sort(data_1min, ColPos::In::timestamp))
 	{
@@ -38,10 +38,11 @@ int agpred::calc_raw_signal(const xtensor_raw& raw)
 
 	const size_t n_len = data_1min.shape().at(1);
 	// copy rows for TALib
-	const auto& r_close = xt::xarray<double>(xt::row(data_1min, ColPos::In::close));
+	const auto r_close = xt::xarray<double>(xt::row(data_1min, ColPos::In::close));
 
-	const double& cur_close = r_close[n_len - 1];
-	const double& prev_close = r_close[n_len - 2];
+	const auto base_adj = 1;
+	const double& cur_close = r_close[n_len - base_adj];
+	const double& prev_close = r_close[n_len - base_adj - 1];
 	
 	bool crossed_above_ma3 = false;
 	bool crossed_below_ma3 = false;
@@ -61,10 +62,10 @@ int agpred::calc_raw_signal(const xtensor_raw& raw)
 			std::cout << "SMA3 error: " << retCode << std::endl;
 			return 0;  // retCode;
 		}
-		bool prev_above_ma3 = prev_close > vals[n_len - 2];
-		bool above_ma3 = cur_close > vals[n_len - 1];
-		bool prev_below_ma3 = prev_close < vals[n_len - 2];
-		below_ma3 = cur_close < vals[n_len - 1];
+		bool prev_above_ma3 = prev_close > vals[n_len - base_adj - 1];
+		bool above_ma3 = cur_close > vals[n_len - base_adj];
+		bool prev_below_ma3 = prev_close < vals[n_len - base_adj - 1];
+		below_ma3 = cur_close < vals[n_len - base_adj];
 		
 		crossed_above_ma3 = above_ma3 && !prev_above_ma3;
 		crossed_below_ma3 = below_ma3 && !prev_below_ma3;
@@ -82,8 +83,8 @@ int agpred::calc_raw_signal(const xtensor_raw& raw)
 			std::cout << "EMA9 error: " << retCode << std::endl;
 			return 0;  // retCode;
 		}
-		above_ema9 = cur_close > vals[n_len - 1];
-		below_ema9 = cur_close < vals[n_len - 1];
+		above_ema9 = cur_close > vals[n_len - base_adj];
+		below_ema9 = cur_close < vals[n_len - base_adj];
 	}
 	
 	// fires signal when above ema9, and we crossed above ma3

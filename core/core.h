@@ -163,17 +163,17 @@ namespace agpred {
 
 
 	struct Snapshot {
-		const NBBO nbbo;  // TODO NBBO or just pass latest 1min Bar?
+		NBBO nbbo;  // TODO NBBO or just pass latest 1min Bar?
 
 		const double& price;  // last price
 
 		//Bar partial1min;  // TODO
 
 		// the last *complete* bars, by interval  // TODO map index by interval?!
-		const Bar& last1min;
-		const Bar& last5min;
-		const Bar& last15min;
-		const Bar& hourly;
+		const BarFullRef& last1min;
+		const BarRef& last5min;
+		const BarRef& last15min;
+		const BarRef& hourly;
 		//Bar daily;  // TODO ? prev_daily?
 		//Bar weekly;  // TODO ?
 	};

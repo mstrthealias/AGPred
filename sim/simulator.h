@@ -54,8 +54,8 @@ namespace agpred {
 			market.price = snapshot.price;
 			market.bid = snapshot.nbbo.bid;
 			market.ask = snapshot.nbbo.ask;
-			market.bid_size = snapshot.nbbo.bid_size * 100;
-			market.ask_size = snapshot.nbbo.ask_size * 100;
+			market.bid_size = static_cast<size_t>(snapshot.nbbo.bid_size) * 100;
+			market.ask_size = static_cast<size_t>(snapshot.nbbo.ask_size) * 100;
 
 			// attempt to fill pending limit orders
 			if (!pending_limit_orders_.empty())

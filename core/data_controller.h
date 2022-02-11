@@ -15,6 +15,32 @@ namespace agpred {
 	using fn_update = std::function<void(const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades)>;
 	using fn_snapshot = std::function<void(const Symbol& symbol, const Snapshot& snapshot)>;
 
+
+	struct ShiftTriggers
+	{
+		const timestamp_t next_ts;
+		const double ts_dbl;
+		const bool flush10sec;
+		const bool flush1min;
+		const bool flush5min;
+		const bool flush15min;
+		const bool flush1hr;
+		const bool flush4hr;
+
+		ShiftTriggers(const timestamp_t& next_ts)
+			: next_ts(next_ts),
+			ts_dbl(static_cast<double>(next_ts)),
+			flush10sec(static_cast<timestamp_t>(ts_dbl / 10.0) * 10 == next_ts),
+			flush1min(static_cast<timestamp_t>(ts_dbl / 60.0) * 60 == next_ts),
+			flush5min(static_cast<timestamp_t>(ts_dbl / 300.0) * 300 == next_ts),
+			flush15min(static_cast<timestamp_t>(ts_dbl / 900.0) * 900 == next_ts),
+			flush1hr(static_cast<timestamp_t>(ts_dbl / 3600.0) * 3600 == next_ts),
+			flush4hr(static_cast<timestamp_t>(ts_dbl / 14400.0) * 14400 == next_ts)
+		{
+		}
+	};
+
+
 	class DataController
 	{
 	public:
@@ -47,18 +73,10 @@ namespace agpred {
 		std::map<size_t, Symbol> symbols_pos_rev_;
 
 		// the remaining are tracked per-symbol, using a fixed array, indexed by the symbol position saved above...
-		// (pre-allocate memory for all symbols)
+		// (pre-allocate memory for up to MAX_ACTIVE_SYMBOLS symbols)
 
 		std::array<timestamp_t, MAX_ACTIVE_SYMBOLS> cur_timesteps_;
 		
-		// for each symbol, track enough bars for each interval, to role up into the next interval
-		//   fe. track 5 1min bars, that-way we can role the 1min bars up into a 5min bar
-		std::array<std::array<Bar, 5>, MAX_ACTIVE_SYMBOLS> bars_1min_;
-		std::array<std::array<Bar, 3>, MAX_ACTIVE_SYMBOLS> bars_5min_;
-		std::array<std::array<Bar, 4>, MAX_ACTIVE_SYMBOLS> bars_15min_;
-		std::array<std::array<Bar, 4>, MAX_ACTIVE_SYMBOLS> bars_1hr_;
-		// for roll-up to ~4hr, note: we never roll-up into daily/weekly bars
-
 		// TODO may be more ideal to have these on the stack, not the heap o.0
 		std::array<trades_queue, MAX_ACTIVE_SYMBOLS>* latest_trades_;
 		std::array<quotes_queue, MAX_ACTIVE_SYMBOLS>* latest_quotes_;
@@ -72,12 +90,8 @@ namespace agpred {
 		std::array<xtensor_raw_interval, MAX_ACTIVE_SYMBOLS>* symbols_1d_ = nullptr;  // loaded in initSymbol/not kept up-to-date
 		std::array<xtensor_raw_interval, MAX_ACTIVE_SYMBOLS>* symbols_1w_ = nullptr;  // loaded in initSymbol/not kept up-to-date
 
-		const std::array<const Snapshot, MAX_ACTIVE_SYMBOLS> snapshots_;
-
 		// for each symbol, track processed data for each interval
-
-		//std::array<xt::xtensor_fixed<double, shape_processed_t>, MAX_ACTIVE_SYMBOLS> processed_data_;
-
+		//std::array<xt::xtensor_fixed<double, shape_processed_t>, MAX_ACTIVE_SYMBOLS> processed_data_;  // TODO save combined xtensor, and use views into it??
 		std::array<xtensor_processed_interval, MAX_ACTIVE_SYMBOLS>* proc_symbols_1min_ = nullptr;
 		std::array<xtensor_processed_interval, MAX_ACTIVE_SYMBOLS>* proc_symbols_5min_ = nullptr;
 		std::array<xtensor_processed_interval, MAX_ACTIVE_SYMBOLS>* proc_symbols_15min_ = nullptr;
@@ -85,6 +99,17 @@ namespace agpred {
 		std::array<xtensor_processed_interval, MAX_ACTIVE_SYMBOLS>* proc_symbols_4hr_ = nullptr;
 		std::array<xtensor_processed_interval, MAX_ACTIVE_SYMBOLS>* proc_symbols_1d_ = nullptr;  // loaded in initSymbol/not kept up-to-date
 		std::array<xtensor_processed_interval, MAX_ACTIVE_SYMBOLS>* proc_symbols_1w_ = nullptr;  // loaded in initSymbol/not kept up-to-date
+
+		// for each symbol, track bars that reference to values of the latest timestamp
+		std::array<BarFullRef, MAX_ACTIVE_SYMBOLS> latest_1min_;
+		std::array<BarRef, MAX_ACTIVE_SYMBOLS> latest_5min_;
+		std::array<BarRef, MAX_ACTIVE_SYMBOLS> latest_15min_;
+		std::array<BarRef, MAX_ACTIVE_SYMBOLS> latest_1hr_;
+		std::array<BarRef, MAX_ACTIVE_SYMBOLS> latest_4hr_;
+		std::array<BarRef, MAX_ACTIVE_SYMBOLS> latest_1d_;
+		std::array<BarRef, MAX_ACTIVE_SYMBOLS> latest_1w_;
+
+		std::array<Snapshot, MAX_ACTIVE_SYMBOLS> snapshots_;
 
 
 		void onTradePayload(const json& trade);
@@ -102,9 +127,9 @@ namespace agpred {
 		void process_quote_rt(const size_t& pos, const json& quote);
 		void process_quote_data(const size_t& pos, const QuoteData& quote);
 		void process_quote_finish(const size_t& pos, const double& ts, const double& askPrice, const uint32_t& askSize, const double& bidPrice, const uint32_t& bidSize);
-
-		void flush(const timestamp_t& ts_step);
-		void flush(const timestamp_t& next_ts, const size_t& pos);
+		
+		void shift(const ShiftTriggers& triggers, const size_t& pos);
+		void do_update(const ShiftTriggers& triggers, const size_t& pos);
 
 		inline void zero_pos(const size_t& pos)
 		{
@@ -112,7 +137,8 @@ namespace agpred {
 			//symbols_data_[pos] = xt::zeros<double>({ NUM_INTERVALS, 255, 6 });
 			cur_timesteps_[pos] = 0;
 
-			bars_1min_[pos][0].zero();
+			// TODO
+			//bars_1min_[pos][0].zero();
 
 			// TODO zero bars_*
 		}

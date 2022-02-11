@@ -83,3 +83,37 @@ std::ostream& operator<< (std::ostream& out, const Bar& bar)
 	out << '}' << std::endl;
 	return out;
 }
+
+std::ostream& operator<< (std::ostream& out, const BarFullRef& bar)
+{
+	out << '{' << std::endl;
+	out << '\t' << "timestamp: " << bar.timestamp << std::endl;
+	out << '\t' << "open: " << bar.open << std::endl;
+	out << '\t' << "high: " << bar.high << std::endl;
+	out << '\t' << "low: " << bar.low << std::endl;
+	out << '\t' << "close: " << bar.close << std::endl;
+	out << '\t' << "volume: " << bar.volume << std::endl;
+	out << '\t' << "ask_high: " << bar.ask_high << std::endl;
+	out << '\t' << "ask_low: " << bar.ask_low << std::endl;
+	out << '\t' << "ask: " << bar.ask << std::endl;
+	out << '\t' << "ask_size: " << bar.ask_size << std::endl;
+	out << '\t' << "bid_high: " << bar.bid_high << std::endl;
+	out << '\t' << "bid_low: " << bar.bid_low << std::endl;
+	out << '\t' << "bid: " << bar.bid << std::endl;
+	out << '\t' << "bid_size: " << bar.bid_size << std::endl;
+	out << '}' << std::endl;
+	return out;
+}
+
+std::ostream& operator<< (std::ostream& out, const BarRef& bar)
+{
+	out << '{' << std::endl;
+	out << '\t' << "timestamp: " << bar.timestamp << std::endl;
+	out << '\t' << "open: " << bar.open << std::endl;
+	out << '\t' << "high: " << bar.high << std::endl;
+	out << '\t' << "low: " << bar.low << std::endl;
+	out << '\t' << "close: " << bar.close << std::endl;
+	out << '\t' << "volume: " << bar.volume << std::endl;
+	out << '}' << std::endl;
+	return out;
+}

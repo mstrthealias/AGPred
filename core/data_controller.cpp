@@ -74,6 +74,8 @@ inline void run_preprocess(xtensor_processed_interval& data_processed, const Sym
 }
 
 
+constexpr ptrdiff_t ROW_POS = 0;
+
 DataController::DataController(const AGMode mode, const fn_snapshot on_snapshot, const fn_update on_update) :
 	mode_(mode),
 	on_snapshot_(on_snapshot),
@@ -88,39 +90,80 @@ DataController::DataController(const AGMode mode, const fn_snapshot on_snapshot,
 	symbols_4hr_(new std::array<xtensor_raw_interval, MAX_ACTIVE_SYMBOLS>()),
 	symbols_1d_(new std::array<xtensor_raw_interval, MAX_ACTIVE_SYMBOLS>()),
 	symbols_1w_(new std::array<xtensor_raw_interval, MAX_ACTIVE_SYMBOLS>()),
-	// TODO some form of snapshots_ initialization that dynamically handles different MAX_ACTIVE_SYMBOLS sizes?
-	snapshots_({
-		Snapshot{
-				{ bars_1min_[0][0].timestamp, bars_1min_[0][0].bid, bars_1min_[0][0].ask, bars_1min_[0][0].bid_size, bars_1min_[0][0].ask_size },
-				bars_1min_[0][0].close,
-				bars_1min_[0][0],
-				bars_5min_[0][0],
-				bars_15min_[0][0],
-				bars_1hr_[0][0]
-		},
-		Snapshot{
-				{ bars_1min_[1][0].timestamp, bars_1min_[1][0].bid, bars_1min_[1][0].ask, bars_1min_[1][0].bid_size, bars_1min_[1][0].ask_size },
-				bars_1min_[1][0].close,
-				bars_1min_[1][0],
-				bars_5min_[1][0],
-				bars_15min_[1][0],
-				bars_1hr_[1][0]
-		},
-		Snapshot{
-				{ bars_1min_[2][0].timestamp, bars_1min_[2][0].bid, bars_1min_[2][0].ask, bars_1min_[2][0].bid_size, bars_1min_[2][0].ask_size },
-				bars_1min_[2][0].close,
-				bars_1min_[2][0],
-				bars_5min_[2][0],
-				bars_15min_[2][0],
-				bars_1hr_[2][0]
-		} }),
+
 	proc_symbols_1min_(new std::array<xtensor_processed_interval, MAX_ACTIVE_SYMBOLS>()),
 	proc_symbols_5min_(new std::array<xtensor_processed_interval, MAX_ACTIVE_SYMBOLS>()),
 	proc_symbols_15min_(new std::array<xtensor_processed_interval, MAX_ACTIVE_SYMBOLS>()),
 	proc_symbols_1hr_(new std::array<xtensor_processed_interval, MAX_ACTIVE_SYMBOLS>()),
 	proc_symbols_4hr_(new std::array<xtensor_processed_interval, MAX_ACTIVE_SYMBOLS>()),
 	proc_symbols_1d_(new std::array<xtensor_processed_interval, MAX_ACTIVE_SYMBOLS>()),
-	proc_symbols_1w_(new std::array<xtensor_processed_interval, MAX_ACTIVE_SYMBOLS>())
+	proc_symbols_1w_(new std::array<xtensor_processed_interval, MAX_ACTIVE_SYMBOLS>()),
+
+	// TODO some form of latest_* initialization that dynamically handles different MAX_ACTIVE_SYMBOLS sizes?
+	latest_1min_({
+		BarFullRef{
+			{ (*symbols_1min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[0](ROW_POS, ColPos::In::open), (*symbols_1min_)[0](ROW_POS, ColPos::In::high), (*symbols_1min_)[0](ROW_POS, ColPos::In::low), (*symbols_1min_)[0](ROW_POS, ColPos::In::close), (*symbols_1min_)[0](ROW_POS, ColPos::In::volume) },
+			(*symbols_1min_)[0](ROW_POS, ColPos::In::bid), (*symbols_1min_)[0](ROW_POS, ColPos::In::bid_high), (*symbols_1min_)[0](ROW_POS, ColPos::In::bid_low),
+			(*symbols_1min_)[0](ROW_POS, ColPos::In::ask), (*symbols_1min_)[0](ROW_POS, ColPos::In::ask_high), (*symbols_1min_)[0](ROW_POS, ColPos::In::ask_low),
+			(*symbols_1min_)[0](ROW_POS, ColPos::In::bid_size), (*symbols_1min_)[0](ROW_POS, ColPos::In::ask_size) },
+		BarFullRef{
+			{ (*symbols_1min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[1](ROW_POS, ColPos::In::open), (*symbols_1min_)[1](ROW_POS, ColPos::In::high), (*symbols_1min_)[1](ROW_POS, ColPos::In::low), (*symbols_1min_)[1](ROW_POS, ColPos::In::close), (*symbols_1min_)[1](ROW_POS, ColPos::In::volume) },
+			(*symbols_1min_)[1](ROW_POS, ColPos::In::bid), (*symbols_1min_)[1](ROW_POS, ColPos::In::bid_high), (*symbols_1min_)[1](ROW_POS, ColPos::In::bid_low),
+			(*symbols_1min_)[1](ROW_POS, ColPos::In::ask), (*symbols_1min_)[1](ROW_POS, ColPos::In::ask_high), (*symbols_1min_)[1](ROW_POS, ColPos::In::ask_low),
+			(*symbols_1min_)[1](ROW_POS, ColPos::In::bid_size), (*symbols_1min_)[1](ROW_POS, ColPos::In::ask_size) },
+		BarFullRef{
+			{ (*symbols_1min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[2](ROW_POS, ColPos::In::open), (*symbols_1min_)[2](ROW_POS, ColPos::In::high), (*symbols_1min_)[2](ROW_POS, ColPos::In::low), (*symbols_1min_)[2](ROW_POS, ColPos::In::close), (*symbols_1min_)[2](ROW_POS, ColPos::In::volume) },
+			(*symbols_1min_)[2](ROW_POS, ColPos::In::bid), (*symbols_1min_)[2](ROW_POS, ColPos::In::bid_high), (*symbols_1min_)[2](ROW_POS, ColPos::In::bid_low),
+			(*symbols_1min_)[2](ROW_POS, ColPos::In::ask), (*symbols_1min_)[2](ROW_POS, ColPos::In::ask_high), (*symbols_1min_)[2](ROW_POS, ColPos::In::ask_low),
+			(*symbols_1min_)[2](ROW_POS, ColPos::In::bid_size), (*symbols_1min_)[2](ROW_POS, ColPos::In::ask_size) } }),
+	latest_5min_({
+		BarRef{ (*symbols_5min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[0](ROW_POS, ColPos::In::open), (*symbols_5min_)[0](ROW_POS, ColPos::In::high), (*symbols_5min_)[0](ROW_POS, ColPos::In::low), (*symbols_5min_)[0](ROW_POS, ColPos::In::close), (*symbols_5min_)[0](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_5min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[1](ROW_POS, ColPos::In::open), (*symbols_5min_)[1](ROW_POS, ColPos::In::high), (*symbols_5min_)[1](ROW_POS, ColPos::In::low), (*symbols_5min_)[1](ROW_POS, ColPos::In::close), (*symbols_5min_)[1](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_5min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[2](ROW_POS, ColPos::In::open), (*symbols_5min_)[2](ROW_POS, ColPos::In::high), (*symbols_5min_)[2](ROW_POS, ColPos::In::low), (*symbols_5min_)[2](ROW_POS, ColPos::In::close), (*symbols_5min_)[2](ROW_POS, ColPos::In::volume) } }),
+	latest_15min_({
+		BarRef{ (*symbols_15min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[0](ROW_POS, ColPos::In::open), (*symbols_15min_)[0](ROW_POS, ColPos::In::high), (*symbols_15min_)[0](ROW_POS, ColPos::In::low), (*symbols_15min_)[0](ROW_POS, ColPos::In::close), (*symbols_15min_)[0](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_15min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[1](ROW_POS, ColPos::In::open), (*symbols_15min_)[1](ROW_POS, ColPos::In::high), (*symbols_15min_)[1](ROW_POS, ColPos::In::low), (*symbols_15min_)[1](ROW_POS, ColPos::In::close), (*symbols_15min_)[1](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_15min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[2](ROW_POS, ColPos::In::open), (*symbols_15min_)[2](ROW_POS, ColPos::In::high), (*symbols_15min_)[2](ROW_POS, ColPos::In::low), (*symbols_15min_)[2](ROW_POS, ColPos::In::close), (*symbols_15min_)[2](ROW_POS, ColPos::In::volume) } }),
+	latest_1hr_({
+		BarRef{ (*symbols_1hr_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[0](ROW_POS, ColPos::In::open), (*symbols_1hr_)[0](ROW_POS, ColPos::In::high), (*symbols_1hr_)[0](ROW_POS, ColPos::In::low), (*symbols_1hr_)[0](ROW_POS, ColPos::In::close), (*symbols_1hr_)[0](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_1hr_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[1](ROW_POS, ColPos::In::open), (*symbols_1hr_)[1](ROW_POS, ColPos::In::high), (*symbols_1hr_)[1](ROW_POS, ColPos::In::low), (*symbols_1hr_)[1](ROW_POS, ColPos::In::close), (*symbols_1hr_)[1](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_1hr_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[2](ROW_POS, ColPos::In::open), (*symbols_1hr_)[2](ROW_POS, ColPos::In::high), (*symbols_1hr_)[2](ROW_POS, ColPos::In::low), (*symbols_1hr_)[2](ROW_POS, ColPos::In::close), (*symbols_1hr_)[2](ROW_POS, ColPos::In::volume) } }),
+	latest_4hr_({
+		BarRef{ (*symbols_4hr_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[0](ROW_POS, ColPos::In::open), (*symbols_4hr_)[0](ROW_POS, ColPos::In::high), (*symbols_4hr_)[0](ROW_POS, ColPos::In::low), (*symbols_4hr_)[0](ROW_POS, ColPos::In::close), (*symbols_4hr_)[0](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_4hr_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[1](ROW_POS, ColPos::In::open), (*symbols_4hr_)[1](ROW_POS, ColPos::In::high), (*symbols_4hr_)[1](ROW_POS, ColPos::In::low), (*symbols_4hr_)[1](ROW_POS, ColPos::In::close), (*symbols_4hr_)[1](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_4hr_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[2](ROW_POS, ColPos::In::open), (*symbols_4hr_)[2](ROW_POS, ColPos::In::high), (*symbols_4hr_)[2](ROW_POS, ColPos::In::low), (*symbols_4hr_)[2](ROW_POS, ColPos::In::close), (*symbols_4hr_)[2](ROW_POS, ColPos::In::volume) } }),
+	latest_1d_({
+		BarRef{ (*symbols_1d_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[0](ROW_POS, ColPos::In::open), (*symbols_1d_)[0](ROW_POS, ColPos::In::high), (*symbols_1d_)[0](ROW_POS, ColPos::In::low), (*symbols_1d_)[0](ROW_POS, ColPos::In::close), (*symbols_1d_)[0](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_1d_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[1](ROW_POS, ColPos::In::open), (*symbols_1d_)[1](ROW_POS, ColPos::In::high), (*symbols_1d_)[1](ROW_POS, ColPos::In::low), (*symbols_1d_)[1](ROW_POS, ColPos::In::close), (*symbols_1d_)[1](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_1d_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[2](ROW_POS, ColPos::In::open), (*symbols_1d_)[2](ROW_POS, ColPos::In::high), (*symbols_1d_)[2](ROW_POS, ColPos::In::low), (*symbols_1d_)[2](ROW_POS, ColPos::In::close), (*symbols_1d_)[2](ROW_POS, ColPos::In::volume) } }),
+	latest_1w_({
+		BarRef{ (*symbols_1w_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[0](ROW_POS, ColPos::In::open), (*symbols_1w_)[0](ROW_POS, ColPos::In::high), (*symbols_1w_)[0](ROW_POS, ColPos::In::low), (*symbols_1w_)[0](ROW_POS, ColPos::In::close), (*symbols_1w_)[0](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_1w_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[1](ROW_POS, ColPos::In::open), (*symbols_1w_)[1](ROW_POS, ColPos::In::high), (*symbols_1w_)[1](ROW_POS, ColPos::In::low), (*symbols_1w_)[1](ROW_POS, ColPos::In::close), (*symbols_1w_)[1](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_1w_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[2](ROW_POS, ColPos::In::open), (*symbols_1w_)[2](ROW_POS, ColPos::In::high), (*symbols_1w_)[2](ROW_POS, ColPos::In::low), (*symbols_1w_)[2](ROW_POS, ColPos::In::close), (*symbols_1w_)[2](ROW_POS, ColPos::In::volume) } }),
+
+	// TODO some form of snapshots_ initialization that dynamically handles different MAX_ACTIVE_SYMBOLS sizes?
+	snapshots_({
+		Snapshot{
+				{ 0.0, 0.0, 0.0, 0, 0 },
+				(*symbols_1min_)[0](ROW_POS, ColPos::In::close),
+				latest_1min_[0],
+				latest_5min_[0],
+				latest_15min_[0],
+				latest_1hr_[0] },
+		Snapshot{
+				{ 0.0, 0.0, 0.0, 0, 0 },
+				(*symbols_1min_)[1](ROW_POS, ColPos::In::close),
+				latest_1min_[1],
+				latest_5min_[1],
+				latest_15min_[1],
+				latest_1hr_[1] },
+		Snapshot{
+				{ 0.0, 0.0, 0.0, 0, 0 },
+				(*symbols_1min_)[2](ROW_POS, ColPos::In::close),
+				latest_1min_[2],
+				latest_5min_[2],
+				latest_15min_[2],
+				latest_1hr_[2] } })
 {
 	assert(dc_initialized == false);
 	dc_initialized = true;
@@ -226,325 +269,105 @@ DataController::~DataController()
 	}
 }
 
-void zero_bar(Bar& bar)
-{
-	bar = { 0, 0, 0, 0, 0, 0 };
-}
 
-void shift_bars_5(std::array<Bar, 5>& bars)
-{
-	std::swap(bars[3], bars[4]);
-	std::swap(bars[2], bars[3]);
-	std::swap(bars[1], bars[2]);
-	std::swap(bars[0], bars[1]);
-	// zero first
-	zero_bar(bars[0]);
-}
-
-void shift_bars_4(std::array<Bar, 4>& bars)
-{
-	std::swap(bars[2], bars[3]);
-	std::swap(bars[1], bars[2]);
-	std::swap(bars[0], bars[1]);
-	// zero first
-	zero_bar(bars[0]);
-}
-
-void shift_bars_3(std::array<Bar, 3>& bars)
-{
-	std::swap(bars[1], bars[2]);
-	std::swap(bars[0], bars[1]);
-	// zero first
-	zero_bar(bars[0]);
-}
-
-void copy_bar_2(Bar& dest, const Bar& b1, const Bar& b2)
-{
-	if (!b2.volume)
-	{
-		dest = b1;  // directly copy the single bar...
-		return;
-	}
-
-	dest.timestamp = b1.timestamp;  // TODO set timestamp here?
-	dest.close = b1.close;
-	dest.ask = b1.ask;
-	dest.ask_size = b1.ask_size;
-	dest.bid = b1.bid;
-	dest.bid_size = b1.bid_size;
-	dest.open = b2.open;
-	dest.volume = b1.volume + b2.volume;
-	dest.high = std::max({ b1.high, b2.high });
-	dest.low = std::min({ b1.low, b2.low });
-	dest.ask_high = std::max({ b1.ask_high, b2.ask_high });
-	dest.ask_low = std::min({ b1.ask_low, b2.ask_low });
-	dest.bid_high = std::max({ b1.bid_high, b2.bid_high });
-	dest.bid_low = std::min({ b1.bid_low, b2.bid_low });
-}
-
-void copy_bar_3(Bar& dest, const Bar& b1, const Bar& b2, const Bar& b3)
-{
-	if (!b3.volume)
-		return copy_bar_2(dest, b1, b2);
-
-	dest.timestamp = b1.timestamp;  // TODO set timestamp here?
-	dest.close = b1.close;
-	dest.ask = b1.ask;
-	dest.ask_size = b1.ask_size;
-	dest.bid = b1.bid;
-	dest.bid_size = b1.bid_size;
-	dest.open = b3.open;
-	dest.volume = b1.volume + b2.volume + b3.volume;
-	dest.high = std::max({ b1.high, b2.high, b3.high });
-	dest.low = std::min({ b1.low, b2.low, b3.low });
-	dest.ask_high = std::max({ b1.ask_high, b2.ask_high, b3.ask_high });
-	dest.ask_low = std::min({ b1.ask_low, b2.ask_low, b3.ask_low });
-	dest.bid_high = std::max({ b1.bid_high, b2.bid_high, b3.bid_high });
-	dest.bid_low = std::min({ b1.bid_low, b2.bid_low, b3.bid_low });
-}
-
-void copy_bar_4(Bar& dest, const Bar& b1, const Bar& b2, const Bar& b3, const Bar& b4)
-{
-	if (!b4.volume)
-		return copy_bar_3(dest, b1, b2, b3);
-
-	dest.timestamp = b1.timestamp;  // TODO set timestamp here?
-	dest.close = b1.close;
-	dest.ask = b1.ask;
-	dest.ask_size = b1.ask_size;
-	dest.bid = b1.bid;
-	dest.bid_size = b1.bid_size;
-	dest.open = b4.open;
-	dest.volume = b1.volume + b2.volume + b3.volume + b4.volume;
-	dest.high = std::max({ b1.high, b2.high, b3.high, b4.high });
-	dest.low = std::min({ b1.low, b2.low, b3.low, b4.low });
-	dest.ask_high = std::max({ b1.ask_high, b2.ask_high, b3.ask_high, b4.ask_high });
-	dest.ask_low = std::min({ b1.ask_low, b2.ask_low, b3.ask_low, b4.ask_low });
-	dest.bid_high = std::max({ b1.bid_high, b2.bid_high, b3.bid_high, b4.bid_high });
-	dest.bid_low = std::min({ b1.bid_low, b2.bid_low, b3.bid_low, b4.bid_low });
-}
-
-void copy_bar_5(Bar& dest, const Bar& b1, const Bar& b2, const Bar& b3, const Bar& b4, const Bar& b5)
-{
-	if (!b5.volume)
-		return copy_bar_4(dest, b1, b2, b3, b4);
-
-	dest.timestamp = b1.timestamp;  // TODO set timestamp here?
-	dest.close = b1.close;
-	dest.ask = b1.ask;
-	dest.ask_size = b1.ask_size;
-	dest.bid = b1.bid;
-	dest.bid_size = b1.bid_size;
-	dest.open = b5.open;
-	dest.volume = b1.volume + b2.volume + b3.volume + b4.volume + b5.volume;
-	dest.high = std::max({ b1.high, b2.high, b3.high, b4.high, b5.high });
-	dest.low = std::min({ b1.low, b2.low, b3.low, b4.low, b5.low });
-	dest.ask_high = std::max({ b1.ask_high, b2.ask_high, b3.ask_high, b4.ask_high, b5.ask_high });
-	dest.ask_low = std::min({ b1.ask_low, b2.ask_low, b3.ask_low, b4.ask_low, b5.ask_low });
-	dest.bid_high = std::max({ b1.bid_high, b2.bid_high, b3.bid_high, b4.bid_high, b5.bid_high });
-	dest.bid_low = std::min({ b1.bid_low, b2.bid_low, b3.bid_low, b4.bid_low, b5.bid_low });
-}
-
-inline void insert_candle(xtensor_raw_interval& data_latest, const Bar& bar)
-{
-	// TODO better way to insert these?
-	data_latest(0, ColPos::In::timestamp) = static_cast<Bar::real_type>(bar.timestamp);
-	data_latest(0, ColPos::In::open) = bar.open;
-	data_latest(0, ColPos::In::high) = bar.high;
-	data_latest(0, ColPos::In::low) = bar.low;
-	data_latest(0, ColPos::In::close) = bar.close;
-	data_latest(0, ColPos::In::volume) = static_cast<Bar::real_type>(bar.volume);  // TODO divide by 100 to match IB data?
-
-	// TODO this order?
-	data_latest(0, ColPos::In::ask_size) = static_cast<Bar::real_type>(bar.ask_size);
-	data_latest(0, ColPos::In::bid_size) = static_cast<Bar::real_type>(bar.bid_size);
-	data_latest(0, ColPos::In::ask) = bar.ask;
-	data_latest(0, ColPos::In::ask_high) = bar.ask_high;
-	data_latest(0, ColPos::In::ask_low) = bar.ask_low;
-	data_latest(0, ColPos::In::bid) = bar.bid;
-	data_latest(0, ColPos::In::bid_high) = bar.bid_high;
-	data_latest(0, ColPos::In::bid_low) = bar.bid_low;
-}
-
-
-template <size_t Size>
-void copy_candles(std::array<Bar, Size>& bars, const xtensor_raw_interval& data)
-{
-
-	/*if (!bars.empty()) {
-		const auto num_candles = bars.size();
-		for (typename std::array<Bar, Size>::size_type i = 0; i < Size; ++i)
-			std::cout << bars[i] << (i == num_candles - 1 ? "" : ", ");
-	}*/
-	for (typename std::array<Bar, Size>::size_type i = 0; i < Size; ++i)
-	{
-		Bar& bar = bars[i];
-
-		bar.timestamp = static_cast<Bar::time_type>(data(i, ColPos::In::timestamp));
-		bar.open = data(i, ColPos::In::open);
-		bar.high = data(i, ColPos::In::high);
-		bar.low = data(i, ColPos::In::low);
-		bar.close = data(i, ColPos::In::close);
-		bar.volume = static_cast<Bar::volume_type>(data(i, ColPos::In::volume));
-
-		bar.bid = data(i, ColPos::In::bid);
-		bar.bid_high = data(i, ColPos::In::bid_high);
-		bar.bid_low = data(i, ColPos::In::bid_low);
-
-		bar.ask = data(i, ColPos::In::ask);
-		bar.ask_high = data(i, ColPos::In::ask_high);
-		bar.ask_low = data(i, ColPos::In::ask_low);
-
-		bar.ask_size = static_cast<Bar::size_type>(data(i, ColPos::In::ask_size));
-		bar.bid_size = static_cast<Bar::size_type>(data(i, ColPos::In::bid_size));
-	}
-}
-
-void DataController::flush(const timestamp_t& ts_step)
-{
-	throw std::logic_error("not implemented");
-}
-
-void DataController::flush(const timestamp_t& next_ts, const size_t& pos)
+void DataController::shift(const ShiftTriggers& triggers, const size_t& pos)
 {
 	// (1min bar is filled with latest data)
 
-	const auto ts_dbl = static_cast<double>(next_ts);
-	const auto flush10sec = static_cast<timestamp_t>(ts_dbl / 10.0) * 10 == next_ts;
-	if (flush10sec)
+	//const timestamp_t& next_ts = triggers.next_ts;
+	
+	if (triggers.flush10sec)
 	{
-		const auto& symbol = symbols_pos_rev_[pos];
-		
-		const auto flush1min = static_cast<timestamp_t>(ts_dbl / 60.0) * 60 == next_ts;
-		const auto flush5min = static_cast<timestamp_t>(ts_dbl / 300.0) * 300 == next_ts;
-		const auto flush15min = static_cast<timestamp_t>(ts_dbl / 900.0) * 900 == next_ts;
-		const auto flush1hr = static_cast<timestamp_t>(ts_dbl / 3600.0) * 3600 == next_ts;
-		const auto flush4hr = static_cast<timestamp_t>(ts_dbl / 14400.0) * 14400 == next_ts;
-		if (flush5min)  // 5min
+		//const auto& symbol = symbols_pos_rev_[pos];
+		constexpr ptrdiff_t shift_pos = 1;
+
+		// // TODO copy on stack or heap?? (otherwise allocated on the stack?!)
+		// const auto data_copy = xt::roll(..., shift_pos, 0);
+
+		if (triggers.flush1min)  // 1min
 		{
-			// flush 1min bars into 5min
-			auto& bars_5min = bars_5min_[pos];
-			const auto& bars_1min = bars_1min_[pos];
-			// shift 5min bars
-			shift_bars_3(bars_5min);
-			// sum all 1min into 5min[0]
-			copy_bar_5(bars_5min[0], bars_1min[0], bars_1min[1], bars_1min[2], bars_1min[3], bars_1min[4]);
+			// shift down
+			auto& data_1min = (*symbols_1min_)[pos];
 
 			if (DEBUG_PRINT_DATA)
 			{
-				std::cout << "latest 5min bar:" << bars_5min[0] << std::endl;
+				std::cout << "1min data (before):" << std::endl << data_1min << std::endl;
+				//std::cout << "1min latest ts:" << static_cast<timestamp_t>(latest_1min_[pos].timestamp) << std::endl;
+				//std::cout << "1min latest close:" << latest_1min_[pos].close << std::endl;
+				//std::cout << "1min raw shape: " << data_1min.shape() << std::endl;
 			}
 
-			// copy into symbols_data_
+			const auto data_copy = xt::roll(data_1min, shift_pos, 0);
+			data_1min = data_copy;
+		}
+		if (triggers.flush5min)  // 5min
+		{
 			// shift down
 			auto& data_5min = (*symbols_5min_)[pos];
-			// TODO copy here?? (otherwise allocated on the stack?!)
-			const auto data_copy = xt::roll(data_5min, 1, 0);
+			const auto data_copy = xt::roll(data_5min, shift_pos, 0);
 			data_5min = data_copy;
-
-			// insert latest candle in [0]
-			insert_candle(data_5min, bars_5min[0]);
-
+			
 			if (DEBUG_PRINT_DATA)
 			{
 				std::cout << "5min data:" << std::endl << data_5min << std::endl;
 			}
-
-			// process data (returned in ASC order, opposite of input):
-			run_preprocess((*proc_symbols_5min_)[pos], symbol, 5, data_5min);
 		}
 
-		if (flush15min)  // 15min
+		if (triggers.flush15min)  // 15min
 		{
-			// flush 5min bars into 15min
-			auto& bars_15min = bars_15min_[pos];
-			const auto& bars_5min = bars_5min_[pos];
-			shift_bars_4(bars_15min);
-			copy_bar_3(bars_15min[0], bars_5min[0], bars_5min[1], bars_5min[2]);
-
-			// copy into symbols_data_
 			// shift down
 			auto& data_15min = (*symbols_15min_)[pos];
-			data_15min = xt::roll(data_15min, 1, 0);
-
-			// insert latest candle in [0]
-			insert_candle(data_15min, bars_15min[0]);
-
+			const auto data_copy = xt::roll(data_15min, shift_pos, 0);
+			data_15min = data_copy;
+			
 			if (DEBUG_PRINT_DATA)
 			{
 				std::cout << "15min data:" << std::endl << data_15min << std::endl;
 			}
-
-			// process data (returned in ASC order, opposite of input):
-			run_preprocess((*proc_symbols_15min_)[pos], symbol, 15, data_15min);
 		}
 
-		if (flush1hr)  // 1hr
+		if (triggers.flush1hr)  // 1hr
 		{
-			// flush 15min bars into 1hr
-			auto& bars_1hr = bars_1hr_[pos];
-			const auto& bars_15min = bars_15min_[pos];
-			shift_bars_4(bars_1hr);
-			copy_bar_4(bars_1hr[0], bars_15min[0], bars_15min[1], bars_15min[2], bars_15min[3]);
-
-			// copy into symbols_data_
 			// shift down
 			auto& data_1hr = (*symbols_1hr_)[pos];
-			data_1hr = xt::roll(data_1hr, 1, 0);
-
-			// insert latest candle in [0]
-			insert_candle(data_1hr, bars_1hr[0]);
-
+			const auto data_copy = xt::roll(data_1hr, shift_pos, 0);
+			data_1hr = data_copy;
+			
 			if (DEBUG_PRINT_DATA)
 			{
 				std::cout << "1hr data:" << std::endl << data_1hr << std::endl;
 			}
-
-			// process data (returned in ASC order, opposite of input):
-			run_preprocess((*proc_symbols_1hr_)[pos], symbol, 60, data_1hr);
 		}
-		if (flush4hr)  // 4hr
+		if (triggers.flush4hr)  // 4hr
 		{
-			// flush 1hr bars into 4hr
-			Bar bar4hr;
-			const auto& bars_1hr = bars_1hr_[pos];
-			copy_bar_4(bar4hr, bars_1hr[0], bars_1hr[1], bars_1hr[2], bars_1hr[3]);
-
 			// copy into symbols_data_
 			// shift down
 			auto& data_4hr = (*symbols_4hr_)[pos];
-			data_4hr = xt::roll(data_4hr, 1, 0);
-
-			// insert latest candle in [0]
-			insert_candle(data_4hr, bar4hr);
-
+			const auto data_copy = xt::roll(data_4hr, shift_pos, 0);
+			data_4hr = data_copy;
+			
 			if (DEBUG_PRINT_DATA)
 			{
 				std::cout << "4hr data:" << std::endl << data_4hr << std::endl;
 			}
-
-			// process data (returned in ASC order, opposite of input):
-			run_preprocess((*proc_symbols_4hr_)[pos], symbol, 240, data_4hr);
 		}
-		if (flush1min)  // 1min
-		{
-			// copy into symbols_data_
-			// shift down
-			auto& data_1min = (*symbols_1min_)[pos];
-			data_1min = xt::roll(data_1min, 1, 0);
+	}
+}
 
-			// insert latest candle in [0]
-			insert_candle(data_1min, bars_1min_[pos][0]);
 
-			if (DEBUG_PRINT_DATA)
-			{
-				std::cout << "1min data:" << std::endl << data_1min << std::endl;
-				//std::cout << "1min raw shape: " << data_1min.shape() << std::endl;
-			}
+void DataController::do_update(const ShiftTriggers& triggers, const size_t& pos)
+{
+	if (triggers.flush1min)
+	{
+		const auto& symbol = symbols_pos_rev_[pos];
 
-			// process data (returned in ASC order, opposite of input):
-			run_preprocess((*proc_symbols_1min_)[pos], symbol, 1, data_1min);
-		}
+		// preprocess all timeframes now...
+		// process data (returned in ASC order, opposite of input):
+		run_preprocess((*proc_symbols_1min_)[pos], symbol, 1, (*symbols_1min_)[pos]);
+		run_preprocess((*proc_symbols_5min_)[pos], symbol, 5, (*symbols_5min_)[pos]);
+		run_preprocess((*proc_symbols_15min_)[pos], symbol, 15, (*symbols_15min_)[pos]);
+		run_preprocess((*proc_symbols_1hr_)[pos], symbol, 60, (*symbols_1hr_)[pos]);
+		run_preprocess((*proc_symbols_4hr_)[pos], symbol, 240, (*symbols_4hr_)[pos]);
 
 		// notify AccountController (or other listener)
 		if (on_update_)
@@ -575,7 +398,7 @@ void DataController::flush(const timestamp_t& next_ts, const size_t& pos)
 				xt::view((*symbols_1w_)[pos], xt::range(0, RT_REPORT_TIMESTEPS), xt::all())
 			));
 			//std::cout << "data.shape: " << data.shape() << std::endl;
-			
+
 			//copy processed data into a merged format passed to on_update
 			const xtensor_processed data_processed = xt::stack(xt::xtuple(
 				xt::view((*proc_symbols_1min_)[pos], xt::range(RT_MAX_TIMESTEPS - NUM_TIMESTEMPS, RT_MAX_TIMESTEPS), xt::all()),
@@ -592,7 +415,7 @@ void DataController::flush(const timestamp_t& next_ts, const size_t& pos)
 		}
 
 		// TODO remove save for verification
-		if (flush15min)
+		if (triggers.flush15min)
 		{
 			xt::dump_npy("pyfiles/_out.AAPL.1min.npy", (*symbols_1min_)[pos]);
 			xt::dump_npy("pyfiles/_out.AAPL.5min.npy", (*symbols_5min_)[pos]);
@@ -602,6 +425,7 @@ void DataController::flush(const timestamp_t& next_ts, const size_t& pos)
 		}
 	}
 }
+
 
 void DataController::process_trade(const size_t& pos, const json& trade)
 {
@@ -672,11 +496,68 @@ void DataController::process_trade_data(const size_t& pos, const TradeData& trad
 	process_trade_finish(pos, cond_json, ts, trade.trade.price, trade.trade.size);
 }
 
+
+inline void update_high_low(BarRef& bar, const double& price)
+{
+	if (price > bar.high)
+		bar.high = price;
+	if (bar.low == 0 || price < bar.low)
+		bar.low = price;
+}
+
+inline void update_open_close(BarRef& bar, const double& price)
+{
+	bar.close = price;
+	if (bar.open == 0)
+	{
+		// TODO should never get here?
+		std::cout << "update_open_close() unexpected open=0" << std::endl;
+		//std::cout << "process_trade_rt() update open/close; open=0; ts=" << ts << "; next_ts=" << next_ts << std::endl;
+		bar.open = price;
+		if (bar.high == 0)
+			bar.high = price;
+		if (bar.low == 0)
+			bar.low = price;
+	}
+}
+
+inline void populate_full_bar(BarFullRef& bar, const int interval_seconds, const timestamp_t& next_ts, const double& ts, const double& price, const uint32_t vol, const double& prev_bid, const double& prev_ask, const double& prev_bid_size, const double& prev_ask_size)
+{
+	// reset this bar
+	bar.timestamp = static_cast<double>(static_cast<timestamp_t>(ts / interval_seconds) * interval_seconds);  // TODO verify
+	//bar.timestamp = next_ts;
+	if (static_cast<timestamp_t>(bar.timestamp) != next_ts && next_ts > interval_seconds) {
+		std::cout << "Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
+	}
+	bar.volume = vol;
+	bar.low = bar.high = bar.open = bar.close = price;
+
+	// reset ask/bid high/low to latest bid/ask price
+	bar.bid_high = bar.bid_low = bar.bid = prev_bid;
+	bar.ask_high = bar.ask_low = bar.ask = prev_ask;
+
+	// TODO sum?
+	// TODO Note: leave ask/bid and ask_size/bid_size the same ??
+	bar.bid_size = prev_bid_size;
+	bar.ask_size = prev_ask_size;
+}
+
+inline void populate_bar(BarRef& bar, const int interval_seconds, const timestamp_t& next_ts, const double& ts, const double& price, const uint32_t vol)
+{
+	// reset this bar
+	bar.timestamp = static_cast<double>(static_cast<uint64_t>(ts / interval_seconds) * interval_seconds);  // TODO verify
+	//bar.timestamp = next_ts;
+	if (static_cast<timestamp_t>(bar.timestamp) != next_ts && next_ts > interval_seconds) {
+		std::cout << "Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
+	}
+	bar.volume = vol;
+	bar.low = bar.high = bar.open = bar.close = price;
+}
+
 void DataController::process_trade_finish(const size_t& pos, const json& conds, const double& ts, const double& price, const uint32_t vol)
 {
 	// flush into 1min bar
 	const int interval_seconds = 60;
-	Bar& bar = bars_1min_[pos][0];
 	timestamp_t& ts_step = cur_timesteps_[pos];
 
 	bool updates_volume = false;
@@ -713,61 +594,99 @@ void DataController::process_trade_finish(const size_t& pos, const json& conds, 
 	if (!updates_high_low && !updates_open_close && !updates_volume)
 		return;  // no more processing to do (for aggregate generation)
 
+	BarFullRef& bar_1min = latest_1min_[pos];
+	BarRef& bar_5min = latest_5min_[pos];
+	BarRef& bar_15min = latest_15min_[pos];
+	BarRef& bar_1hr = latest_1hr_[pos];
+	BarRef& bar_4hr = latest_4hr_[pos];
+	BarRef& bar_1d = latest_1d_[pos];
+	BarRef& bar_1w = latest_1w_[pos];
+	
 	const timestamp_t next_ts = ts_step + interval_seconds;
 	if (ts >= static_cast<double>(next_ts))
 	{
-		// flush last bar
+		const double prev_bid = bar_1min.bid;
+		const double prev_ask = bar_1min.ask;
+		const double prev_bid_size = bar_1min.bid_size;
+		const double prev_ask_size = bar_1min.ask_size;
+
+		// shift bars
 		// Note: this introduces delay to the flush routine (by waiting for next timestamp before processing previous)
 		//   This should be changed after moving to a faster network, then preempt end-of-interval
-		if (next_ts > interval_seconds) {  // only flush if this is not the first payload
-			flush(next_ts, pos);
+		const ShiftTriggers triggers(next_ts);
+		if (next_ts > interval_seconds) {  // only shift if this is not the first timestep
+			// call update before shifting
+			do_update(triggers, pos);
+
+			shift(triggers, pos);
 		}
 
-		// reset this bar
-		bar.timestamp = static_cast<double>(static_cast<uint64_t>(ts / interval_seconds) * interval_seconds);  // TODO verify
-		//bar.timestamp = next_ts;
-		if (static_cast<timestamp_t>(bar.timestamp) != next_ts && next_ts > interval_seconds) {
-			std::cout << "Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
+		// TODO consider updates_* flags in these cases?
+
+		if (triggers.flush1min)
+		{
+			populate_full_bar(bar_1min, interval_seconds, next_ts, ts, price, vol, prev_bid, prev_ask, prev_bid_size, prev_ask_size);
 		}
-		bar.volume = vol;
-		bar.low = bar.high = bar.open = bar.close = price;
+		if (triggers.flush5min)
+		{
+			populate_bar(bar_5min, interval_seconds * 5, next_ts, ts, price, vol);
+		}
+		if (triggers.flush15min)
+		{
+			populate_bar(bar_15min, interval_seconds * 15, next_ts, ts, price, vol);
+		}
+		if (triggers.flush1hr)
+		{
+			populate_bar(bar_1hr, interval_seconds * 60, next_ts, ts, price, vol);
+		}
+		if (triggers.flush4hr)
+		{
+			populate_bar(bar_4hr, interval_seconds * 240, next_ts, ts, price, vol);
+		}
+		// Note: never flush 1d/1w (TODO flush 1d if after hours starts? or 1w if after hours starts on friday?)
+		/*if (triggers.flush1d)
+			populate_bar(bar_1d, interval_seconds * 5, next_ts, ts, price, vol);
+		if (triggers.flush1w)
+			populate_bar(bar_1w, interval_seconds * 5, next_ts, ts, price, vol);*/
 
-		// reset ask/bid high/low to current bid/ask price
-		bar.ask_high = bar.ask_low = bar.ask;
-		bar.bid_high = bar.bid_low = bar.bid;
-		// TODO Note: leave ask/bid and ask_size/bid_size the same ??
-
-		ts_step = static_cast<timestamp_t>(bar.timestamp);  // next_ts;
+		ts_step = static_cast<timestamp_t>(bar_1min.timestamp);  // next_ts;
 	}
 	else
 	{
 		// append to existing bar!
 		if (updates_high_low)
 		{
-			if (price > bar.high)
-				bar.high = price;
-			if (bar.low == 0 || price < bar.low)
-				bar.low = price;
+			update_high_low(bar_1min, price);
+			update_high_low(bar_5min, price);
+			update_high_low(bar_15min, price);
+			update_high_low(bar_1hr, price);
+			update_high_low(bar_4hr, price);
+			update_high_low(bar_1d, price);
+			update_high_low(bar_1w, price);
 		}
 		if (updates_open_close)
 		{
-			bar.close = price;
-			if (bar.open == 0)
-			{
-				// TODO should never get here?
-				std::cout << "process_trade_rt() update open/close; open=0; ts=" << ts << "; next_ts=" << next_ts << std::endl;
-				bar.open = price;
-				if (bar.high == 0)
-					bar.high = price;
-				if (bar.low == 0)
-					bar.low = price;
-			}
-
+			update_open_close(bar_1min, price);
+			update_open_close(bar_5min, price);
+			update_open_close(bar_15min, price);
+			update_open_close(bar_1hr, price);
+			update_open_close(bar_4hr, price);
+			update_open_close(bar_1d, price);
+			update_open_close(bar_1w, price);
 		}
 		if (updates_volume)
-			bar.volume += vol;
+		{
+			bar_1min.volume += vol;
+			bar_5min.volume += vol;
+			bar_15min.volume += vol;
+			bar_1hr.volume += vol;
+			bar_4hr.volume += vol;
+			bar_1d.volume += vol;
+			bar_1w.volume += vol;
+		}
 	}
 }
+
 
 void DataController::process_quote(const size_t& pos, const json& quote)
 {
@@ -831,11 +750,58 @@ void DataController::process_quote_data(const size_t& pos, const QuoteData& quot
 	process_quote_finish(pos, ts, quote.quote.ask, quote.quote.ask_size, quote.quote.bid, quote.quote.bid_size);
 }
 
+
+inline void update_bid_ask(BarFullRef& bar, const double& bid, const double& ask, const double bid_size, const double ask_size)
+{
+	// append to existing bar!
+	if (ask > bar.ask_high)
+		bar.ask_high = ask;
+	if (bar.ask_low == 0 || ask < bar.ask_low)
+		bar.ask_low = ask;
+	if (bid > bar.bid_high)
+		bar.bid_high = bid;
+	if (bar.bid_low == 0 || bid < bar.bid_low)
+		bar.bid_low = bid;
+	bar.ask = ask;
+	bar.bid = bid;
+	bar.ask_size = ask_size;
+	bar.bid_size = bid_size;
+}
+
+inline void populate_next_full_bar(BarFullRef& bar, const int interval_seconds, const timestamp_t& next_ts, const double& ts, const double& price, const double& bid, const double& ask, const double bid_size, const double ask_size)
+{
+	// reset this bar
+	bar.timestamp = static_cast<Bar::time_type>(static_cast<uint64_t>(ts / interval_seconds) * interval_seconds);  // TODO verify
+	//bar.timestamp = next_ts;
+	if (static_cast<timestamp_t>(bar.timestamp) != next_ts && next_ts > interval_seconds) {
+		std::cout << "Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
+	}
+	bar.volume = 0;  // so far, 0 volume in this bar
+	bar.low = bar.high = bar.open = bar.close = price;  // TODO copy last close price ?
+
+	// set bid/ask and reset the high/lows
+	bar.ask = bar.ask_high = bar.ask_low = ask;
+	bar.bid = bar.bid_high = bar.bid_low = bid;
+	bar.ask_size = ask_size;
+	bar.bid_size = bid_size;
+}
+
+inline void populate_next_bar(BarRef& bar, const int interval_seconds, const timestamp_t& next_ts, const double& ts, const double& price)
+{
+	// reset this bar
+	bar.timestamp = static_cast<Bar::time_type>(static_cast<uint64_t>(ts / interval_seconds) * interval_seconds);  // TODO verify
+	//bar.timestamp = next_ts;
+	if (static_cast<timestamp_t>(bar.timestamp) != next_ts && next_ts > interval_seconds) {
+		std::cout << "Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
+	}
+	bar.volume = 0;  // so far, 0 volume in this bar
+	bar.low = bar.high = bar.open = bar.close = price;  // TODO copy last close price ?
+}
+
 void DataController::process_quote_finish(const size_t& pos, const double& ts, const double& askPrice, const uint32_t& askSize, const double& bidPrice, const uint32_t& bidSize)
 {
 	// flush into 1min bar
 	const int interval_seconds = 60;
-	Bar& bar = bars_1min_[pos][0];
 	timestamp_t& ts_step = cur_timesteps_[pos];
 
 	/*
@@ -875,56 +841,72 @@ void DataController::process_quote_finish(const size_t& pos, const double& ts, c
 		return;  // no more processing to do (for aggregate generation)
 	*/
 
+	// update NBBO
+	snapshots_[pos].nbbo = { ts, bidPrice, askPrice, bidSize, askSize };
+
+	// always notify AccountController first (or other listener) when bid/ask changes
+	if (on_snapshot_)
+		on_snapshot_(symbols_pos_rev_[pos], snapshots_[pos]);
+
+	BarFullRef& bar_1min = latest_1min_[pos];
+	BarRef& bar_5min = latest_5min_[pos];
+	BarRef& bar_15min = latest_15min_[pos];
+	BarRef& bar_1hr = latest_1hr_[pos];
+	BarRef& bar_4hr = latest_4hr_[pos];
+	//BarRef& bar_1d = latest_1d_[pos];
+	//BarRef& bar_1w = latest_1w_[pos];
+
 	const timestamp_t next_ts = ts_step + interval_seconds;
 	if (ts >= static_cast<double>(next_ts))
 	{
-		// flush last bar
+		// copy last close price into new bars
+		const double price = bar_1min.close;
+
+		const ShiftTriggers triggers(next_ts);
+
+		// shift bars
 		// Note: this introduces delay to the flush routine (by waiting for next timestamp before processing previous)
 		//   This should be changed after moving to a faster network, then preempt end-of-interval
-		if (next_ts > interval_seconds) {  // only flush if this is not the first payload
-			flush(next_ts, pos);
+		if (next_ts > interval_seconds) {  // only shift if this is not the first timestep
+			// call update before shifting
+			do_update(triggers, pos);
+			
+			shift(triggers, pos);
 		}
 
-		// TODO copy last close price into this bar?
-		const auto price = bar.close;
-
-		// reset this bar
-		bar.timestamp = static_cast<Bar::time_type>(static_cast<uint64_t>(ts / interval_seconds) * interval_seconds);  // TODO verify
-		//bar.timestamp = next_ts;
-		if (static_cast<timestamp_t>(bar.timestamp) != next_ts && next_ts > interval_seconds) {
-			std::cout << "Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
+		if (triggers.flush1min)
+		{
+			populate_next_full_bar(bar_1min, interval_seconds, next_ts, ts, price, bidPrice, askPrice, bidSize, askSize);
 		}
-		bar.volume = 0;  // so far, 0 volume in this bar
-		bar.low = bar.high = bar.open = bar.close = price;  // TODO copy last close price ?
-
-		// set bid/ask and reset the high/lows
-		bar.ask = bar.ask_high = bar.ask_low = askPrice;
-		bar.bid = bar.bid_high = bar.bid_low = bidPrice;
-		bar.ask_size = askSize;
-		bar.bid_size = bidSize;
-
-		ts_step = static_cast<timestamp_t>(bar.timestamp);  // next_ts;
+		if (triggers.flush5min)
+		{
+			populate_next_bar(bar_5min, interval_seconds * 5, next_ts, ts, price);
+		}
+		if (triggers.flush15min)
+		{
+			populate_next_bar(bar_15min, interval_seconds * 15, next_ts, ts, price);
+		}
+		if (triggers.flush1hr)
+		{
+			populate_next_bar(bar_1hr, interval_seconds * 60, next_ts, ts, price);
+		}
+		if (triggers.flush4hr)
+		{
+			populate_next_bar(bar_4hr, interval_seconds * 240, next_ts, ts, price);
+		}
+		// Note: never flush 1d/1w (TODO flush 1d if after hours starts? or 1w if after hours starts on friday?)
+		/*if (triggers.flush1d)
+			populate_next_bar(bar_1d, interval_seconds, next_ts, ts, price);
+		if (triggers.flush1w)
+			populate_next_bar(bar_1w, interval_seconds, next_ts, ts, price);*/
+		
+		ts_step = static_cast<timestamp_t>(bar_1min.timestamp);  // next_ts;
 	}
 	else
 	{
 		// append to existing bar!
-		if (askPrice > bar.ask_high)
-			bar.ask_high = askPrice;
-		if (bar.ask_low == 0 || askPrice < bar.ask_low)
-			bar.ask_low = askPrice;
-		if (bidPrice > bar.bid_high)
-			bar.bid_high = bidPrice;
-		if (bar.bid_low == 0 || bidPrice < bar.bid_low)
-			bar.bid_low = bidPrice;
-		bar.ask = askPrice;
-		bar.bid = bidPrice;
-		bar.ask_size = askSize;
-		bar.bid_size = bidSize;
+		update_bid_ask(bar_1min, bidPrice, askPrice, bidSize, askSize);
 	}
-
-	// always notify AccountController (or other listener) when bid/ask changes
-	if (on_snapshot_)
-		on_snapshot_(symbols_pos_rev_[pos], snapshots_[pos]);
 }
 
 void DataController::onPayloads(const json& payloads)
@@ -1259,41 +1241,7 @@ void DataController::initSymbol(const Symbol& symbol, std::chrono::seconds ts)
 		}
     }
 
-	// copy into staging bars
-    for (const auto& tpl : INTERVAL_INITIAL_DOWNLOADS)
-    {
-	    switch (std::get<0>(tpl))
-	    {
-	    case 1:
-		    {
-			    xtensor_raw_interval& dest = (*symbols_1min_)[pos];
-			    copy_candles(bars_1min_[pos], dest);
-			    break;
-		    }
-	    case 5:
-		    {
-			    xtensor_raw_interval& dest = (*symbols_5min_)[pos];
-			    copy_candles(bars_5min_[pos], dest);
-			    break;
-		    }
-	    case 15:
-		    {
-			    xtensor_raw_interval& dest = (*symbols_15min_)[pos];
-			    copy_candles(bars_15min_[pos], dest);
-			    break;
-		    }
-	    case 60:
-		    {
-			    xtensor_raw_interval& dest = (*symbols_1hr_)[pos];
-			    copy_candles(bars_1hr_[pos], dest);
-			    break;
-		    }
-		default:
-			break;
-	    }
-    }
-
-	// TODO run preprocess now?
+	// TODO run preprocess now? (and later only process last ts)
     {
 		// must transpose raw data to (features, timesteps) for preprocess...
 		run_preprocess((*proc_symbols_1min_)[pos], symbol, 1, (*symbols_1min_)[pos]);

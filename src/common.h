@@ -257,7 +257,9 @@ struct trade_ref_t
 };
 
 
-typedef quote_ref_t<double, uint32_t, double> NBBO;
+//typedef quote_ref_t<double, uint32_t, double> NBBO;
+//typedef quote_ref_t<double, double, double> NBBO;
+typedef quote_t<double, uint32_t, double> NBBO;
 typedef trade_t<double, uint32_t, timestamp_t> Trade;
 typedef quote_t<double, uint32_t, timestamp_t> Quote;
 
@@ -301,9 +303,47 @@ struct bar_t
 
 };
 
+template <typename Real, typename Volume, typename Time>
+struct bar_ref_t
+{
+	using time_type = Time;
+	using real_type = Real;
+	using volume_type = Volume;
+
+	Time& timestamp = 0;
+	Real& open = 0.0;
+	Real& high = 0.0;
+	Real& low = 0.0;
+	Real& close = 0.0;
+	Volume& volume = 0;
+};
+
+template <typename Real, typename Volume, typename Time, typename Size>
+struct bar_full_ref_t : bar_ref_t<Real, Volume, Time>
+{
+	using size_type = Size;
+
+	Real& bid = 0.0;
+	Real& bid_high = 0.0;
+	Real& bid_low = 0.0;
+
+	Real& ask = 0.0;
+	Real& ask_high = 0.0;
+	Real& ask_low = 0.0;
+
+	Size& bid_size = 0;
+	Size& ask_size = 0;
+};
+
+
 typedef bar_t<double, uint64_t, double, uint32_t> Bar;
 
+typedef bar_ref_t<double, double, double> BarRef;
+typedef bar_full_ref_t<double, double, double, double> BarFullRef;
+
 std::ostream& operator<< (std::ostream& out, const Bar& bar);
+std::ostream& operator<< (std::ostream& out, const BarRef& bar);
+std::ostream& operator<< (std::ostream& out, const BarFullRef& bar);
 
 
 class Timeframes
