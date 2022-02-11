@@ -450,16 +450,16 @@ public:
 		trend9,
 		trend20,
 		trend50,
-		volume_buy,
-		volume_sell,
+		//volume_buy,
+		//volume_sell,
 		volume_percent_buy,
 		volume_percent_sell,
-		obv,
+		//obv,
 		obv_trend20,
 		obv_trend50,
 		adi_trend20,
 		adi_trend50,
-		adi_obv_ratio,
+		//adi_obv_ratio,
 		rsi,
 		rsi_indicator,
 		rsi_trend20,
@@ -475,7 +475,7 @@ public:
 	{
 		// 2 cols
 		close_ln = _IN_NUM_COLS + _DEP_NUM_COLS + _REGR_NUM_COLS + _DIFF_NUM_COLS + _TA_NUM_COLS,
-		close_next_norm,
+		//close_next_norm,
 	};
 
 	static constexpr ptrdiff_t _CANDLE_NUM_COLS = 61;
@@ -550,135 +550,6 @@ public:
 static_assert(ColPos::Candle::_MORNINGSTAR == ColPos::NUM_COLS - 1, "Invalid ColPos configuration...");
 static_assert(ColPos::_IN_NUM_COLS + ColPos::_DEP_NUM_COLS + ColPos::_REGR_NUM_COLS + ColPos::_DIFF_NUM_COLS + ColPos::_TA_NUM_COLS + ColPos::_NORM_NUM_COLS + ColPos::_CANDLE_NUM_COLS == ColPos::NUM_COLS, "Invalid ColPos configuration...");
 
-/*
-class ColPos
-{
-public:
-	enum In : ptrdiff_t
-	{
-		timestamp = 0,
-		open = 0,
-		high = 1,
-		low = 2,
-		close = 3,
-		volume = 4,
-	};
-	enum Dep : ptrdiff_t
-	{
-		hlc3 = 0,
-		range = 1,
-		atr = 2,
-		past_range = 3,
-	};
-	enum Regr : ptrdiff_t
-	{
-		regr = 0,
-		stddev = 1,
-	};
-	enum Diff : ptrdiff_t
-	{
-		diff = 0,
-		range_t = 1,
-		range_b = 2,
-		range_pos = 3,
-	};
-	enum TA : ptrdiff_t
-	{
-		trend5 = 0,
-		trend9 = 1,
-		trend20 = 2,
-		trend50 = 3,
-		volume_buy = 4,
-		volume_sell = 5,
-		volume_percent_buy = 6,
-		volume_percent_sell = 7,
-		obv = 8,
-		obv_trend20 = 9,
-		obv_trend50 = 10,
-		adi_trend20 = 11,
-		adi_trend50 = 12,
-		adi_obv_ratio = 13,
-		rsi = 14,
-		rsi_indicator = 15,
-		rsi_trend20 = 16,
-		rsi_trend50 = 17,
-		ppo = 18,
-		ppo_diff = 19,
-		adx = 20,
-		adx_indicator = 21,
-	};
-	enum Norm : ptrdiff_t
-	{
-		close_ln = 0,
-		close_next_norm = 1,
-	};
-	enum Candle : ptrdiff_t
-	{
-		// 61 cols
-		_2CROWS,
-		_3BLACKCROWS,
-		_3INSIDE,
-		_3LINESTRIKE,
-		_3OUTSIDE,
-		_3STARSINSOUTH,
-		_3WHITESOLDIERS,
-		_ADVANCEBLOCK,
-		_BELTHOLD,
-		_BREAKAWAY,
-		_CLOSINGMARUBOZU,
-		_CONCEALBABYSWALL,
-		_COUNTERATTACK,
-		_DOJI,
-		_DOJISTAR,
-		_DRAGONFLYDOJI,
-		_ENGULFING,
-		_GAPSIDESIDEWHITE,
-		_GRAVESTONEDOJI,
-		_HAMMER,
-		_HANGINGMAN,
-		_HARAMI,
-		_HARAMICROSS,
-		_HIGHWAVE,
-		_HIKKAKE,
-		_HIKKAKEMOD,
-		_HOMINGPIGEON,
-		_IDENTICAL3CROWS,
-		_INNECK,
-		_INVERTEDHAMMER,
-		_KICKING,
-		_KICKINGBYLENGTH,
-		_LADDERBOTTOM,
-		_LONGLEGGEDDOJI,
-		_LONGLINE,
-		_MARUBOZU,
-		_MATCHINGLOW,
-		_ONNECK,
-		_PIERCING,
-		_RICKSHAWMAN,
-		_RISEFALL3METHODS,
-		_SEPARATINGLINES,
-		_SHOOTINGSTAR,
-		_SHORTLINE,
-		_SPINNINGTOP,
-		_STALLEDPATTERN,
-		_STICKSANDWICH,
-		_TAKURI,
-		_TASUKIGAP,
-		_THRUSTING,
-		_TRISTAR,
-		_UNIQUE3RIVER,
-		_UPSIDEGAP2CROWS,
-		_XSIDEGAP3METHODS,
-		_ABANDONEDBABY,
-		_DARKCLOUDCOVER,
-		_EVENINGDOJISTAR,
-		_EVENINGSTAR,
-		_MATHOLD,
-		_MORNINGDOJISTAR,
-		_MORNINGSTAR,
-	};
-};
-*/
 
 
 #endif // COMMON_H

@@ -45,7 +45,7 @@ xt::xarray<double> do_market_inputs(const xt::xarray<double>& a_in);
 void do_outputs(const char* symbol, xt::xarray<double>& o_outputs, const xt::xarray<double>& o_results, const unsigned int timeframe, const unsigned int interval);
 
 
-static const std::array<std::tuple<ColPosType, ptrdiff_t>, 98> COLS_FORMAT1 = {
+static constexpr std::array<std::tuple<ColPosType, ptrdiff_t>, 94> COLS_FORMAT1 = {
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::In, ColPos::In::timestamp),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::In, ColPos::In::open),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::In, ColPos::In::high),
@@ -125,16 +125,16 @@ static const std::array<std::tuple<ColPosType, ptrdiff_t>, 98> COLS_FORMAT1 = {
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::trend9),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::trend20),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::trend50),
-	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::volume_buy),
-	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::volume_sell),
+	//std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::volume_buy),
+	//std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::volume_sell),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::volume_percent_buy),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::volume_percent_sell),
-	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::obv),
+	//std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::obv),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::obv_trend20),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::obv_trend50),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::adi_trend20),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::adi_trend50),
-	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::adi_obv_ratio),
+	//std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::adi_obv_ratio),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::rsi),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::rsi_indicator),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::rsi_trend20),
@@ -150,7 +150,7 @@ static const std::array<std::tuple<ColPosType, ptrdiff_t>, 98> COLS_FORMAT1 = {
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::Norm, ColPos::Norm::close_ln),
 };
 
-static const std::array<std::tuple<ColPosType, ptrdiff_t>, 100> COLS_FORMAT_YAR = {
+static constexpr std::array<std::tuple<ColPosType, ptrdiff_t>, 96> COLS_FORMAT_YAR = {
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::In, ColPos::In::timestamp),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::In, ColPos::In::open),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::In, ColPos::In::high),
@@ -160,8 +160,8 @@ static const std::array<std::tuple<ColPosType, ptrdiff_t>, 100> COLS_FORMAT_YAR 
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::Dep, ColPos::Dep::hlc3),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::Regr, ColPos::Regr::regr),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::Regr, ColPos::Regr::stddev),
-	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::volume_buy),
-	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::volume_sell),
+	//std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::volume_buy),
+	//std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::volume_sell),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::volume_percent_buy),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::volume_percent_sell),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::Dep, ColPos::Dep::range),
@@ -237,12 +237,12 @@ static const std::array<std::tuple<ColPosType, ptrdiff_t>, 100> COLS_FORMAT_YAR 
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::Candle, ColPos::Candle::_UNIQUE3RIVER),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::Candle, ColPos::Candle::_UPSIDEGAP2CROWS),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::Candle, ColPos::Candle::_XSIDEGAP3METHODS),
-	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::obv),
+	//std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::obv),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::obv_trend20),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::obv_trend50),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::adi_trend20),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::adi_trend50),
-	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::adi_obv_ratio),
+	//std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::adi_obv_ratio),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::rsi),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::rsi_indicator),
 	std::make_tuple<ColPosType, ptrdiff_t>(ColPosType::TA, ColPos::TA::rsi_trend20),

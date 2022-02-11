@@ -275,21 +275,21 @@ double mk_volume_sell(double high, double low, double volume, double volume_buy)
 	// //dfin['volume_sell'] = (dfin['volume'] * (dfin['high'] - dfin['close']) / (dfin['high'] - dfin['low'])).where(dfin['high'] != dfin['low'], 0.0)
 }
 
-double mk_volume_percent_buy(double volume_buy, double volume_sell)
+double mk_volume_percent_buy(double volume_buy, double volume_sum)
 {
 	// Buy Volume Percent = BV / (BV + SV)
-	if (volume_buy + volume_sell > 0)
-		return volume_buy / (volume_buy + volume_sell);
+	if (volume_sum > 0)
+		return volume_buy / volume_sum;
 	else
 		return 0.0;
 	//dfin['volume_percent_buy'] = (dfin['volume_buy'] / vol_sum).where(vol_sum > 0, 0.0)
 }
 
-double mk_volume_percent_sell(double volume_buy, double volume_sell)
+double mk_volume_percent_sell(double volume_sell, double volume_sum)
 {
 	// Sell Volume Percent = SV / (BV + SV)
-	if (volume_buy + volume_sell > 0)
-		return -volume_sell / (volume_buy + volume_sell);  // convert to negative...
+	if (volume_sum > 0)
+		return volume_sell / volume_sum;  // convert to negative...
 	else
 		return 0.0;
 	//dfin['volume_percent_sell'] = (dfin['volume_sell'] / vol_sum).where(vol_sum > 0, 0.0)
@@ -331,19 +331,26 @@ double mk_adi_pre_cumsum(double high, double low, double close, double volume)
 	//// self._adi = adi.cumsum()  // Note: performed after running this vectorized fn
 }
 
-double mk_adi_obv_ratio(double obv, double adi)
+/*double mk_adi_obv_ratio(double obv, double adi)
 {
 	if (dbl_equal(adi, 0.0))
 		return 0;
 	else
 		return obv / (adi * 10.0);
 	//dfin['adi_obv_ratio'] = dfin['obv'] / (adi * 10.0)
-}
+}*/
 
 
-double mk_xfrm_ln_div_10(double val)
+/*double mk_xfrm_ln_div_10(double val)
 {
 	return std::log(val + 1) / 10.0;
+	//dfin['close_ln'] = (close + 1).apply(np.log) / 10.0
+	////dfin['close_ln'] = close.apply(np.log) / 10.0
+}*/
+
+double mk_xfrm_ln(double val)
+{
+	return std::log(val);
 	//dfin['close_ln'] = (close + 1).apply(np.log) / 10.0
 	////dfin['close_ln'] = close.apply(np.log) / 10.0
 }
@@ -367,23 +374,23 @@ double mk_scale_rsi(double rsi)
 	//dfin[k] = (dfin[k] / 50.0) - 1.0
 }
 
-double mk_scale_vol(double close_ln, double v)
+double mk_scale_vol(double hlc3_ln, double v, double adj_vol_divider)
 {
-	return pow(close_ln * v, 0.5) / 1000.0;
+	return pow(hlc3_ln * v / 100.0, 0.5) / adj_vol_divider;
 	//((dfin['volume'] * close_ln) ** (1/2)) / 1000.0
 	////dfin['volume'] = ((dfin['volume'] * close / 10000.0) ** 2) / 10.0
 }
 
-double mk_scale_obv(double obv)
+/*double mk_scale_obv(double obv)
 {
 	return obv / 1000000000.0;
 	//(dfin['obv'] / 1000000000.0)
 	////dfin['obv'] = (dfin['obv'] * close / 10000000.0)
-}
+}*/
 
-double mk_scale_obv_trend(double obv_trend)
+double mk_scale_obv_trend(double obv_trend, double adj_vol_divider)
 {
-	return obv_trend / 10000000.0;
+	return (obv_trend / 10000.0) / adj_vol_divider;
 	//(dfin['obv_trend20'] / 10000000.0)
 	////dfin['obv_trend20'] = (dfin['obv_trend20'] * close / 100000.0)
 }
@@ -411,9 +418,14 @@ double mk_subtract(double b, double a)
 	return b - a;
 }
 
-double mk_divide_by_80(double b)
+double mk_sum(double b, double a)
 {
-	return b / 80.0;
+	return b + a;
+}
+
+double mk_divide_by_160(double b)
+{
+	return b / 160.0;
 }
 
 
@@ -437,14 +449,15 @@ const auto vec_volume_percent_sell = xt::vectorize(mk_volume_percent_sell);
 const auto vec_rsi_indicator = xt::vectorize(mk_rsi_indicator);
 const auto vec_adx_indicator = xt::vectorize(mk_adx_indicator);
 const auto vec_adi_pre_cumsum = xt::vectorize(mk_adi_pre_cumsum);
-const auto vec_adi_obv_ratio = xt::vectorize(mk_adi_obv_ratio);
+//const auto vec_adi_obv_ratio = xt::vectorize(mk_adi_obv_ratio);
 
-const auto vec_xfrm_ln_div_10 = xt::vectorize(mk_xfrm_ln_div_10);
+//const auto vec_xfrm_ln_div_10 = xt::vectorize(mk_xfrm_ln_div_10);
+const auto vec_xfrm_ln = xt::vectorize(mk_xfrm_ln);
 const auto vec_scale_div_100 = xt::vectorize(mk_scale_div_100);
 const auto vec_scale_div_10 = xt::vectorize(mk_scale_div_10);
 const auto vec_scale_rsi = xt::vectorize(mk_scale_rsi);
 const auto vec_scale_vol = xt::vectorize(mk_scale_vol);
-const auto vec_scale_obv = xt::vectorize(mk_scale_obv);
+//const auto vec_scale_obv = xt::vectorize(mk_scale_obv);
 const auto vec_scale_obv_trend = xt::vectorize(mk_scale_obv_trend);
 
 const auto vec_norm_10x_n_stddevs = xt::vectorize(mk_norm_10x_n_stddevs);
@@ -452,7 +465,8 @@ const auto vec_norm_10x_n_stddevs = xt::vectorize(mk_norm_10x_n_stddevs);
 const auto vec_min5 = xt::vectorize(mk_min5);
 const auto vec_max5 = xt::vectorize(mk_max5);
 const auto vec_subtract = xt::vectorize(mk_subtract);
-const auto vec_mk_divide_by_80 = xt::vectorize(mk_divide_by_80);
+const auto vec_sum = xt::vectorize(mk_sum);
+const auto vec_mk_divide_by_160 = xt::vectorize(mk_divide_by_160);
 
 
 xt::xarray<double> process_step1_single(const char* symbol, const xt::xarray<double>& a_orig, const bool training, const int timeframe, const int interval, const bool ext_hours)
@@ -598,7 +612,7 @@ void apply_candles(const char* symbol, xt::xarray<double>& o_results, const xt::
 			continue;
 		}
 		std::copy(candle_data.cbegin(), std::prev(candle_data.cend()), xt::row(o_results, pos++).begin());
-		xt::row(o_results, pos - 1) = vec_mk_divide_by_80(xt::row(o_results, pos - 1));
+		xt::row(o_results, pos - 1) = vec_mk_divide_by_160(xt::row(o_results, pos - 1));
 	}
 
 	for (auto& func : CANDLE_FUNCTIONS2)
@@ -634,7 +648,7 @@ void apply_candles(const char* symbol, xt::xarray<double>& o_results, const xt::
 			continue;
 		}
 		std::copy(candle_data.cbegin(), std::prev(candle_data.cend()), xt::row(o_results, pos++).begin());
-		xt::row(o_results, pos - 1) = vec_mk_divide_by_80(xt::row(o_results, pos - 1));
+		xt::row(o_results, pos - 1) = vec_mk_divide_by_160(xt::row(o_results, pos - 1));
 	}
 }
 
@@ -830,8 +844,8 @@ TA_RetCode add_regr(xt::xarray<double>& o_results, const unsigned int interval)
 TA_RetCode do_ta(xt::xarray<double>& o_results)
 {
 	/*
-	 * trend5, trend9, trend20, trend50, volume_buy, volume_sell, volume_percent_buy, volume_percent_sell
-	 * obv, obv_trend20, obv_trend50, adi_trend20, adi_trend50, adi_obv_ratio
+	 * trend5, trend9, trend20, trend50, volume_percent_buy, volume_percent_sell
+	 * obv_trend20, obv_trend50, adi_trend20, adi_trend50
 	 * rsi, rsi_indicator, rsi_trend20, rsi_trend50, ppo, ppo_diff, adx, adx_indicator
 	 */ 
 
@@ -843,8 +857,8 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 	const auto r_close = xt::xarray<double>(xt::row(o_results, ColPos::In::close));
 	const auto r_volume = xt::xarray<double>(xt::row(o_results, ColPos::In::volume));
 	// const auto& r_hlc3 = xt::row(o_results, ColPos::Dep::hlc3);
-	const auto& r_regr = xt::row(o_results, ColPos::Regr::regr);
-	const auto& r_stddev = xt::row(o_results, ColPos::Regr::stddev);
+	//const auto& r_regr = xt::row(o_results, ColPos::Regr::regr);
+	//const auto& r_stddev = xt::row(o_results, ColPos::Regr::stddev);
 
 	int outBegIdx = 0;
 	int outNBElement = 0;
@@ -853,10 +867,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 	xt::xarray<double> taTmp1 = xt::zeros<double>(r_high.shape());
 	xt::xarray<double> taTmp2 = xt::zeros<double>(r_high.shape());
 
-	// Simple trends (fe. slope of # of std. devs)
+	// Simple trends: trend5, trend9, trend20, trend50 // TODO slope of # of std. devs ??
 	{
 		//close_norm = 10.0 * (dfin['close'] - dfin['regr']) / dfin['stddev'];
-		taTmp1 = vec_norm_10x_n_stddevs(r_close, r_regr, r_stddev);  //close_norm
+		//taTmp1 = vec_norm_10x_n_stddevs(r_close, r_regr, r_stddev);  //close_norm
+		taTmp1 = r_close;
 		
 		std::fill(taResult.begin(), taResult.end(), NAN);
 		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 5, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(5));
@@ -895,18 +910,22 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::trend50).begin());  //:trend50
 	}
 
-	xt::row(o_results, ColPos::TA::volume_buy) = vec_volume_buy(r_high, r_low, r_close, r_volume);  //:volume_buy
-	xt::row(o_results, ColPos::TA::volume_sell) = vec_volume_sell(r_high, r_low, r_volume, xt::row(o_results, ColPos::TA::volume_buy));  //:volume_sell
-	xt::row(o_results, ColPos::TA::volume_percent_buy) = vec_volume_percent_buy(xt::row(o_results, ColPos::TA::volume_buy), xt::row(o_results, ColPos::TA::volume_sell));  //:volume_percent_buy
-	xt::row(o_results, ColPos::TA::volume_percent_sell) = vec_volume_percent_sell(xt::row(o_results, ColPos::TA::volume_buy), xt::row(o_results, ColPos::TA::volume_sell));  //:volume_percent_sell
-	//negate_row(o_results, ColPos::TA::volume_sell);  // volume_sell = -volume_sell  // Note: negated after normalization...
+	// Split volume into volume_percent_buy, volume_percent_sell
+	{
+		taTmp1 = vec_volume_buy(r_high, r_low, r_close, r_volume);  //volume_buy
+		taTmp2 = vec_volume_sell(r_high, r_low, r_volume, taTmp1);  //volume_sell
+		const auto taTmp3 = vec_sum(taTmp1, taTmp2);
+		xt::row(o_results, ColPos::TA::volume_percent_buy) = vec_volume_percent_buy(taTmp1, taTmp3);  //:volume_percent_buy
+		xt::row(o_results, ColPos::TA::volume_percent_sell) = vec_volume_percent_sell(taTmp2, taTmp3);  //:volume_percent_sell
+	}
+
 
 	/* add technical indicators(ATR, OBV, ADI, RSI, ADX, PPO) : */
 
 	// Average True Range (ATR)
 	// Note: applied in do_dep_columns
 	
-	// On Balance Volume Indicator (OBV)
+	// On Balance Volume Indicator (OBV) trends
 	{
 		std::fill(taResult.begin(), taResult.end(), NAN);
 		retCode = TA_OBV(0, n_rows, r_close.data(), r_volume.data(), &outBegIdx, &outNBElement, taResult.data() + TA_OBV_Lookback());
@@ -915,12 +934,10 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 			std::cout << "OBV error: " << retCode << std::endl;
 			return retCode;
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::obv).begin());  //:obv
+		std::copy(taResult.cbegin(), std::prev(taResult.cend()), taTmp1.begin());  // obv
 		
 		// OBV trend (20 and 50 period)
-
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), taTmp1.begin());  // obv
-
+		
 		std::fill(taResult.begin(), taResult.end(), NAN);
 		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
 		if (retCode != TA_SUCCESS)
@@ -966,7 +983,7 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 		}
 		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::adi_trend50).begin());  //:adi_trend50
 
-		xt::row(o_results, ColPos::TA::adi_obv_ratio) = vec_adi_obv_ratio(xt::row(o_results, ColPos::TA::obv), taTmp2);  //:adi_obv_ratio
+		//xt::row(o_results, ColPos::TA::adi_obv_ratio) = vec_adi_obv_ratio(xt::row(o_results, ColPos::TA::obv), taTmp2);  // adi_obv_ratio
 	}
 
 	// Relative Strength Index (RSI)
@@ -980,7 +997,7 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 		}
 		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::rsi).begin());  //:rsi
 		std::copy(taResult.cbegin(), std::prev(taResult.cend()), taTmp1.begin());  // rsi
-		xt::row(o_results, ColPos::TA::rsi_indicator) = vec_rsi_indicator(xt::row(o_results, ColPos::TA::rsi));  //:rsi_indicator
+		xt::row(o_results, ColPos::TA::rsi_indicator) = vec_rsi_indicator(taTmp1);  //:rsi_indicator
 		
 		// RSI trend (20 and 50 period)
 
@@ -1088,30 +1105,51 @@ void do_diffs(xt::xarray<double>& o_results)
 }
 
 
-const std::array<ColPos::Dep, 1> COLS_REGR_DEP_10_STDDEVS = { ColPos::Dep::atr };
-const std::array<ColPos::In, 4> COLS_REGR_IN_N_STDDEVS = { ColPos::In::open, ColPos::In::high, ColPos::In::low, ColPos::In::close };
-const std::array<ColPos::Dep, 3> COLS_REGR_DEP_SCALED_STDDEVS1 = { ColPos::Dep::past_range, ColPos::Dep::range, ColPos::Dep::atr };
-const std::array<ColPos::Diff, 1> COLS_REGR_DIFF_SCALED_STDDEVS2 = { ColPos::Diff::diff };
-const std::array<ColPos::Diff, 2> COLS_REGR_DIFF_SCALED_STDDEVS3 = { ColPos::Diff::range_t, ColPos::Diff::range_b };
+constexpr std::array<ColPos::In, 4> COLS_REGR_IN_N_STDDEVS = { ColPos::In::open, ColPos::In::high, ColPos::In::low, ColPos::In::close };
+constexpr std::array<ColPos::Dep, 1> COLS_REGR_DEP_N_STDDEVS = { ColPos::Dep::hlc3 };
+constexpr std::array<ColPos::Dep, 3> COLS_REGR_DEP_NORM_STDDEV = { ColPos::Dep::past_range, ColPos::Dep::range, ColPos::Dep::atr };
+constexpr std::array<ColPos::Diff, 3> COLS_REGR_DIFF_NORM_STDDEV = { ColPos::Diff::diff, ColPos::Diff::range_t, ColPos::Diff::range_b };
 
 void apply_regr(xt::xarray<double>& o_results, const unsigned int interval)
 {
-	//;hlc3
+	//;open, ;high, ;low, ;close
+	{
+		// normalize with vec_norm_n_stddevs and ColPos::Regr::regr/ColPos::Regr::stddev
+		const auto& r_regr = xt::row(o_results, ColPos::Regr::regr);
+		const auto& r_stddev = xt::row(o_results, ColPos::Regr::stddev);
+		
+		for (const ColPos::In k : COLS_REGR_IN_N_STDDEVS)
+			xt::row(o_results, k) = vec_norm_n_stddevs(xt::row(o_results, k), r_regr, r_stddev);
+	}
+
+	// TODO 'bid_high', 'bid_low', 'ask_high', 'ask_low', 'bid', 'ask'
+	// TODO Note: 'bid_high', 'bid_low', 'ask_high', 'ask_low'
+
+	/* //;close_next_norm  // TODO remove?
+	{
+		// TODO remove?
+		// close_next_norm should be the shifted close value
+		xt::row(o_results, ColPos::Norm::close_next_norm) = xt::roll(xt::row(o_results, ColPos::In::close), 1);  //:close_next_norm // TODO roll direction? TODO verify compile warning...
+	}*/
+	
+	//;hlc3, ;atr, ;past_range, ;range, ;diff, ;range_t, ;range_b
 	{
 		const int n_rows = static_cast<int>(o_results.shape().at(1));
+
+		constexpr int regrPeriod = INTERVAL_REGR_WINDOW;  // INTERVAL_REGR_WINDOWS.at(interval);
 
 		// copy rows for TALib
 		const auto r_hlc3 = xt::xarray<double>(xt::row(o_results, ColPos::Dep::hlc3));
 
-		const int regrPeriod = INTERVAL_REGR_WINDOW;  // INTERVAL_REGR_WINDOWS.at(interval);
-
+		// first calculate hlc3regr and hlc3stddev:
+		xt::xarray<double> hlc3regr = xt::zeros<double>(r_hlc3.shape());
+		xt::xarray<double> hlc3stddev = xt::zeros<double>(r_hlc3.shape());
+		
 		int outBegIdx = 0;
 		int outNBElement = 0;
 		TA_RetCode retCode;
 		bool hlc3ok = true;
 		std::vector<double> taResult(n_rows + 1);
-		xt::xarray<double> hlc3regr = xt::zeros<double>(r_hlc3.shape());
-		xt::xarray<double> hlc3stddev = xt::zeros<double>(r_hlc3.shape());
 
 		// Linear regression (hlc3)
 		{
@@ -1143,73 +1181,66 @@ void apply_regr(xt::xarray<double>& o_results, const unsigned int interval)
 				std::copy(taResult.cbegin(), std::prev(taResult.cend()), hlc3stddev.begin());
 			}
 		}
-		if (hlc3ok)
-			xt::row(o_results, ColPos::Dep::hlc3) = vec_norm_n_stddevs(xt::row(o_results, ColPos::Dep::hlc3), hlc3regr, hlc3stddev);
-		else
+		if (!hlc3ok)
+		{
 			std::cout << "Unable to normalize hlc3." << std::endl;
+		}
+		else
+		{
+			//;hlc3
+			for (const ColPos::Dep k : COLS_REGR_DEP_N_STDDEVS)
+				xt::row(o_results, k) = vec_norm_n_stddevs(xt::row(o_results, k), hlc3regr, hlc3stddev);
+
+			//;atr, ;past_range, ;range
+			for (const ColPos::Dep k : COLS_REGR_DEP_NORM_STDDEV)
+				xt::row(o_results, k) = vec_norm_stddevs(xt::row(o_results, k), hlc3stddev);
+
+			/* transform diff / range features */
+			//;diff, ;range_t, ;range_b
+			for (const ColPos::Diff k : COLS_REGR_DIFF_NORM_STDDEV)
+				xt::row(o_results, k) = vec_norm_stddevs(xt::row(o_results, k), hlc3stddev);
+		}
 	}
-
-	const auto& r_regr = xt::row(o_results, ColPos::Regr::regr);
-	const auto& r_stddev = xt::row(o_results, ColPos::Regr::stddev);
-
-	//;atr
-	for (const ColPos::Dep k : COLS_REGR_DEP_10_STDDEVS)
-		xt::row(o_results, k) = vec_norm_stddevs(xt::row(o_results, k), r_stddev);
-
-	// TODO Note: 'bid_high', 'bid_low', 'ask_high', 'ask_low'
-	
-	//;hlc3, ;open, ;high, ;low, ;close
-	for (const ColPos::In k : COLS_REGR_IN_N_STDDEVS)
-		xt::row(o_results, k) = vec_norm_n_stddevs(xt::row(o_results, k), r_regr, r_stddev);
-
-	// close_next_norm should be the shifted close value
-	xt::row(o_results, ColPos::Norm::close_next_norm) = xt::roll(xt::row(o_results, ColPos::In::close), 1);  //:close_next_norm // TODO roll direction? TODO verify compile warning...
-
-	/* transform diff / range features */
-
-	//;past_range, ;range
-	for (const ColPos::Dep k : COLS_REGR_DEP_SCALED_STDDEVS1)
-		xt::row(o_results, k) = vec_norm_stddevs(xt::row(o_results, k), r_stddev);  //vec_norm_scaled_stddevs1
-
-	//;diff
-	for (const ColPos::Diff k : COLS_REGR_DIFF_SCALED_STDDEVS2)
-		xt::row(o_results, k) = vec_norm_stddevs(xt::row(o_results, k), r_stddev);  //vec_norm_scaled_stddevs2
-
-	//;range_t, ;range_b
-	for (const ColPos::Diff k : COLS_REGR_DIFF_SCALED_STDDEVS3)
-		xt::row(o_results, k) = vec_norm_stddevs(xt::row(o_results, k), r_stddev);  //vec_norm_scaled_stddevs3
 
 }
 
 
-const std::array<ColPos::TA, 1> COLS_NORM_TA_SCALE_DIV_100 = { ColPos::TA::adx };
-const std::array<ColPos::TA, 2> COLS_NORM_TA_SCALE_DIV_10 = { ColPos::TA::ppo, ColPos::TA::ppo_diff };
-const std::array<ColPos::TA, 2> COLS_NORM_TA_SCALE_DIV_BIG = { ColPos::TA::adi_trend20, ColPos::TA::adi_trend50 };
+constexpr std::array<ColPos::TA, 1> COLS_NORM_TA_SCALE_DIV_100 = { ColPos::TA::adx };
+constexpr std::array<ColPos::TA, 2> COLS_NORM_TA_SCALE_DIV_10 = { ColPos::TA::ppo, ColPos::TA::ppo_diff };
+constexpr std::array<ColPos::TA, 4> COLS_NORM_TA_SCALE_AS_VOL = { ColPos::TA::obv_trend20, ColPos::TA::obv_trend50, ColPos::TA::adi_trend20, ColPos::TA::adi_trend50 };
 
 void do_norm(xt::xarray<double>& o_results, const unsigned int interval)
 {
+	// Normalize volume related fields across timeperiods  // TODO don't do this???
+	double adj_vol_divider = 
+		interval < 1440 ? interval
+		: interval == 1440 ? 390
+		: 1950;
+
 	/* Apply normalization that relies on actual close price */
 
 	const auto& r_close = xt::row(o_results, ColPos::In::close);
+	const auto& r_hlc3 = xt::row(o_results, ColPos::Dep::hlc3);
 
 	// keep close, with ln applied, allows model to handle price differences
-	xt::row(o_results, ColPos::Norm::close_ln) = vec_xfrm_ln_div_10(r_close);  //:close_ln
+	xt::row(o_results, ColPos::Norm::close_ln) = vec_xfrm_ln(r_close);  //:close_ln
 
-	const auto& r_close_ln = xt::row(o_results, ColPos::Norm::close_ln);
-
+	// calculate hlc3_ln, for volume normalization
+	const auto hlc3_ln = vec_xfrm_ln(r_hlc3);
+	
 	// add volume(normalized with asset price), squared to increase focus on large volume candles
 	//;volume, ;volume_buy, ;volume_sell
-	xt::row(o_results, ColPos::In::volume) = vec_scale_vol(r_close_ln, xt::row(o_results, ColPos::In::volume));
-	xt::row(o_results, ColPos::TA::volume_buy) = vec_scale_vol(r_close_ln, xt::row(o_results, ColPos::TA::volume_buy));
-	xt::row(o_results, ColPos::TA::volume_sell) = vec_scale_vol(r_close_ln, xt::row(o_results, ColPos::TA::volume_sell));
-	negate_row(o_results, ColPos::TA::volume_sell);  // volume_sell = -volume_sell
+	xt::row(o_results, ColPos::In::volume) = vec_scale_vol(hlc3_ln, xt::row(o_results, ColPos::In::volume), adj_vol_divider);
+	//xt::row(o_results, ColPos::TA::volume_buy) = vec_scale_vol(r_close_ln, xt::row(o_results, ColPos::TA::volume_buy), adj_vol_divider);
+	//xt::row(o_results, ColPos::TA::volume_sell) = vec_scale_vol(r_close_ln, xt::row(o_results, ColPos::TA::volume_sell), adj_vol_divider);
+	//negate_row(o_results, ColPos::TA::volume_sell);  // volume_sell = -volume_sell
 
-	// normalize OBV similar as volume
-	//;obv, ;obv_trend20, ;obv_trend50
-	xt::row(o_results, ColPos::TA::obv) = vec_scale_obv(xt::row(o_results, ColPos::TA::obv));
-	xt::row(o_results, ColPos::TA::obv_trend20) = vec_scale_obv_trend(xt::row(o_results, ColPos::TA::obv_trend20));
-	xt::row(o_results, ColPos::TA::obv_trend50) = vec_scale_obv_trend(xt::row(o_results, ColPos::TA::obv_trend50));
+	// normalize OBV/ADI similar as volume
+	//;obv_trend20, ;obv_trend50, ;adi_trend20, ;adi_trend50
+	for (const ColPos::TA k : COLS_NORM_TA_SCALE_AS_VOL)
+		xt::row(o_results, k) = vec_scale_obv_trend(xt::row(o_results, k), adj_vol_divider);
 
+	// TODO bid/ask/etc.
 	// for bids / asks, use difference between open and bids / asks
 	// for k in['bid_high', 'bid_low']:
 	//     dfin[k] = dfin[k] - dfin['open']
@@ -1218,7 +1249,7 @@ void do_norm(xt::xarray<double>& o_results, const unsigned int interval)
 
 	/* Apply regression */
 
-	apply_regr(o_results, interval);  //:close_next_norm  // ~+1 cols, updates 11
+	apply_regr(o_results, interval);  // ~+0 cols, updates 11  // TODO //:close_next_norm  // ~+1 cols, updates 11
 
 	/* Normalize remaining fields */
 	// scale rsi to - 1 - 1
@@ -1232,11 +1263,7 @@ void do_norm(xt::xarray<double>& o_results, const unsigned int interval)
 	//;ppo, ;ppo_diff
 	for (const ColPos::TA k : COLS_NORM_TA_SCALE_DIV_10)
 		xt::row(o_results, k) = vec_scale_div_10(xt::row(o_results, k));
-
-	//;adi_trend20, ;adi_trend50
-	for (const ColPos::TA k : COLS_NORM_TA_SCALE_DIV_BIG)
-		xt::row(o_results, k) = vec_scale_obv_trend(xt::row(o_results, k));
-
+	
 	//// log normalize these inputs
 	////cols2 = []
 }

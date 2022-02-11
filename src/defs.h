@@ -8,8 +8,8 @@
 
 
 // TODO move into core.h?
-constexpr int NUM_COLUMNS = 101;
-constexpr int NUM_TIMESTEMPS = 17;  // 73;  //33  //27
+constexpr int NUM_COLUMNS = 101;  // TODO 94, 94+1?
+constexpr int NUM_TIMESTEMPS = 17;  // 73;  //33  //27  // LEN_DEPTH
 constexpr int NUM_INTERVALS = 7;
 
 // TODO place elsewhere ?
@@ -17,7 +17,7 @@ constexpr unsigned int NUM_QUOTES = 15000;
 constexpr unsigned int NUM_TRADES = 15000;
 
 
-static const int TIMEFRAME = 10080;
+static const int TIMEFRAME = 1;
 
 [[clang::no_destroy]]
 static const std::map<const char*, const int> INTERVAL_MAP = {
