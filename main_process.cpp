@@ -1,12 +1,5 @@
 #define NOMINMAX
 
-#include <tensorflow/cc/saved_model/loader.h>
-#include <tensorflow/cc/saved_model/tag_constants.h>
-#include <tensorflow/core/public/session_options.h>
-#include <tensorflow/core/framework/tensor.h>
-#include <tensorflow/core/lib/io/path.h>
-// #include <tensorflow/cc/ops/array_ops.h>
-
 #include <xtensor/xio.hpp>
 #include <xtensor/xarray.hpp>
 #include <xtensor/xnpy.hpp>
@@ -132,9 +125,12 @@ int main(int argc, char* argv[])
     xt::xarray<double> input = load_npy_src(npy_file);
 
     dfs_map_t dfs = { {TIMEFRAME, input} };
+    const std::map<const char*, const int> interval_map = {
+        {"1min", 1}
+    };
 
     //yar1(input);
-    process_step1("APPL", dfs, TIMEFRAME, false, INTERVAL_MAP);
+    process_step1("APPL", dfs, TIMEFRAME, false, interval_map);
 
 
     retCode = TA_Shutdown();

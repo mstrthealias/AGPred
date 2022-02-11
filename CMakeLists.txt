@@ -87,46 +87,61 @@ FetchContent_MakeAvailable(cpr)
 # TODO could use FetchContent for xtensor, dlfcn-win32, nlohmann_json, pybind11, etc.
 
 
-### agpred executable ###
+### agpred_process executable ###
 
-add_executable(agpred main.cpp "main_pred.cpp" "src/common.cpp" "src/preprocess.cpp" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp" "src/util.cpp"
+add_executable(agpred_process "main_process.cpp" "src/common.cpp" "src/preprocess.cpp" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp" "src/util.cpp"
 	"core/core.cpp" "core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp" "adapters/polygon_io.cpp"
 	)
 
-target_include_directories(agpred PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/share/OpenSSL-Win64-1.1.1l/include ${cpr_INCLUDE_DIRS} C:/src/tensorflow/bazel-bin/tensorflow/include)
+target_include_directories(agpred_process PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/share/OpenSSL-Win64-1.1.1l/include ${cpr_INCLUDE_DIRS})
+# C:/src/tensorflow/bazel-bin/tensorflow/include
 
 # TensorflowCC::TensorflowCC
-target_link_libraries(agpred PRIVATE cpr::cpr C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libssl64MD.lib C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libcrypto64MD.lib PUBLIC xtensor dlfcn-win32::dl C:/src/tensorflow/bazel-bin/tensorflow/libtensorflow_cc.so.2.5.2.if.lib C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib)
+target_link_libraries(agpred_process PRIVATE cpr::cpr C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libssl64MD.lib C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libcrypto64MD.lib PUBLIC xtensor dlfcn-win32::dl C:/src/tensorflow/bazel-bin/tensorflow/libtensorflow_cc.so.2.5.2.if.lib C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib)
 #  OpenSSL::applink OpenSSL::Crypto OpenSSL::SSL  CURL::libcurl    OpenSSL::applink
 #  C:/share/cpr/lib/cpr.lib   date::date-tz 
 # TensorflowCC::TensorflowCC
-# target_link_libraries(agpred PUBLIC xtensor dlfcn-win32::dl C:/src/tensorflow/bazel-bin/tensorflow/libtensorflow_cc.so.2.5.2.if.lib OpenSSL::applink OpenSSL::Crypto OpenSSL::SSL C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib)
+# target_link_libraries(agpred_process PUBLIC xtensor dlfcn-win32::dl C:/src/tensorflow/bazel-bin/tensorflow/libtensorflow_cc.so.2.5.2.if.lib OpenSSL::applink OpenSSL::Crypto OpenSSL::SSL C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib)
 
 
 
 ### Copy package assets into build dir ###
-add_custom_command(TARGET agpred POST_BUILD        # Adds a post-build event to agpred
+add_custom_command(TARGET agpred_process POST_BUILD        # Adds a post-build event to agpred_process
     COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
         "${cpr_BINARY_DIR}/cpr/cpr.dll"
-        $<TARGET_FILE_DIR:agpred>)
-#add_custom_command(TARGET agpred POST_BUILD        # Adds a post-build event to agpred
+        $<TARGET_FILE_DIR:agpred_process>)
+#add_custom_command(TARGET agpred_process POST_BUILD        # Adds a post-build event to agpred_process
 #    COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
 #        "${cpr_BINARY_DIR}/cpr/cpr.lib"
-#        $<TARGET_FILE_DIR:agpred>)
-add_custom_command(TARGET agpred POST_BUILD        # Adds a post-build event to agpred
+#        $<TARGET_FILE_DIR:agpred_process>)
+add_custom_command(TARGET agpred_process POST_BUILD        # Adds a post-build event to agpred_process
     COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
         "${CURL_BINARY_DIR}/lib/libcurl.dll"
-        $<TARGET_FILE_DIR:agpred>)
-add_custom_command(TARGET agpred POST_BUILD        # Adds a post-build event to agpred
+        $<TARGET_FILE_DIR:agpred_process>)
+add_custom_command(TARGET agpred_process POST_BUILD        # Adds a post-build event to agpred_process
     COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
         "${zlib_BINARY_DIR}/zlib.dll"
-        $<TARGET_FILE_DIR:agpred>)
-#add_custom_command(TARGET agpred POST_BUILD        # Adds a post-build event to agpred
+        $<TARGET_FILE_DIR:agpred_process>)
+#add_custom_command(TARGET agpred_process POST_BUILD        # Adds a post-build event to agpred_process
 #    COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
 #        "${zlib_BINARY_DIR}/zlib.lib"
-#        $<TARGET_FILE_DIR:agpred>)
+#        $<TARGET_FILE_DIR:agpred_process>)
 # TODO libcrypto-1_1-x64.dll libssl-1_1-x64.dll cacert.pem
 # TODO dl.lib ?
+
+
+
+### agpred_pred executable ###
+
+add_executable(agpred_pred "main_pred.cpp" "src/common.cpp" "src/preprocess.cpp" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp" "src/util.cpp"
+	"core/core.cpp" "core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp" "adapters/polygon_io.cpp"
+	)
+
+target_include_directories(agpred_pred PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/share/OpenSSL-Win64-1.1.1l/include ${cpr_INCLUDE_DIRS} C:/src/tensorflow/bazel-bin/tensorflow/include)
+
+# TensorflowCC::TensorflowCC
+target_link_libraries(agpred_pred PRIVATE cpr::cpr C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libssl64MD.lib C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libcrypto64MD.lib PUBLIC xtensor dlfcn-win32::dl C:/src/tensorflow/bazel-bin/tensorflow/libtensorflow_cc.so.2.5.2.if.lib C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib)
+
 
 
 ### agpred_sys executable ###

@@ -85,7 +85,8 @@ std::string _input_name = "features";
 std::string _output_name = "profit3";
 
 
-int main_pred() {
+int main(int argc, char* argv[])
+{
     // test_tf();
 
     // This is passed into LoadSavedModel to be populated.
