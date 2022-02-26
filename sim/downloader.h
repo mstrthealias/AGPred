@@ -10,12 +10,15 @@
 namespace agpred {
 
 
-	void onUpdateDl(const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades);
+	void onUpdateDl(const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades, const xtensor_outputs_interval& outputs);
 
 
 	class Downloader final {
 	public:
-		Downloader() = default;
+		Downloader(const std::string& file_prefix) 
+			: file_prefix_(file_prefix)
+		{
+		}
 
 		void onSnapshot(const Symbol& symbol, const Snapshot& snapshot)
 		{
@@ -23,13 +26,18 @@ namespace agpred {
 			
 		}
 
-		void onUpdate(const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades)
-		{
-			onUpdateDl(symbol, snapshot, data, data_processed, quotes, trades);
+		void onUpdate(const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades, const xtensor_outputs_interval& outputs);
+		void onSimComplete(const Symbol& symbol);
+
+	private:
+
+		void do_flush(const Symbol& symbol);
 
 
-		}
+		std::string file_prefix_;
 
+		size_t cur_pos_ = 0;
+		size_t cur_stage_ = 0;
 	};
 
 
