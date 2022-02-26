@@ -5,6 +5,9 @@
 #include <array>
 #include <execution>
 
+#include <xtensor/xio.hpp>
+#include <xtensor/xvectorize.hpp>
+
 #include "../src/common.h" 
 #include "core.h"
 
@@ -12,10 +15,14 @@
 constexpr bool DEBUG_RING = false;
 
 
+static const agpred::xtensor_quotes zeros_quotes = xt::zeros<double>(agpred::shape_quotes_t());
+static const agpred::xtensor_trades zeros_trades = xt::zeros<double>(agpred::shape_trades_t());
+
+
 /**
  * quotes_ring implements a circular buffer with a queue-like interface for QuoteData
  */
-template <size_t _Size = 15000, typename _Ttime = timestamp_t, typename _Treal = double, typename _Tsize = uint32_t>
+template <size_t _Size = 15000, typename _Ttime = double, typename _Treal = double, typename _Tsize = double, class _Tcond = double>
 class quotes_ring
 {
 public:
@@ -79,14 +86,14 @@ public:
 				std::cout << "push() full start->end " << prev_start << "->" << prev_end << " TO " << start_ << "->" << end_ << std::endl;
         }
 
-        timestamp_[end_] = _Val.quote.timestamp;
-        bid_[end_] = _Val.quote.bid;
-        ask_[end_] = _Val.quote.ask;
-        bid_size_[end_] = _Val.quote.bid_size;
-        ask_size_[end_] = _Val.quote.ask_size;
-        cond1_[end_] = _Val.cond[0];
-        cond2_[end_] = _Val.cond[1];
-        cond3_[end_] = _Val.cond[2];
+        timestamp_[end_] = static_cast<_Ttime>(static_cast<double>(_Val.quote.timestamp) / 1000.0);
+        bid_[end_] = static_cast<_Treal>(_Val.quote.bid);
+        ask_[end_] = static_cast<_Treal>(_Val.quote.ask);
+        bid_size_[end_] = static_cast<_Tsize>(_Val.quote.bid_size);
+        ask_size_[end_] = static_cast<_Tsize>(_Val.quote.ask_size);
+        cond1_[end_] = static_cast<_Tcond>(static_cast<int32_t>(_Val.cond[0]));
+        cond2_[end_] = static_cast<_Tcond>(static_cast<int32_t>(_Val.cond[1]));
+        cond3_[end_] = static_cast<_Tcond>(static_cast<int32_t>(_Val.cond[2]));
 
         ++end_;
 
@@ -139,14 +146,16 @@ public:
 
         return {
             {
-	            timestamp_[start_],
-                bid_[start_],
-                ask_[start_],
-	            bid_size_[start_],
-	            ask_size_[start_]
+                static_cast<timestamp_t>(timestamp_[start_]),
+                static_cast<double>(bid_[start_]),
+                static_cast<double>(ask_[start_]),
+                static_cast<uint32_t>(bid_size_[start_]),
+                static_cast<uint32_t>(ask_size_[start_])
             },
-            { cond1_[start_], cond2_[start_], cond3_[start_]}
-        };
+            {
+                static_cast<QuoteCondition>(static_cast<int32_t>(cond1_[start_])),
+                static_cast<QuoteCondition>(static_cast<int32_t>(cond2_[start_])),
+                static_cast<QuoteCondition>(static_cast<int32_t>(cond3_[start_])) } };
     }
     
     _NODISCARD agpred::QuoteData back() {  // strengthened  TODO noexcept?
@@ -156,19 +165,97 @@ public:
         const auto pos = end_ - 1;
         return {
             {
-                timestamp_[pos],
-                bid_[pos],
-                ask_[pos],
-                bid_size_[pos],
-                ask_size_[pos]
+                static_cast<timestamp_t>(timestamp_[pos]),
+                static_cast<double>(bid_[pos]),
+                static_cast<double>(ask_[pos]),
+                static_cast<uint32_t>(bid_size_[pos]),
+                static_cast<uint32_t>(ask_size_[pos])
             },
-            { cond1_[pos], cond2_[pos], cond3_[pos]}
-        };
+            {
+                static_cast<QuoteCondition>(static_cast<int32_t>(cond1_[pos])),
+                static_cast<QuoteCondition>(static_cast<int32_t>(cond2_[pos])),
+                static_cast<QuoteCondition>(static_cast<int32_t>(cond3_[pos])) } };
     }
+
+    // _NODISCARD _CONSTEXPR17 const_iterator begin() const noexcept {
+    //     return const_iterator(timestamp_, bid_, ask_, bid_size_, ask_size_, start_, 0);
+    // }
+    //
+    // _NODISCARD _CONSTEXPR17 const_iterator end() const noexcept {
+    //     return const_iterator(timestamp_, bid_, ask_, bid_size_, ask_size_, start_, end_);
+    // }
+    //
+    // _NODISCARD _CONSTEXPR17 const_reverse_iterator rbegin() const noexcept {
+    //     return const_reverse_iterator(end());
+    // }
+    //
+    // _NODISCARD _CONSTEXPR17 const_reverse_iterator rend() const noexcept {
+    //     return const_reverse_iterator(begin());
+    // }
+    //
+    // _NODISCARD _CONSTEXPR17 const_iterator cbegin() const noexcept {
+    //     return begin();
+    // }
+    //
+    // _NODISCARD _CONSTEXPR17 const_iterator cend() const noexcept {
+    //     return end();
+    // }
+    //
+    // _NODISCARD _CONSTEXPR17 const_reverse_iterator crbegin() const noexcept {
+    //     return rbegin();
+    // }
+    //
+    // _NODISCARD _CONSTEXPR17 const_reverse_iterator crend() const noexcept {
+    //     return rend();
+    // }
 
     /*void swap(queue& _Right) noexcept(_Is_nothrow_swappable<_Container>::value) {
         _Swap_adl(c, _Right.c);
     }*/
+
+    void toTensor(agpred::xtensor_quotes& quotes) const
+    {
+        // // TODO test an iterator with this...
+        // size_t i = 0;
+        // for (const agpred::QuoteData& quote : *this)
+        // {
+        //     quotes(i, 0) = static_cast<double>(quote.quote.timestamp / 1000);
+        //     quotes(i, 1) = quote.quote.bid;
+        //     quotes(i, 2) = quote.quote.ask;
+        //     quotes(i, 3) = static_cast<double>(quote.quote.bid_size);
+        //     quotes(i, 4) = static_cast<double>(quote.quote.ask_size);
+        //     quotes(i, 5) = static_cast<double>(static_cast<int32_t>(quote.cond[0]));
+        //     quotes(i, 6) = static_cast<double>(static_cast<int32_t>(quote.cond[1]));
+        //     quotes(i, 7) = static_cast<double>(static_cast<int32_t>(quote.cond[2]));
+        //     ++i;
+        // }
+
+        if (static_cast<int64_t>(end_) - static_cast<int64_t>(start_) < static_cast<int64_t>(NUM_QUOTES)) {
+            // zero entire quotes array if end_ - start_ < NUM_QUOTES?
+            std::copy(zeros_quotes.cbegin(), zeros_quotes.cend(), quotes.begin());
+        }
+
+        auto timestamp = xt::view(quotes, xt::all(), 0);
+        auto bid = xt::view(quotes, xt::all(), 1);
+        auto ask = xt::view(quotes, xt::all(), 2);
+        auto bid_size = xt::view(quotes, xt::all(), 3);
+        auto ask_size = xt::view(quotes, xt::all(), 4);
+        auto cond1 = xt::view(quotes, xt::all(), 5);
+        auto cond2 = xt::view(quotes, xt::all(), 6);
+        auto cond3 = xt::view(quotes, xt::all(), 7);
+
+        std::copy(timestamp_.cbegin() + start_, timestamp_.cbegin() + end_, timestamp.begin());
+        std::copy(bid_.cbegin() + start_, bid_.cbegin() + end_, bid.begin());
+        std::copy(ask_.cbegin() + start_, ask_.cbegin() + end_, ask.begin());
+        std::copy(bid_size_.cbegin() + start_, bid_size_.cbegin() + end_, bid_size.begin());
+        std::copy(ask_size_.cbegin() + start_, ask_size_.cbegin() + end_, ask_size.begin());
+        std::copy(cond1_.cbegin() + start_, cond1_.cbegin() + end_, cond1.begin());
+        std::copy(cond2_.cbegin() + start_, cond2_.cbegin() + end_, cond2.begin());
+        std::copy(cond3_.cbegin() + start_, cond3_.cbegin() + end_, cond3.begin());
+
+        //std::cout << "toTensor: quotes=" << std::endl << quotes << std::endl;
+        //std::cout << "toTensor: quotes.shape=" << std::endl << quotes.shape() << std::endl;
+    }
 
 private:
     size_t start_ = 0;  // inclusive start
@@ -179,16 +266,16 @@ private:
     std::array<_Treal, 2 * _Size> ask_ = {};
     std::array<_Tsize, 2 * _Size> bid_size_ = {};
     std::array<_Tsize, 2 * _Size> ask_size_ = {};
-    std::array<QuoteCondition, 2 * _Size> cond1_ = {};
-    std::array<QuoteCondition, 2 * _Size> cond2_ = {};
-    std::array<QuoteCondition, 2 * _Size> cond3_ = {};
+    std::array<_Tcond, 2 * _Size> cond1_ = {};
+    std::array<_Tcond, 2 * _Size> cond2_ = {};
+    std::array<_Tcond, 2 * _Size> cond3_ = {};
 };
 
 
 /**
  * trades_ring implements a circular buffer with a queue-like interface for TradeData
  */
-template <size_t _Size = 15000, typename _Ttime = timestamp_t, typename _Treal = double, typename _Tsize = uint32_t>
+template <size_t _Size = 15000, typename _Ttime = double, typename _Treal = double, typename _Tsize = double, class _Tcond = double>
 class trades_ring
 {
 public:
@@ -197,6 +284,9 @@ public:
 
     const size_t max_size = _Size;
     const size_t max_internal_size = 2 * _Size;
+
+    // using const_iterator = ring_const_iterator<value_type, _Ttime, _Treal, _Tsize, _Size>;
+    // using const_reverse_iterator = _STD reverse_iterator<const_iterator>;
 
 
     _NODISCARD bool empty() const noexcept {  // strengthened
@@ -250,12 +340,12 @@ public:
                 std::cout << "push() full start->end " << prev_start << "->" << prev_end << " TO " << start_ << "->" << end_ << std::endl;
         }
 
-        timestamp_[end_] = _Val.trade.timestamp;
-        price_[end_] = _Val.trade.price;
-        size_[end_] = _Val.trade.size;
-        cond1_[end_] = _Val.cond[0];
-        cond2_[end_] = _Val.cond[1];
-        cond3_[end_] = _Val.cond[2];
+        timestamp_[end_] = static_cast<_Ttime>(static_cast<double>(_Val.trade.timestamp) / 1000.0);
+        price_[end_] = static_cast<_Treal>(_Val.trade.price);
+        size_[end_] = static_cast<_Tsize>(_Val.trade.size);
+        cond1_[end_] = static_cast<_Tcond>(static_cast<uint32_t>(_Val.cond[0]));
+        cond2_[end_] = static_cast<_Tcond>(static_cast<uint32_t>(_Val.cond[1]));
+        cond3_[end_] = static_cast<_Tcond>(static_cast<uint32_t>(_Val.cond[2]));
 
         ++end_;
 
@@ -308,12 +398,13 @@ public:
 
         return {
             {
-                timestamp_[start_],
-                price_[start_],
-                size_[start_]
+                static_cast<timestamp_t>(timestamp_[start_]),
+                static_cast<double>(price_[start_]),
+                static_cast<uint32_t>(size_[start_])
             },
-            { cond1_[start_], cond2_[start_], cond3_[start_]}
-        };
+            { static_cast<TradeCondition>(static_cast<uint32_t>(cond1_[start_])),
+                static_cast<TradeCondition>(static_cast<uint32_t>(cond2_[start_])),
+                static_cast<TradeCondition>(static_cast<uint32_t>(cond3_[start_])) } };
     }
 
     _NODISCARD agpred::TradeData back() {  // strengthened  TODO noexcept?
@@ -323,17 +414,75 @@ public:
         const auto pos = end_ - 1;
         return {
             {
-                timestamp_[pos],
-                price_[pos],
-                size_[pos]
+                static_cast<timestamp_t>(timestamp_[pos]),
+                static_cast<double>(price_[pos]),
+                static_cast<uint32_t>(size_[pos])
             },
-            { cond1_[pos], cond2_[pos], cond3_[pos]}
-        };
+            { static_cast<TradeCondition>(static_cast<uint32_t>(cond1_[pos])),
+                static_cast<TradeCondition>(static_cast<uint32_t>(cond2_[pos])),
+                static_cast<TradeCondition>(static_cast<uint32_t>(cond3_[pos])) } };
     }
+
+    // _NODISCARD _CONSTEXPR17 const_iterator begin() const noexcept {
+    //     return const_iterator(timestamp_, price_, size_, start_, 0);
+    // }
+    //
+    // _NODISCARD _CONSTEXPR17 const_iterator end() const noexcept {
+    //     return const_iterator(timestamp_, price_, size_, start_, end_);
+    // }
+    //
+    // _NODISCARD _CONSTEXPR17 const_reverse_iterator rbegin() const noexcept {
+    //     return const_reverse_iterator(end());
+    // }
+    //
+    // _NODISCARD _CONSTEXPR17 const_reverse_iterator rend() const noexcept {
+    //     return const_reverse_iterator(begin());
+    // }
+    //
+    // _NODISCARD _CONSTEXPR17 const_iterator cbegin() const noexcept {
+    //     return begin();
+    // }
+    //
+    // _NODISCARD _CONSTEXPR17 const_iterator cend() const noexcept {
+    //     return end();
+    // }
+    //
+    // _NODISCARD _CONSTEXPR17 const_reverse_iterator crbegin() const noexcept {
+    //     return rbegin();
+    // }
+    //
+    // _NODISCARD _CONSTEXPR17 const_reverse_iterator crend() const noexcept {
+    //     return rend();
+    // }
 
     /*void swap(queue& _Right) noexcept(_Is_nothrow_swappable<_Container>::value) {
         _Swap_adl(c, _Right.c);
     }*/
+
+    void toTensor(agpred::xtensor_trades& trades) const
+    {
+        if (static_cast<int64_t>(end_) - static_cast<int64_t>(start_) < static_cast<int64_t>(NUM_QUOTES)) {
+            // zero entire trades array if end_ - start_ < NUM_TRADES?
+            std::copy(zeros_trades.cbegin(), zeros_trades.cend(), trades.begin());
+        }
+
+        auto timestamp = xt::view(trades, xt::all(), 0);
+        auto price = xt::view(trades, xt::all(), 1);
+        auto size = xt::view(trades, xt::all(), 2);
+        auto cond1 = xt::view(trades, xt::all(), 3);
+        auto cond2 = xt::view(trades, xt::all(), 4);
+        auto cond3 = xt::view(trades, xt::all(), 5);
+
+        std::copy(timestamp_.cbegin() + start_, timestamp_.cbegin() + end_, timestamp.begin());
+        std::copy(price_.cbegin() + start_, price_.cbegin() + end_, price.begin());
+        std::copy(size_.cbegin() + start_, size_.cbegin() + end_, size.begin());
+        std::copy(cond1_.cbegin() + start_, cond1_.cbegin() + end_, cond1.begin());
+        std::copy(cond2_.cbegin() + start_, cond2_.cbegin() + end_, cond2.begin());
+        std::copy(cond3_.cbegin() + start_, cond3_.cbegin() + end_, cond3.begin());
+
+        //std::cout << "toTensor: trades=" << std::endl << trades << std::endl;
+        //std::cout << "toTensor: trades.shape=" << std::endl << trades.shape() << std::endl;
+    }
 
 private:
     size_t start_ = 0;  // inclusive start
@@ -342,15 +491,17 @@ private:
     std::array<_Ttime, 2 * _Size> timestamp_ = {};
     std::array<_Treal, 2 * _Size> price_ = {};
     std::array<_Tsize, 2 * _Size> size_ = {};
-    std::array<TradeCondition, 2 * _Size> cond1_ = {};
-    std::array<TradeCondition, 2 * _Size> cond2_ = {};
-    std::array<TradeCondition, 2 * _Size> cond3_ = {};
+    std::array<_Tcond, 2 * _Size> cond1_ = {};
+    std::array<_Tcond, 2 * _Size> cond2_ = {};
+    std::array<_Tcond, 2 * _Size> cond3_ = {};
 };
 
 
 // TODO consolidate?
-using quotes_queue = quotes_ring<NUM_QUOTES, timestamp_t, double, uint32_t>;
-using trades_queue = trades_ring<NUM_TRADES, timestamp_t, double, uint32_t>;
+using quotes_queue = quotes_ring<NUM_QUOTES, double, double, double, double>;
+using trades_queue = trades_ring<NUM_TRADES, double, double, double, double>;
+//using quotes_queue = quotes_ring<NUM_QUOTES, timestamp_t, double, uint32_t>;
+//using trades_queue = trades_ring<NUM_TRADES, timestamp_t, double, uint32_t>;
 
 
 /*

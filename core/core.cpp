@@ -21,6 +21,11 @@ bool Symbol::operator== (const Symbol& b) const
 	return symbol == b.symbol;
 }
 
+bool Symbol::operator!= (const Symbol& b) const
+{
+	return !(*this == b);
+}
+
 
 /*std::ostream& agpred::operator<< (std::ostream& out, const QuoteData& quote)
 {

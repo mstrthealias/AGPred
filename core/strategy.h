@@ -5,6 +5,7 @@
 
 #include "core.h"
 #include "position.h"
+#include "ring_buffers.h"
 
 
 namespace agpred {
@@ -17,7 +18,7 @@ namespace agpred {
 		}
 		virtual ~AlgoBase() = default;
 
-		virtual bool operator() (const Snapshot& snapshot, const xtensor_raw& raw, const xtensor_processed& processed) const = 0;
+		virtual bool operator() (const Snapshot& snapshot, const xtensor_raw& raw, const xtensor_processed& processed, const quotes_queue& quotes, const trades_queue& trades) const = 0;
 
 		[[nodiscard]] const std::string& name() const
 		{
@@ -63,7 +64,7 @@ namespace agpred {
 		}
 		virtual ~ExitBase() = default;
 
-		virtual agpred::ExitData operator() (const Symbol& symbol, const Snapshot& snapshot) const = 0;
+		virtual agpred::ExitData operator() (const Position& position, const Symbol& symbol, const Snapshot& snapshot) const = 0;
 
 		[[nodiscard]] const std::string& name() const
 		{
@@ -103,29 +104,29 @@ namespace agpred {
 		}
 		virtual ~SnapshotExitBase() = default;
 
-		virtual bool operator() (const Position& position, const Snapshot& snapshot) const = 0;
+		virtual bool call(const Position& position, const Snapshot& snapshot) const = 0;
 	};
 
 
-	class StopLossExit final : public SnapshotExitBase {
+	/*class StopLossExit final : public SnapshotExitBase {
 	public:
 		explicit StopLossExit(const std::string& name) : SnapshotExitBase(name)
 		{
 		}
 		~StopLossExit() = default;
 
-		bool operator() (const Position& position, const Snapshot& snapshot) const override
+		bool call(const Position& position, const Snapshot& snapshot) const override
 		{
 			// TODO
 			return false;
 		}
 
-		ExitData operator() (const Symbol& symbol, const Snapshot & snapshot) const override
+		ExitData operator() (const Position& position, const Symbol& symbol, const Snapshot & snapshot) const override
 		{
 			std::cout << "StopLossExit: ExitData CALL()" << std::endl;
 			return ExitData{ PositionType::LONG, 0.0 };  // symbol, 
 		}
-	};
+	};*/
 
 
 }

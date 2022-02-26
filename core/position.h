@@ -78,6 +78,11 @@ namespace agpred {
 			return num_shares_;
 		}
 
+		const double& avg_price() const
+		{
+			return avg_price_;
+		}
+		
 		const bool& exiting() const
 		{
 			return exiting_;
@@ -86,6 +91,16 @@ namespace agpred {
 		void setExiting()
 		{
 			exiting_ = true;
+		}
+
+		const bool hasStoploss() const
+		{
+			return entry_data_.stoploss > 0.0;
+		}
+
+		const EntryData& entry_data() const
+		{
+			return entry_data_;
 		}
 
 		/**

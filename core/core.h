@@ -87,6 +87,7 @@ namespace agpred {
 		const Market market = Market::NASDAQ;  // TODO
 		
 		bool operator== (const Symbol& b) const;
+		bool operator!= (const Symbol& b) const;
 
 		// TODO
 		static const Symbol& get_symbol(const std::string& ticker);
@@ -109,6 +110,7 @@ namespace agpred {
 
 		const size_t size;
 		const double limit_price;
+		const double stoploss;  // if non-zero, the system will manage the exit at this stop-loss price
 
 		/*
             'target': self.target,
@@ -145,7 +147,7 @@ namespace agpred {
 			return {
 				{
 					next_order_id++,
-				{}
+					{}
 				},
 				entry_data
 			};
@@ -161,7 +163,7 @@ namespace agpred {
 			return {
 				{
 					next_order_id++,
-				{}
+					{}
 				},
 				position_id,
 				exit_data
