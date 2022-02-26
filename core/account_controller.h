@@ -21,6 +21,33 @@ namespace agpred {
 	
 	void onUpdateLog(const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed);
 
+
+	/**
+	 * The internal Exit implementation used for handling EntryData::stoploss
+	 */
+	class _SystemStopLossExit final : public SnapshotExitBase {
+	public:
+		explicit _SystemStopLossExit(const std::string& name) : SnapshotExitBase(name)
+		{
+		}
+		~_SystemStopLossExit() = default;
+
+		bool call(const Position& position, const Snapshot& snapshot) const override
+		{
+			const auto& stoploss = position.entry_data().stoploss;
+			if (stoploss <= 0)
+				return false;
+			return (position.type() == PositionType::LONG && snapshot.nbbo.bid <= stoploss)
+				|| (position.type() == PositionType::SHORT && snapshot.nbbo.ask >= stoploss);
+		}
+
+		ExitData operator() (const Position& position, const Symbol& symbol, const Snapshot& snapshot) const override
+		{
+			std::cout << "_SystemStopLossExit : ExitData CALL()" << std::endl;
+			return ExitData{ position.type(), 0.0 };
+		}
+	};
+
 	
 	template <size_t Algos, size_t Entries, size_t Exits>
 	class AccountController {
@@ -32,6 +59,8 @@ namespace agpred {
 		const std::array<AlgoBase* const, Algos> algos_;
 		const std::array<EntryBase* const, Entries> entries_;
 		const std::array<ExitBase* const, Exits> exits_;
+
+		_SystemStopLossExit internal_stoploss_exit_;
 		
 		std::map<id_t, Position> positions_;
 
@@ -44,7 +73,7 @@ namespace agpred {
 
 	public:
 		AccountController(AccountAdapter& adapter, const AGMode mode, const std::array<AlgoBase* const, Algos>& algos, const std::array<EntryBase* const, Entries>& entries, const std::array<ExitBase* const, Exits>& exits)
-			: adapter_(adapter), mode_(mode), algos_(algos), entries_(entries), exits_(exits)
+			: adapter_(adapter), mode_(mode), algos_(algos), entries_(entries), exits_(exits), internal_stoploss_exit_("_internal_stoploss_ exit")
 		{
 			adapter.setCallbacks(
 				[AccountPtr = this](id_t order_id, const Symbol& symbol, OrderStatus status, size_t filled, size_t remaining, double avg_price)
@@ -56,10 +85,42 @@ namespace agpred {
 
 		void onSnapshot(const Symbol& symbol, const Snapshot& snapshot)
 		{
-			// TODO call exits with snapshot
-			for (auto& p : positions_)
+			// handle snapshot exists
 			{
-				Position& position = p.second;
+				// loop positions, check all snapshot exists
+				for (auto& p : positions_)
+				{
+					Position& position = p.second;
+					if (position.exiting() || position.symbol() != symbol)
+						continue;
+
+					// run the system stop loss check
+					if (position.hasStoploss() && internal_stoploss_exit_.call(position, snapshot))
+					{
+						// exit result true, exit position...
+						ExitData exit_data = internal_stoploss_exit_(position, symbol, snapshot);
+						if (position.type() == exit_data.type)
+						{
+							exitPosition(position, exit_data);
+							continue;
+						}
+					}
+
+					// loop snapshot exists and call to check for exit
+					std::map<size_t, const AlgoBase*> algo_map;
+					for (const ExitBase* exit : exits_)
+					{
+						// TODO using dynamic_cast to determine sub-class; maybe track the exits separately...
+						const SnapshotExitBase* snapshot_exit = dynamic_cast<const SnapshotExitBase*>(exit);
+						if (snapshot_exit != nullptr && snapshot_exit->call(position, snapshot))
+						{
+							// exit result true, exit position...
+							ExitData exit_data = snapshot_exit->operator()(position, symbol, snapshot);
+							if (position.type() == exit_data.type)
+								exitPosition(position, exit_data);
+						}
+					}
+				}
 			}
 		}
 		
@@ -87,7 +148,7 @@ namespace agpred {
 				std::map<size_t, bool> algo_result_map;
 				for (const auto& pair : algo_map)
 				{
-					algo_result_map[pair.first] = pair.second->operator()(snapshot, data, data_processed);
+					algo_result_map[pair.first] = pair.second->operator()(snapshot, data, data_processed, quotes, trades);
 				}
 
 				// loop exits, check if algo result was true
@@ -99,9 +160,6 @@ namespace agpred {
 					const AlgoExitBase* algo_exit = dynamic_cast<const AlgoExitBase*>(exit);
 					if (algo_exit != nullptr && algo_result_map[algo_exit->algo_.id_])
 					{
-						// algo result true, exit position...
-						ExitData exit_data = (*algo_exit)(symbol, snapshot);
-
 						// loop all entries for this symbol that do not have a position/have not been filled
 						if (symbol_pending_entries_.count(symbol))
 						{
@@ -117,10 +175,13 @@ namespace agpred {
 						for (auto& p : positions_)
 						{
 							Position& position = p.second;
-							if (!position.exiting() && position.type() == exit_data.type && position.symbol() == symbol)
+							if (position.exiting() || position.symbol() != symbol)
+								continue;
+							// algo result true, exit position...
+							ExitData exit_data = algo_exit->operator()(position, symbol, snapshot);
+							if (position.type() == exit_data.type)
 								exitPosition(position, exit_data);
 						}
-
 					}
 				}
 			}
@@ -139,7 +200,7 @@ namespace agpred {
 				std::map<size_t, bool> algo_result_map;
 				for (const auto& pair : algo_map)
 				{
-					algo_result_map[pair.first] = pair.second->operator()(snapshot, data, data_processed);
+					algo_result_map[pair.first] = pair.second->operator()(snapshot, data, data_processed, quotes, trades);
 				}
 
 				// loop entries, check if algo result was true

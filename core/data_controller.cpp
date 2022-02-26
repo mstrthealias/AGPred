@@ -526,7 +526,7 @@ void DataController::process_trade_rt(const size_t& pos, const json& trade)
 
 void DataController::process_trade_data(const size_t& pos, const TradeData& trade)
 {
-	const auto ts = static_cast<double>(trade.trade.timestamp);
+	const auto ts = static_cast<double>(trade.trade.timestamp / 1000);
 
 	// TODO this is a terrible way to handle conditions
 	json cond_json;
@@ -573,7 +573,7 @@ inline void populate_full_bar(BarFullRef& bar, const int interval_seconds, const
 	bar.timestamp = static_cast<double>(static_cast<timestamp_t>(ts / interval_seconds) * interval_seconds);  // TODO verify
 	//bar.timestamp = next_ts;
 	if (static_cast<timestamp_t>(bar.timestamp) != next_ts && next_ts > interval_seconds) {
-		std::cout << "Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
+		std::cout << "populate_full_bar() Skip timestamp " << next_ts << " (to " << static_cast<timestamp_t>(bar.timestamp) << ")" << std::endl;
 	}
 	bar.volume = vol;
 	bar.low = bar.high = bar.open = bar.close = price;
@@ -594,7 +594,7 @@ inline void populate_bar(BarRef& bar, const int interval_seconds, const timestam
 	bar.timestamp = static_cast<double>(static_cast<uint64_t>(ts / interval_seconds) * interval_seconds);  // TODO verify
 	//bar.timestamp = next_ts;
 	if (static_cast<timestamp_t>(bar.timestamp) != next_ts && next_ts > interval_seconds) {
-		std::cout << "Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
+		std::cout << "populate_bar() Skip timestamp " << next_ts << " (to " << static_cast<timestamp_t>(bar.timestamp) << ")" << std::endl;
 	}
 	bar.volume = vol;
 	bar.low = bar.high = bar.open = bar.close = price;
@@ -791,7 +791,7 @@ void DataController::process_quote_rt(const size_t& pos, const json& quote)
 
 void DataController::process_quote_data(const size_t& pos, const QuoteData& quote)
 {
-	const auto ts = static_cast<double>(quote.quote.timestamp);
+	const auto ts = static_cast<double>(quote.quote.timestamp / 1000);
 
 	process_quote_finish(pos, ts, quote.quote.ask, quote.quote.ask_size, quote.quote.bid, quote.quote.bid_size);
 }
@@ -820,7 +820,7 @@ inline void populate_next_full_bar(BarFullRef& bar, const int interval_seconds, 
 	bar.timestamp = static_cast<Bar::time_type>(static_cast<uint64_t>(ts / interval_seconds) * interval_seconds);  // TODO verify
 	//bar.timestamp = next_ts;
 	if (static_cast<timestamp_t>(bar.timestamp) != next_ts && next_ts > interval_seconds) {
-		std::cout << "Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
+		std::cout << "populate_next_full_bar() Skip timestamp " << next_ts << " (to " << static_cast<timestamp_t>(bar.timestamp) << ")" << std::endl;
 	}
 	bar.volume = 0;  // so far, 0 volume in this bar
 	bar.low = bar.high = bar.open = bar.close = price;  // TODO copy last close price ?
@@ -838,7 +838,7 @@ inline void populate_next_bar(BarRef& bar, const int interval_seconds, const tim
 	bar.timestamp = static_cast<Bar::time_type>(static_cast<uint64_t>(ts / interval_seconds) * interval_seconds);  // TODO verify
 	//bar.timestamp = next_ts;
 	if (static_cast<timestamp_t>(bar.timestamp) != next_ts && next_ts > interval_seconds) {
-		std::cout << "Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
+		std::cout << "populate_next_bar() Skip timestamp " << next_ts << " (to " << static_cast<timestamp_t>(bar.timestamp) << ")" << std::endl;
 	}
 	bar.volume = 0;  // so far, 0 volume in this bar
 	bar.low = bar.high = bar.open = bar.close = price;  // TODO copy last close price ?
@@ -1091,7 +1091,7 @@ void DataController::startSimulation(std::chrono::seconds start_ts, std::chrono:
 				// TODO continue if quotes empty?
 				// last ts
 				if (!tmp_quotes.empty())
-					end_ts = tmp_quotes.back().quote.timestamp;
+					end_ts = tmp_quotes.back().quote.timestamp / 1000;
 			}
 			else
 			{
@@ -1116,11 +1116,20 @@ void DataController::startSimulation(std::chrono::seconds start_ts, std::chrono:
 				// pop from trades, and flush those until next trade is later than this quote
 				while (!tmp_trades.empty() && tmp_trades.front().trade.timestamp < quote.quote.timestamp)
 				{
+					if (tmp_trades.front().trade.timestamp / 1000.0 > max_end_ts) {
+						tmp_trades.pop();
+						continue;
+					}
+
 					// first push this trade into ctrl queue, that-way it's available for the callbacks
 					(*latest_trades_)[pos].emplace(tmp_trades.front());
 
 					process_trade_data(pos, tmp_trades.front());
 					tmp_trades.pop();
+				}
+
+				if (quote.quote.timestamp / 1000.0 > max_end_ts) {
+					continue;
 				}
 
 				// first push this quote into ctrl queue, that-way it's available for the callbacks
@@ -1132,6 +1141,11 @@ void DataController::startSimulation(std::chrono::seconds start_ts, std::chrono:
 			// flush remaining trades (they have timestamp > than the last handled quote timestamp)
 			while (!tmp_trades.empty())
 			{
+				if (tmp_trades.front().trade.timestamp / 1000.0 > max_end_ts) {
+					tmp_trades.pop();
+					continue;
+				}
+
 				// first push this trade into ctrl queues, that-way it's available for the callbacks
 				(*latest_trades_)[pos].emplace(tmp_trades.front());
 

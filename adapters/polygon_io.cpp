@@ -63,7 +63,8 @@ inline void process_agg2(xtensor_raw_interval& dest, const uint32_t i, const jso
 
 inline void payload_v2_to_quote_data(QuoteData& quote_data, const json& quote)
 {
-	const timestamp_t cur_ts = quote["t"].get<uint64_t>() / static_cast<timestamp_t>(1e9);
+	const timestamp_t cur_ts = quote["t"].get<uint64_t>() / static_cast<timestamp_t>(1e6);
+	//const timestamp_t cur_ts = quote["t"].get<uint64_t>() / static_cast<timestamp_t>(1e9);
 	const auto& askPrice = quote["P"].get<double>();
 	const auto& askSize = quote["S"].get<uint32_t>();
 	const auto& bidPrice = quote["p"].get<double>();
@@ -99,7 +100,8 @@ inline void payload_v2_to_quote_data(QuoteData& quote_data, const json& quote)
 
 inline void payload_vx_to_quote_data(QuoteData& quote_data, const json& quote)
 {
-	const timestamp_t cur_ts = quote["sip_timestamp"].get<uint64_t>() / static_cast<timestamp_t>(1e9);
+	const timestamp_t cur_ts = quote["sip_timestamp"].get<uint64_t>() / static_cast<timestamp_t>(1e6);
+	//const timestamp_t cur_ts = quote["sip_timestamp"].get<uint64_t>() / static_cast<timestamp_t>(1e9);
 	const auto& askPrice = quote["ask_price"].get<double>();
 	const auto& askSize = quote["ask_size"].get<uint32_t>();
 	const auto& bidPrice = quote["bid_price"].get<double>();
@@ -135,7 +137,8 @@ inline void payload_vx_to_quote_data(QuoteData& quote_data, const json& quote)
 
 void adapter::payload_rt_to_quote_data(QuoteData& quote_data, const json& quote)
 {
-	const timestamp_t cur_ts = quote["t"].get<uint64_t>() / static_cast<timestamp_t>(1e9);
+	const timestamp_t cur_ts = quote["t"].get<uint64_t>() / static_cast<timestamp_t>(1e6);
+	//const timestamp_t cur_ts = quote["t"].get<uint64_t>() / static_cast<timestamp_t>(1e9);
 	const auto& askPrice = quote["ap"].get<double>();
 	const auto& askSize = quote["as"].get<uint32_t>();
 	const auto& bidPrice = quote["bp"].get<double>();
@@ -187,7 +190,8 @@ void adapter::payload_rt_to_quote_data(QuoteData& quote_data, const json& quote)
 
 inline void payload_vx_to_trade_data(TradeData& trade_data, const json& trade)
 {
-	const timestamp_t cur_ts = trade["sip_timestamp"].get<uint64_t>() / static_cast<timestamp_t>(1e9);
+	const timestamp_t cur_ts = trade["sip_timestamp"].get<uint64_t>() / static_cast<timestamp_t>(1e6);
+	//const timestamp_t cur_ts = trade["sip_timestamp"].get<uint64_t>() / static_cast<timestamp_t>(1e9);
 	const auto& price = trade["price"].get<double>();
 	const auto& size = trade["size"].get<uint32_t>();
 
@@ -219,7 +223,8 @@ inline void payload_vx_to_trade_data(TradeData& trade_data, const json& trade)
 
 void adapter::payload_rt_to_trade_data(TradeData& trade_data, const json& trade)
 {
-	const timestamp_t cur_ts = trade["t"].get<uint64_t>() / static_cast<timestamp_t>(1e9);
+	const timestamp_t cur_ts = trade["t"].get<uint64_t>() / static_cast<timestamp_t>(1e6);
+	//const timestamp_t cur_ts = trade["t"].get<uint64_t>() / static_cast<timestamp_t>(1e9);
 	const auto& price = trade["p"].get<double>();
 	const auto& size = trade["s"].get<uint32_t>();
 
@@ -289,6 +294,11 @@ size_t PolygonIoAdapter::getAggregateHistory(xtensor_raw_interval& dest, const s
 		}
 	);
 
+	if (r.status_code > 299 || r.status_code < 200) {
+		std::cout << symbol << " getAggregateHistory() ERROR CODE " << r.status_code << std::endl;
+		return 0;
+	}
+
 	json res = json::parse(r.text);
 	const size_t count = res["count"].is_null() || !res["results"].is_array() ? 0 : res["count"].get<size_t>();
 	if (!count) {
@@ -344,6 +354,11 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 				{"apiKey", POLYGON_API_KEY}
 			}
 		);
+
+		if (r.status_code > 299 || r.status_code < 200) {
+			std::cout << symbol << " mergeQuotesAggregates() ERROR CODE " << r.status_code << std::endl;
+			continue;
+		}
 
 		json res = json::parse(r.text);
 		res_cnt = res["results_count"].is_null() || !res["results"].is_array() ? 0 : res["results_count"].get<size_t>();
@@ -539,11 +554,17 @@ size_t PolygonIoAdapter::getQuoteHistoryBefore(std::queue<QuoteData>& quotes, co
 			//{"timestampLimit", std::to_string(end_ts * static_cast<long long>(1e9))},  // nanosec, fe. sec*9
 		}
 	);
-	
+
+	if (r.status_code > 299 || r.status_code < 200) {
+		std::cout << symbol << " getQuoteHistoryBefore() ERROR CODE " << r.status_code << std::endl;
+		return 0;
+	}
+
 	json res = json::parse(r.text);
-	const size_t res_cnt = res["count"].is_null() || !res["results"].is_array() ? 0 : res["count"].get<size_t>();
+	const size_t res_cnt = !res["results"].is_array() ? 0 : res["results"].size();
+	//const size_t res_cnt = res["count"].is_null() || !res["results"].is_array() ? 0 : res["count"].get<size_t>();
 	if (!res_cnt) {
-		std::cout << symbol << " LATEST QUOTES ERROR:" << std::endl << "\t" << res << std::endl;
+		std::cout << symbol << " getQuoteHistoryBefore() ERROR:" << std::endl << "\t" << res << std::endl;
 	}
 	else {
 		if (DEBUG_PRINT_REQUESTS)
@@ -573,11 +594,11 @@ size_t PolygonIoAdapter::getQuoteHistoryBefore(std::queue<QuoteData>& quotes, co
 
 		if (DEBUG_PRINT_REQUESTS)
 		{
-			tmp_time = static_cast<time_t>(quotes.front().quote.timestamp);
+			tmp_time = static_cast<time_t>(quotes.front().quote.timestamp / 1000);
 			ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 			std::cout << "getQuoteHistoryBefore() front timestamp: " << tmp_str;  //  << std::endl
 
-			tmp_time = static_cast<time_t>(quotes.back().quote.timestamp);
+			tmp_time = static_cast<time_t>(quotes.back().quote.timestamp / 1000);
 			ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 			std::cout << "getQuoteHistoryBefore() back timestamp: " << tmp_str;  // << std::endl
 		}
@@ -615,11 +636,17 @@ size_t PolygonIoAdapter::getTradeHistoryBefore(std::queue<TradeData>& trades, co
 		}
 	);
 
+	if (r.status_code > 299 || r.status_code < 200) {
+		std::cout << symbol << " getTradeHistoryBefore() ERROR CODE " << r.status_code << std::endl;
+		return 0;
+	}
+
 	json res = json::parse(r.text);
-	const size_t res_cnt = res["count"].is_null() || !res["results"].is_array() ? 0 : res["count"].get<size_t>();
+	const size_t res_cnt = !res["results"].is_array() ? 0 : res["results"].size();
+	//const size_t res_cnt = res["count"].is_null() || !res["results"].is_array() ? 0 : res["count"].get<size_t>();
 	size_t count = 0;
 	if (!res_cnt) {
-		std::cout << symbol << " LATEST TRADES ERROR:" << std::endl << "\t" << res << std::endl;
+		std::cout << symbol << " getTradeHistoryBefore() ERROR:" << std::endl << "\t" << res << std::endl;
 	}
 	else {
 		count += res_cnt;
@@ -646,11 +673,11 @@ size_t PolygonIoAdapter::getTradeHistoryBefore(std::queue<TradeData>& trades, co
 		
 		if (DEBUG_PRINT_REQUESTS)
 		{
-			tmp_time = static_cast<time_t>(trades.front().trade.timestamp);
+			tmp_time = static_cast<time_t>(trades.front().trade.timestamp / 1000);
 			ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 			std::cout << "getTradeHistoryBefore() front timestamp: " << tmp_str;  //  << std::endl
 
-			tmp_time = static_cast<time_t>(trades.back().trade.timestamp);
+			tmp_time = static_cast<time_t>(trades.back().trade.timestamp / 1000);
 			ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 			std::cout << "getTradeHistoryBefore() back timestamp: " << tmp_str;  // << std::endl
 		}
@@ -691,10 +718,16 @@ size_t PolygonIoAdapter::getQuoteHistoryAfter(std::queue<QuoteData>& quotes, con
 		}
 	);
 
+	if (r.status_code > 299 || r.status_code < 200) {
+		std::cout << symbol << " getQuoteHistoryAfter() ERROR CODE " << r.status_code << std::endl;
+		return 0;
+	}
+
 	json res = json::parse(r.text);
-	const size_t res_cnt = res["count"].is_null() || !res["results"].is_array() ? 0 : res["count"].get<size_t>();
+	const size_t res_cnt = !res["results"].is_array() ? 0 : res["results"].size();
+	//const size_t res_cnt = res["count"].is_null() || !res["results"].is_array() ? 0 : res["count"].get<size_t>();
 	if (!res_cnt) {
-		std::cout << symbol << " LATEST QUOTES ERROR:" << std::endl << "\t" << res << std::endl;
+		std::cout << symbol << " getQuoteHistoryAfter() ERROR:" << std::endl << "\t" << res << std::endl;
 	}
 	else {
 		std::cout << symbol << " count=" << res_cnt << std::endl;
@@ -779,11 +812,19 @@ size_t PolygonIoAdapter::getQuoteHistoryBetween(std::queue<QuoteData>& quotes, c
 				}
 			);
 		}
+
+		if (r.status_code > 299 || r.status_code < 200) {
+			std::cout << symbol << " getQuoteHistoryBetween() ERROR CODE " << r.status_code << std::endl;
+			next_url = JSON_NULL;
+			continue;
+		}
+
 		json res = json::parse(r.text);
-		const size_t res_cnt = res["count"].is_null() || !res["results"].is_array() ? 0 : res["count"].get<size_t>();
+		const size_t res_cnt = !res["results"].is_array() ? 0 : res["results"].size();
+		//const size_t res_cnt = res["count"].is_null() || !res["results"].is_array() ? 0 : res["count"].get<size_t>();
 
 		if (!res_cnt) {
-			std::cout << symbol << " LATEST QUOTES ERROR:" << std::endl << "\t" << res << std::endl;
+			std::cout << symbol << " getQuoteHistoryBetween() ERROR:" << std::endl << "\t" << res << std::endl;
 			next_url = JSON_NULL;
 		}
 		else {
@@ -866,11 +907,19 @@ size_t PolygonIoAdapter::getTradeHistoryBetween(std::queue<TradeData>& trades, c
 				}
 			);
 		}
+
+		if (r.status_code > 299 || r.status_code < 200) {
+			std::cout << symbol << " getTradeHistoryBetween() ERROR CODE " << r.status_code << std::endl;
+			next_url = JSON_NULL;
+			continue;
+		}
+
 		json res = json::parse(r.text);
-		const size_t res_cnt = res["count"].is_null() || !res["results"].is_array() ? 0 : res["count"].get<size_t>();
+		const size_t res_cnt = !res["results"].is_array() ? 0 : res["results"].size();
+		//const size_t res_cnt = res["count"].is_null() || !res["results"].is_array() ? 0 : res["count"].get<size_t>();
 
 		if (!res_cnt) {
-			std::cout << symbol << " LATEST TRADES ERROR:" << std::endl << "\t" << res << std::endl;
+			std::cout << symbol << " getTradeHistoryBetween() ERROR:" << std::endl << "\t" << res << std::endl;
 			next_url = JSON_NULL;
 		}
 		else {
