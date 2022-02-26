@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
     };
 
     //yar1(input);
-    process_step1("APPL", dfs, TIMEFRAME, false, interval_map);
+    process_step1to3("APPL", dfs, TIMEFRAME, false, interval_map);
 
 
     retCode = TA_Shutdown();

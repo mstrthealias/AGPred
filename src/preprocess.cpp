@@ -9,6 +9,7 @@
 #include <xtensor/xvectorize.hpp>
 #include <xtensor/xnpy.hpp>
 #include <xtensor/xmasked_view.hpp>
+#include <xtensor/xmath.hpp>
 
 #include <ta_libc.h>
 
@@ -413,6 +414,16 @@ double mk_max5(double a, double b, double c, double d, double e)
 	return std::max({ a, b, c, d, e });
 }
 
+double mk_min7(double a, double b, double c, double d, double e, double f, double g)
+{
+	return std::min({ a, b, c, d, e, f, g });
+}
+
+double mk_max7(double a, double b, double c, double d, double e, double f, double g)
+{
+	return std::max({ a, b, c, d, e, f, g });
+}
+
 double mk_subtract(double b, double a)
 {
 	return b - a;
@@ -423,9 +434,26 @@ double mk_sum(double b, double a)
 	return b + a;
 }
 
+double mk_multiply(double b, double a)
+{
+	return b * a;
+}
+
 double mk_divide_by_160(double b)
 {
 	return b / 160.0;
+}
+
+double mk_vec_equals(double b, double a) {
+	return static_cast<double>(dbl_equal(b, a));
+}
+
+double mk_vec_greater_sum2(double a, double b, double c) {
+	return a > b + c;
+}
+
+double mk_vec_less_sub2(double a, double b, double c) {
+	return a < b - c;
 }
 
 
@@ -464,22 +492,29 @@ const auto vec_norm_10x_n_stddevs = xt::vectorize(mk_norm_10x_n_stddevs);
 
 const auto vec_min5 = xt::vectorize(mk_min5);
 const auto vec_max5 = xt::vectorize(mk_max5);
+const auto vec_min7 = xt::vectorize(mk_min7);
+const auto vec_max7 = xt::vectorize(mk_max7);
 const auto vec_subtract = xt::vectorize(mk_subtract);
 const auto vec_sum = xt::vectorize(mk_sum);
+const auto vec_multiply = xt::vectorize(mk_multiply);
 const auto vec_mk_divide_by_160 = xt::vectorize(mk_divide_by_160);
+const auto vec_equals = xt::vectorize(mk_vec_equals);
+const auto vec_greater_sum2 = xt::vectorize(mk_vec_greater_sum2);
+const auto vec_less_sub2 = xt::vectorize(mk_vec_less_sub2);
 
 
+// removes NANs and sorts the input dataset
 xt::xarray<double> process_step1_single(const char* symbol, const xt::xarray<double>& a_orig, const bool training, const int timeframe, const int interval, const bool ext_hours)
 {
 
 	const size_t df_len_orig = a_orig.shape().at(1);
-	
-	const auto a_orig_close = xt::xarray<double>(xt::row(a_orig, ColPos::In::close));
-	
+
+	//const auto a_orig_close = xt::xarray<double>(xt::row(a_orig, ColPos::In::close));
+
 	// copy to new array with no nans
 	//cleanup_pre_step1()
 	xt::xarray<double> a_new = _xt_nonans(a_orig, ColPos::In::close);
-	
+
 	// reverse order if needed (a_new must be ASC order)
 	const bool was_sorted = _xt_2d_sort(a_new, ColPos::In::timestamp);
 	//// TODO actually sort intervals dataset...
@@ -487,26 +522,53 @@ xt::xarray<double> process_step1_single(const char* symbol, const xt::xarray<dou
 	if (was_sorted && DEBUG_PRINT_DATA)
 		std::cout << "process_step1_single() interval=" << interval << " sorted" << std::endl;
 
+	return a_new;
+}
+
+
+xt::xarray<double> process_step2_single(const char* symbol, const xt::xarray<double>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours)
+{
+
 	// allocate the results array
-	xt::xarray<double> o_results = xt::zeros<double>({ 101, static_cast<int>(a_new.shape().at(1)) });
+	xt::xarray<double> o_results = xt::zeros<double>({ 101, static_cast<int>(a_step1.shape().at(1)) });
 
 	// copy input rows to o_results
-	xt::row(o_results, ColPos::In::timestamp) = xt::row(a_new, ColPos::In::timestamp);
-	xt::row(o_results, ColPos::In::open) = xt::row(a_new, ColPos::In::open);
-	xt::row(o_results, ColPos::In::high) = xt::row(a_new, ColPos::In::high);
-	xt::row(o_results, ColPos::In::low) = xt::row(a_new, ColPos::In::low);
-	xt::row(o_results, ColPos::In::close) = xt::row(a_new, ColPos::In::close);
-	xt::row(o_results, ColPos::In::volume) = xt::row(a_new, ColPos::In::volume);
-
+	xt::row(o_results, ColPos::In::timestamp) = xt::row(a_step1, ColPos::In::timestamp);
+	xt::row(o_results, ColPos::In::open) = xt::row(a_step1, ColPos::In::open);
+	xt::row(o_results, ColPos::In::high) = xt::row(a_step1, ColPos::In::high);
+	xt::row(o_results, ColPos::In::low) = xt::row(a_step1, ColPos::In::low);
+	xt::row(o_results, ColPos::In::close) = xt::row(a_step1, ColPos::In::close);
+	xt::row(o_results, ColPos::In::volume) = xt::row(a_step1, ColPos::In::volume);
+	// TODO bid/ask/etc.?
+	
 	// Track step1 run time for each interval
 	//now = time.time()
 
-	apply_candles(symbol, o_results, a_new);  // +61 cols
+	apply_candles(symbol, o_results, a_step1);  // +61 cols
 
 	apply_step2(symbol, o_results, timeframe, interval, training, ext_hours);
 
+	return o_results;
+}
+
+void process_step3_single(xt::xarray<double>& o_results, xt::xarray<double>& o_outputs, const char* symbol, const xt::xarray<double>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours)
+{
+
+	if (training) {
+		// TODO fe. null|
+		// TODO verify o_outputs size? or not empty?
+		if (!o_outputs.size())
+			throw std::logic_error("o_outputs must be initialized.");
+		do_outputs(o_outputs, symbol, o_results, a_step1, timeframe, interval);
+	}
+
 	// create a copy, removing initial nan values
 	o_results = do_cleanup_initial(o_results, interval);
+
+	if (training) {
+		// copy outputs with same rows removed...
+		o_outputs = do_cleanup_initial(o_outputs, interval);
+	}
 
 	/*
 	// TODO restore original order?
@@ -516,10 +578,9 @@ xt::xarray<double> process_step1_single(const char* symbol, const xt::xarray<dou
 		_xt_2d_sort(o_results, 0, true);
 	}*/
 
-	return o_results;
 }
 
-void process_step1(const char* symbol, dfs_map_t& dfs, const int timeframe, const bool ext_hours, const interval_map_t& interval_map)
+void process_step1to3(const char* symbol, dfs_map_t& dfs, const int timeframe, const bool ext_hours, const interval_map_t& interval_map)
 {
 	// loop interval_map
 	for (const auto& i : interval_map)
@@ -532,7 +593,14 @@ void process_step1(const char* symbol, dfs_map_t& dfs, const int timeframe, cons
 		// TODO training
 		const bool training = timeframe == interval;
 
-		auto o_results = process_step1_single(symbol, a_orig, training, timeframe, interval, ext_hours);
+		auto a_step1 = process_step1_single(symbol, a_orig, training, timeframe, interval, ext_hours);
+		auto o_results = process_step2_single(symbol, a_step1, training, timeframe, interval, ext_hours);
+
+		// TODO outputs ...
+		// TODO skip creating outputs if !trainig?
+		xt::xarray<double> o_outputs = xt::zeros<double>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(a_step1.shape().at(1))});  // TODO timestamp and/or close in outputs?
+
+		process_step3_single(o_results, o_outputs, symbol, a_step1, training, timeframe, interval, ext_hours);
 
 		dfs[interval] = o_results;
 		
@@ -662,11 +730,6 @@ void apply_step2(const char* symbol, xt::xarray<double>& o_results, const unsign
 	do_dep_columns(o_results, training);  // +4 cols
 	add_regr(o_results, interval);  // +2 cols
 	
-	if (training) {
-		// TODO fe. null|
-		// auto cols_outputs = do_outputs(symbol, timeframe, interval);
-	}
-
 	// Note: at this time, cleanup_inline() was called to remove vwap, bid, ask
 
 	do_ta(o_results);  // +22 cols
@@ -1306,7 +1369,98 @@ xt::xarray<double> do_market_inputs(const xt::xarray<double>& a_in)
 	return results;
 }
 
-void do_outputs(const char* symbol, xt::xarray<double>& o_outputs, const xt::xarray<double>& o_results, const unsigned int timeframe, const unsigned int interval)
+void do_outputs(xt::xarray<double>& o_outputs, const char* symbol, const xt::xarray<double>& o_results, const xt::xarray<double>& a_step1, const unsigned int timeframe, const unsigned int interval)
 {
+	assert(CHECK_FUTURE_CNT == 7);
+
+	const size_t n_len = o_results.shape().at(1);
+
+	const auto r_ask_low = xt::row(a_step1, ColPos::In::ask_low);
+	const auto r_ask_high = xt::row(a_step1, ColPos::In::ask_high);
+	const auto r_bid_low = xt::row(a_step1, ColPos::In::bid_low);
+	const auto r_bid_high = xt::row(a_step1, ColPos::In::bid_high);
+	const auto r_low = xt::row(a_step1, ColPos::In::low);
+	const auto r_high = xt::row(a_step1, ColPos::In::high);
+
+	xt::xarray<double> windowCols = xt::zeros<double>({ CHECK_FUTURE_CNT, static_cast<int>(n_len) });
+
+	// calculate max(future_bid_high) [with current row]
+	for (int i = 0; i < CHECK_FUTURE_CNT; i++)
+	{
+		if (i)
+			xt::row(windowCols, i) = xt::roll(r_bid_high, -i);
+		else
+			xt::row(windowCols, i) = r_bid_high;
+	}
+	xt::xarray<double> rolling7_bid_high = vec_max7(xt::row(windowCols, 0), xt::row(windowCols, 1), xt::row(windowCols, 2), xt::row(windowCols, 3), xt::row(windowCols, 4), xt::row(windowCols, 5), xt::row(windowCols, 6));
+
+	// calculate min(future_ask_low) [with current row]
+	windowCols = xt::zeros<double>({ CHECK_FUTURE_CNT, static_cast<int>(n_len) });  // TODO zero this?
+	for (int i = 0; i < CHECK_FUTURE_CNT; i++)
+	{
+		if (i)
+			xt::row(windowCols, i) = xt::roll(r_ask_low, -i);
+		else
+			xt::row(windowCols, i) = r_ask_low;
+	}
+	xt::xarray<double> rolling7_ask_low = vec_min7(xt::row(windowCols, 0), xt::row(windowCols, 1), xt::row(windowCols, 2), xt::row(windowCols, 3), xt::row(windowCols, 4), xt::row(windowCols, 5), xt::row(windowCols, 6));
+
+	// calculate future_low [excluding current row]
+	windowCols = xt::zeros<double>({ CHECK_FUTURE_CNT, static_cast<int>(n_len) });  // TODO zero this?
+	for (int i = 0; i < CHECK_FUTURE_CNT; i++)
+	{
+		xt::row(windowCols, i) = xt::roll(r_low, static_cast<ptrdiff_t>(-(i + 1)));
+	}
+	xt::xarray<double> future_low = vec_min7(xt::row(windowCols, 0), xt::row(windowCols, 1), xt::row(windowCols, 2), xt::row(windowCols, 3), xt::row(windowCols, 4), xt::row(windowCols, 5), xt::row(windowCols, 6));
 	
+	// calculate future_high [excluding current row]
+	windowCols = xt::zeros<double>({ CHECK_FUTURE_CNT, static_cast<int>(n_len) });  // TODO zero this?
+	for (int i = 0; i < CHECK_FUTURE_CNT; i++)
+	{
+		xt::row(windowCols, i) = xt::roll(r_high, static_cast<ptrdiff_t>(-(i + 1)));
+	}
+	xt::xarray<double> future_high = vec_max7(xt::row(windowCols, 0), xt::row(windowCols, 1), xt::row(windowCols, 2), xt::row(windowCols, 3), xt::row(windowCols, 4), xt::row(windowCols, 5), xt::row(windowCols, 6));
+
+
+	//x_std_dev = current_row['atr'] * 1.777
+	xt::xarray<double> x_std_dev = vec_multiply(xt::row(o_results, ColPos::Dep::atr), 1.777);
+
+	//h_std_dev = current_row['atr'] * 1.577
+	xt::xarray<double> h_std_dev = vec_multiply(xt::row(o_results, ColPos::Dep::atr), 1.577);
+
+	//o_std_dev = current_row['atr'] * 1.337
+	xt::xarray<double> o_std_dev = vec_multiply(xt::row(o_results, ColPos::Dep::atr), 1.337);
+
+	
+	// calculate the outputs
+	/*ColPos::Output::long_low;    // min(future_ask_low) == ask_low
+	ColPos::Output::long1;       // future_high > x_std_dev + current_ask_high
+	ColPos::Output::long2;       // future_high > h_std_dev + current_ask_high
+	ColPos::Output::long3;       // future_high > o_std_dev + current_ask_high
+	ColPos::Output::short_high;  // max(future_bid_high) == bid_high
+	ColPos::Output::short1;      // future_low < current_bid_low - x_std_dev
+	ColPos::Output::short2;      // future_low < current_bid_low - h_std_dev
+	ColPos::Output::short3;      // future_low < current_bid_low - o_std_dev*/
+
+	xt::row(o_outputs, ColPos::Output::ts) = xt::row(a_step1, ColPos::In::timestamp);
+
+	xt::row(o_outputs, ColPos::Output::long_low) = vec_equals(rolling7_ask_low, r_ask_low);
+	xt::row(o_outputs, ColPos::Output::short_high) = vec_equals(rolling7_bid_high, r_bid_high);
+
+	xt::row(o_outputs, ColPos::Output::long1) = vec_greater_sum2(future_high, x_std_dev, r_ask_high);
+	xt::row(o_outputs, ColPos::Output::long2) = vec_greater_sum2(future_high, h_std_dev, r_ask_high);
+	xt::row(o_outputs, ColPos::Output::long3) = vec_greater_sum2(future_high, o_std_dev, r_ask_high);
+
+	xt::row(o_outputs, ColPos::Output::short1) = vec_less_sub2(future_low, r_bid_low, x_std_dev);
+	xt::row(o_outputs, ColPos::Output::short2) = vec_less_sub2(future_low, r_bid_low, h_std_dev);
+	xt::row(o_outputs, ColPos::Output::short3) = vec_less_sub2(future_low, r_bid_low, o_std_dev);
+
+	/*std::cout << "do_outputs() " << symbol << " long_low = " << (100.0 * xt::sum(xt::row(o_outputs, ColPos::Output::long_low)) / n_len) << "%" << std::endl;
+	std::cout << "do_outputs() " << symbol << " short_high = " << (100.0 * xt::sum(xt::row(o_outputs, ColPos::Output::short_high)) / n_len) << "%" << std::endl;
+	std::cout << "do_outputs() " << symbol << " long1 = " << (100.0 * xt::sum(xt::row(o_outputs, ColPos::Output::long1)) / n_len) << "%" << std::endl;
+	std::cout << "do_outputs() " << symbol << " long2 = " << (100.0 * xt::sum(xt::row(o_outputs, ColPos::Output::long2)) / n_len) << "%" << std::endl;
+	std::cout << "do_outputs() " << symbol << " long3 = " << (100.0 * xt::sum(xt::row(o_outputs, ColPos::Output::long3)) / n_len) << "%" << std::endl;
+	std::cout << "do_outputs() " << symbol << " short1 = " << (100.0 * xt::sum(xt::row(o_outputs, ColPos::Output::short1)) / n_len) << "%" << std::endl;
+	std::cout << "do_outputs() " << symbol << " short2 = " << (100.0 * xt::sum(xt::row(o_outputs, ColPos::Output::short2)) / n_len) << "%" << std::endl;
+	std::cout << "do_outputs() " << symbol << " short3 = " << (100.0 * xt::sum(xt::row(o_outputs, ColPos::Output::short3)) / n_len) << "%" << std::endl;*/
 }

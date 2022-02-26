@@ -10,7 +10,11 @@
 
 xt::xarray<double> process_step1_single(const char* symbol, const xt::xarray<double>& a_orig, const bool training, const int timeframe, const int interval, const bool ext_hours);
 
-void process_step1(const char* symbol, dfs_map_t& dfs, const int timeframe, const bool ext_hours, const interval_map_t& interval_map);
+xt::xarray<double> process_step2_single(const char* symbol, const xt::xarray<double>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours);
+
+void process_step3_single(xt::xarray<double>& o_results, xt::xarray<double>& o_outputs, const char* symbol, const xt::xarray<double>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours);
+
+void process_step1to3(const char* symbol, dfs_map_t& dfs, const int timeframe, const bool ext_hours, const interval_map_t& interval_map);
 
 void apply_candles(const char* symbol, xt::xarray<double>& o_results, const xt::xarray<double>& a_in);
 
@@ -42,7 +46,7 @@ xt::xarray<double> do_cleanup_final(xt::xarray<double>& a_in);
 
 xt::xarray<double> do_market_inputs(const xt::xarray<double>& a_in);
 
-void do_outputs(const char* symbol, xt::xarray<double>& o_outputs, const xt::xarray<double>& o_results, const unsigned int timeframe, const unsigned int interval);
+void do_outputs(xt::xarray<double>& o_outputs, const char* symbol, const xt::xarray<double>& o_results, const xt::xarray<double>& a_step1, const unsigned int timeframe, const unsigned int interval);
 
 
 static constexpr std::array<std::tuple<ColPosType, ptrdiff_t>, 94> COLS_FORMAT1 = {

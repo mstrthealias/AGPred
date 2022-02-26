@@ -42,7 +42,8 @@ void zero_processed_data(std::array<xt::xtensor_fixed<double, shape_processed_t>
 }*/
 
 
-inline void run_preprocess(xtensor_processed_interval& data_processed, const Symbol& symbol, const int interval, const xtensor_raw_interval& data_raw)
+// Note: data_outputs is only populated if interval==TIMEFRAME
+inline void run_preprocess(xtensor_processed_interval& data_processed, xtensor_outputs_interval& data_outputs, const Symbol& symbol, const int interval, const xtensor_raw_interval& data_raw)
 {
 	//std::cout << interval << "min raw:" << std::endl << data_raw << std::endl;
 	//std::cout << interval << "min raw shape:" << std::endl << data_raw.shape() << std::endl;
@@ -53,36 +54,57 @@ inline void run_preprocess(xtensor_processed_interval& data_processed, const Sym
 	// process interval data (returned in ASC order, input is in DESC order):
 	// TODO TIMEFRAME, training
 	const bool training = TIMEFRAME == interval;
-	auto processed = process_step1_single(symbol.symbol.c_str(), data_raw_transposed, training, TIMEFRAME, interval, false);
+
+	auto a_step1 = process_step1_single(symbol.symbol.c_str(), data_raw_transposed, training, TIMEFRAME, interval, false);
+	auto processed = process_step2_single(symbol.symbol.c_str(), a_step1, training, TIMEFRAME, interval, false);
+
+	// TODO skip creating outputs (elsewhere) if !training?
+	xt::xarray<double> o_outputs;  // TODO include timestamp and/or close in outputs?
+	if (training)
+		o_outputs = xt::zeros<double>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(a_step1.shape().at(1)) });
+	process_step3_single(processed, o_outputs, symbol.symbol.c_str(), a_step1, training, TIMEFRAME, interval, false);
+	if (training) {
+		const auto outputs_transposed = xt::transpose(o_outputs, { 1, 0 });
+		std::copy(outputs_transposed.crbegin(), outputs_transposed.crend(), data_outputs.rbegin());
+	}
 
 	// transpose to match format that's being copied into
-	const xt::xarray<double> processed_transposed = xt::transpose(processed, { 1, 0 });
+	const auto processed_transposed = xt::transpose(processed, { 1, 0 });
 	std::copy(processed_transposed.crbegin(), processed_transposed.crend(), data_processed.rbegin());
 
 	if (DEBUG_PRINT_PROCESSED_DATA)
 	{
-		std::cout << interval << "min processed (heap):" << std::endl << data_processed << std::endl;
-		std::cout << interval << "min processed (heap) shape: " << data_processed.shape() << std::endl;
+		std::cout << interval << "min processed:" << std::endl << data_processed << std::endl;
+		std::cout << interval << "min processed shape: " << data_processed.shape() << std::endl;
+
 		/*
 		// log timestamps with xt::row() for verification
 		xt::xarray<double> processed_transposed_heap = xt::transpose(data_processed, { 1, 0 });
 		xt::xarray<double> tss2 = xt::row(processed_transposed_heap, ColPos::In::timestamp);
-		std::cout << interval << "min processed_transposed tss (heap):" << std::endl << tss2 << std::endl;
-		std::cout << interval << "min processed_transposed tss (heap) shape: " << tss2.shape() << std::endl;
+		std::cout << interval << "min processed_transposed tss:" << std::endl << tss2 << std::endl;
+		std::cout << interval << "min processed_transposed tss shape: " << tss2.shape() << std::endl;
 		*/
+
+		if (training) {
+			std::cout << interval << "min outputs: " << data_outputs << std::endl;
+			std::cout << interval << "min outputs shape: " << data_outputs.shape() << std::endl;
+		}
 	}
 }
 
 
 constexpr ptrdiff_t ROW_POS = 0;
 
-DataController::DataController(const AGMode mode, const fn_snapshot on_snapshot, const fn_update on_update) :
+DataController::DataController(const AGMode mode, const fn_snapshot on_snapshot, const fn_update on_update, const fn_update_outputs on_update_outputs) :
 	mode_(mode),
 	on_snapshot_(on_snapshot),
 	on_update_(on_update),
+	on_update_outputs_(on_update_outputs),
 	cur_timesteps_(),
 	latest_trades_(new std::array<trades_queue, MAX_ACTIVE_SYMBOLS>()),
 	latest_quotes_(new std::array<quotes_queue, MAX_ACTIVE_SYMBOLS>()),
+	symbols_outputs_(new std::array<xtensor_outputs_interval, MAX_ACTIVE_SYMBOLS>()),
+
 	symbols_1min_(new std::array<xtensor_raw_interval, MAX_ACTIVE_SYMBOLS>()),
 	symbols_5min_(new std::array<xtensor_raw_interval, MAX_ACTIVE_SYMBOLS>()),
 	symbols_15min_(new std::array<xtensor_raw_interval, MAX_ACTIVE_SYMBOLS>()),
@@ -176,8 +198,18 @@ DataController::DataController(const AGMode mode, const fn_snapshot on_snapshot,
 	assert(symbols_pos_.size() == symbols_pos_rev_.size());
 }
 
+DataController::DataController(const AGMode mode, const fn_snapshot on_snapshot, const fn_update on_update) :
+	DataController(mode, on_snapshot, on_update, fn_update_outputs())
+{
+}
+
+DataController::DataController(const AGMode mode, const fn_snapshot on_snapshot, const fn_update_outputs on_update_outputs) :
+	DataController(mode, on_snapshot, fn_update(), on_update_outputs)
+{
+}
+
 DataController::DataController(const AGMode mode) :
-	DataController(mode, fn_snapshot(), fn_update())
+	DataController(mode, fn_snapshot(), fn_update(), fn_update_outputs())
 {
 }
 
@@ -192,6 +224,12 @@ DataController::~DataController()
 	{
 		delete latest_quotes_;
 		latest_quotes_ = nullptr;
+	}
+
+	if (symbols_outputs_ != nullptr)
+	{
+		delete symbols_outputs_;
+		symbols_outputs_ = nullptr;
 	}
 
 	// cleanup raw xarrays
@@ -361,18 +399,21 @@ void DataController::do_update(const ShiftTriggers& triggers, const size_t& pos)
 	{
 		const auto& symbol = symbols_pos_rev_[pos];
 
+		// TODO only update outputs if on_update_outputs_ is bound?
+		auto& symbol_outputs = (*symbols_outputs_)[pos];
+
 		// preprocess all timeframes now...
 		// process data (returned in ASC order, opposite of input):
-		run_preprocess((*proc_symbols_1min_)[pos], symbol, 1, (*symbols_1min_)[pos]);
-		run_preprocess((*proc_symbols_5min_)[pos], symbol, 5, (*symbols_5min_)[pos]);
-		run_preprocess((*proc_symbols_15min_)[pos], symbol, 15, (*symbols_15min_)[pos]);
-		run_preprocess((*proc_symbols_1hr_)[pos], symbol, 60, (*symbols_1hr_)[pos]);
-		run_preprocess((*proc_symbols_4hr_)[pos], symbol, 240, (*symbols_4hr_)[pos]);
+		run_preprocess((*proc_symbols_1min_)[pos], symbol_outputs, symbol, 1, (*symbols_1min_)[pos]);
+		run_preprocess((*proc_symbols_5min_)[pos], symbol_outputs, symbol, 5, (*symbols_5min_)[pos]);
+		run_preprocess((*proc_symbols_15min_)[pos], symbol_outputs, symbol, 15, (*symbols_15min_)[pos]);
+		run_preprocess((*proc_symbols_1hr_)[pos], symbol_outputs, symbol, 60, (*symbols_1hr_)[pos]);
+		run_preprocess((*proc_symbols_4hr_)[pos], symbol_outputs, symbol, 240, (*symbols_4hr_)[pos]);
 
 		// notify AccountController (or other listener)
-		if (on_update_)
+		if (on_update_ || on_update_outputs_)
 		{
-			// make sure
+			/* // make sure
 			while ((*latest_trades_)[pos].size() > NUM_TRADES)
 			{
 				// TODO use circular buffer instead
@@ -385,8 +426,10 @@ void DataController::do_update(const ShiftTriggers& triggers, const size_t& pos)
 				// TODO use circular buffer instead
 				// trim the latest quotes to NUM_QUOTES (~15k) quotes
 				(*latest_quotes_)[pos].pop();
-			}
+			}*/
 
+			// TODO move some of this onto the heap? or maybe pass a view type into the callbacks?
+			
 			//copy raw data into a merged format passed to on_update
 			const xtensor_raw data = xt::stack(xt::xtuple(
 				xt::view((*symbols_1min_)[pos], xt::range(0, RT_REPORT_TIMESTEPS), xt::all()),
@@ -411,7 +454,10 @@ void DataController::do_update(const ShiftTriggers& triggers, const size_t& pos)
 			));
 			//std::cout << "data_processed.shape: " << data_processed.shape() << std::endl;
 
-			on_update_(symbol, snapshots_[pos], data, data_processed, (*latest_quotes_)[pos], (*latest_trades_)[pos]);
+			if (on_update_outputs_)
+				on_update_outputs_(symbol, snapshots_[pos], data, data_processed, (*latest_quotes_)[pos], (*latest_trades_)[pos], symbol_outputs);
+			else
+				on_update_(symbol, snapshots_[pos], data, data_processed, (*latest_quotes_)[pos], (*latest_trades_)[pos]);
 		}
 
 		// TODO remove save for verification
@@ -1244,13 +1290,14 @@ void DataController::initSymbol(const Symbol& symbol, std::chrono::seconds ts)
 	// TODO run preprocess now? (and later only process last ts)
     {
 		// must transpose raw data to (features, timesteps) for preprocess...
-		run_preprocess((*proc_symbols_1min_)[pos], symbol, 1, (*symbols_1min_)[pos]);
-		run_preprocess((*proc_symbols_5min_)[pos], symbol, 5, (*symbols_5min_)[pos]);
-		run_preprocess((*proc_symbols_15min_)[pos], symbol, 15, (*symbols_15min_)[pos]);
-		run_preprocess((*proc_symbols_1hr_)[pos], symbol, 60, (*symbols_1hr_)[pos]);
-		run_preprocess((*proc_symbols_4hr_)[pos], symbol, 240, (*symbols_4hr_)[pos]);
-		run_preprocess((*proc_symbols_1d_)[pos], symbol, 1440, (*symbols_1d_)[pos]);
-		run_preprocess((*proc_symbols_1w_)[pos], symbol, 10080, (*symbols_1w_)[pos]);
+		auto& symbol_outputs = (*symbols_outputs_)[pos];
+		run_preprocess((*proc_symbols_1min_)[pos], symbol_outputs, symbol, 1, (*symbols_1min_)[pos]);
+		run_preprocess((*proc_symbols_5min_)[pos], symbol_outputs, symbol, 5, (*symbols_5min_)[pos]);
+		run_preprocess((*proc_symbols_15min_)[pos], symbol_outputs, symbol, 15, (*symbols_15min_)[pos]);
+		run_preprocess((*proc_symbols_1hr_)[pos], symbol_outputs, symbol, 60, (*symbols_1hr_)[pos]);
+		run_preprocess((*proc_symbols_4hr_)[pos], symbol_outputs, symbol, 240, (*symbols_4hr_)[pos]);
+		run_preprocess((*proc_symbols_1d_)[pos], symbol_outputs, symbol, 1440, (*symbols_1d_)[pos]);
+		run_preprocess((*proc_symbols_1w_)[pos], symbol_outputs, symbol, 10080, (*symbols_1w_)[pos]);
     }
 
     {

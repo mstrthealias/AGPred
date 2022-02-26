@@ -29,6 +29,16 @@ std::ostream& operator<< (std::ostream& out, const std::vector<int>& s);
 std::ostream& operator<< (std::ostream& out, const std::vector<double>& v);
 std::ostream& operator<< (std::ostream& out, const std::vector<std::vector<size_t>>& v);
 
+template <std::size_t... N>
+std::ostream& operator<< (std::ostream& out, const xt::xshape<N...>& v)
+{
+	out << '(';
+	std::copy(v.cbegin(), v.cend(), std::ostream_iterator<double>(out, ", "));
+	out << "\b\b)";
+	return out;
+}
+
+
 /*
 enum Timeframe : uint32_t
 {
@@ -544,6 +554,22 @@ public:
 		_MORNINGDOJISTAR,
 		_MORNINGSTAR,
 	};
+
+	// outputs are saved in their own array, thus start at idx 0...
+	static constexpr ptrdiff_t _OUTPUT_NUM_COLS = 9;
+	enum Output : ptrdiff_t
+	{
+		ts = 0,
+		long_low,
+		long1,
+		long2,
+		long3,
+		short_high,
+		short1,
+		short2,
+		short3,
+	};
+
 };
 
 // assert ColPos configuration...

@@ -11,8 +11,9 @@
 namespace agpred {
 	// fixed maximum number of symbols that may be tracked at any time:
 	constexpr unsigned int MAX_ACTIVE_SYMBOLS = 3;
-	
+
 	using fn_update = std::function<void(const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades)>;
+	using fn_update_outputs = std::function<void(const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades, const xtensor_outputs_interval& outputs)>;
 	using fn_snapshot = std::function<void(const Symbol& symbol, const Snapshot& snapshot)>;
 
 
@@ -27,7 +28,7 @@ namespace agpred {
 		const bool flush1hr;
 		const bool flush4hr;
 
-		ShiftTriggers(const timestamp_t& next_ts)
+		explicit ShiftTriggers(const timestamp_t& next_ts)
 			: next_ts(next_ts),
 			ts_dbl(static_cast<double>(next_ts)),
 			flush10sec(static_cast<timestamp_t>(ts_dbl / 10.0) * 10 == next_ts),
@@ -44,7 +45,9 @@ namespace agpred {
 	class DataController
 	{
 	public:
+		DataController(const AGMode mode, const fn_snapshot on_snapshot, const fn_update on_update, const fn_update_outputs on_update_outputs);
 		DataController(const AGMode mode, const fn_snapshot on_snapshot, const fn_update on_update);
+		DataController(const AGMode mode, const fn_snapshot on_snapshot, const fn_update_outputs on_update_outputs);
 		DataController(const AGMode mode);
 		~DataController();
 
@@ -67,6 +70,7 @@ namespace agpred {
 		const AGMode mode_;
 		const fn_snapshot on_snapshot_;
 		const fn_update on_update_;
+		const fn_update_outputs on_update_outputs_;
 
 		// maintain a map of the active symbol positions in symbols_data
 		std::map<Symbol, size_t, _compare_symbol> symbols_pos_; // TODO index by char*?
@@ -78,8 +82,11 @@ namespace agpred {
 		std::array<timestamp_t, MAX_ACTIVE_SYMBOLS> cur_timesteps_;
 		
 		// TODO may be more ideal to have these on the stack, not the heap o.0
-		std::array<trades_queue, MAX_ACTIVE_SYMBOLS>* latest_trades_;
-		std::array<quotes_queue, MAX_ACTIVE_SYMBOLS>* latest_quotes_;
+		std::array<trades_queue, MAX_ACTIVE_SYMBOLS>* latest_trades_ = nullptr;
+		std::array<quotes_queue, MAX_ACTIVE_SYMBOLS>* latest_quotes_ = nullptr;
+		
+		// track outputs here, incase in download-data mode
+		std::array<xtensor_outputs_interval, MAX_ACTIVE_SYMBOLS>* symbols_outputs_ = nullptr;
 
 		// track the raw candle data in xtensor arrays in ascending order
 		std::array<xtensor_raw_interval, MAX_ACTIVE_SYMBOLS>* symbols_1min_ = nullptr;

@@ -15,8 +15,10 @@ namespace agpred {
 	using json = nlohmann::json;
 
 	using id_t = unsigned int;  // TODO size_t?
-
+	
 	constexpr int NUM_RAW_COLUMNS = 14;
+	constexpr int NUM_TRADE_COLUMNS = 6;  // ts, price, size, cond1, cond2, cond3
+	constexpr int NUM_QUOTE_COLUMNS = 8;  // ts, bid, ask, bid_size, ask_size, cond1, cond2, cond3
 	constexpr int RT_MAX_TIMESTEPS = 255;
 	constexpr int RT_REPORT_TIMESTEPS = 11;  // TODO NUM_TIMESTEMPS ?
 
@@ -24,19 +26,25 @@ namespace agpred {
 	using shape_raw_interval_255_t = xt::xshape<RT_MAX_TIMESTEPS, NUM_RAW_COLUMNS>;  // (timesteps, cols)
 	using shape_raw_255_t = xt::xshape<NUM_INTERVALS, RT_MAX_TIMESTEPS, NUM_RAW_COLUMNS>;  // (timeframe, timesteps, cols)
 	using shape_raw_t = xt::xshape<NUM_INTERVALS, RT_REPORT_TIMESTEPS, NUM_RAW_COLUMNS>;  // (timeframe, timesteps, cols)
+	using shape_trades_t = xt::xshape<NUM_TRADES, NUM_TRADE_COLUMNS>;  // (timesteps, cols)
+	using shape_quotes_t = xt::xshape<NUM_QUOTES, NUM_QUOTE_COLUMNS>;  // (timesteps, cols)
 
 	using xtensor_raw_interval = xt::xtensor_fixed<double, shape_raw_interval_255_t>;
 	using xtensor_raw_255 = xt::xtensor_fixed<double, shape_raw_255_t>;
 	using xtensor_raw = xt::xtensor_fixed<double, shape_raw_t>;
+	using xtensor_trades = xt::xtensor_fixed<double, shape_trades_t>;
+	using xtensor_quotes = xt::xtensor_fixed<double, shape_quotes_t>;
 
 	// TODO processed
 	// this is how much processed data is tracked for each symbol
 	// shape: (timesteps, columns/features, timeframes)
 	using shape_processed_interval_t = xt::xshape<RT_MAX_TIMESTEPS, NUM_COLUMNS>;
 	using shape_processed_t = xt::xshape<NUM_INTERVALS, NUM_TIMESTEMPS, NUM_COLUMNS>;  // TODO move NUM_INTERVALS to end?
+	using shape_outputs_interval_t = xt::xshape<RT_MAX_TIMESTEPS, ColPos::_OUTPUT_NUM_COLS>;  // (timesteps) for single column
 	
 	using xtensor_processed_interval = xt::xtensor_fixed<double, shape_processed_interval_t>;
 	using xtensor_processed = xt::xtensor_fixed<double, shape_processed_t>;
+	using xtensor_outputs_interval = xt::xtensor_fixed<double, shape_outputs_interval_t>;
 
 	enum class AGMode
 	{
