@@ -11,6 +11,28 @@ namespace agpred {
 	int calc_raw_signal(const xtensor_raw& raw);
 
 
+	class TakeProfitExit final : public SnapshotExitBase {
+	public:
+		explicit TakeProfitExit(const std::string& name) : SnapshotExitBase(name)
+		{
+		}
+		~TakeProfitExit() = default;
+
+		bool call(const Position& position, const Snapshot& snapshot) const override
+		{
+			// TODO
+			return snapshot.nbbo.bid >= position.avg_price() + 1.337;
+		}
+
+		ExitData operator() (const Position& position, const Symbol& symbol, const Snapshot& snapshot) const override
+		{
+			std::cout << "TakeProfitExit: ExitData CALL()" << std::endl;
+			return ExitData{ position.type(), 0.0};
+		}
+	};
+
+
+
 	class MA3EMA9Algo final : public AlgoBase
 	{
 	public:
@@ -20,7 +42,7 @@ namespace agpred {
 		}
 		~MA3EMA9Algo() override = default;
 
-		bool operator() (const Snapshot& snapshot, const xtensor_raw& raw, const xtensor_processed& processed) const override
+		bool operator() (const Snapshot& snapshot, const xtensor_raw& raw, const xtensor_processed& processed, const quotes_queue& quotes, const trades_queue& trades) const override
 		{
 			//std::cout << "MA3EMA9Algo: CALL()" << std::endl;
 
@@ -47,7 +69,7 @@ namespace agpred {
 			//std::cout << "MA3EMA9Entry: EntryData CALL()" << std::endl;
 
 			// TODO an actual entry ?
-			return EntryData{ PositionType::LONG, 100, snapshot.price};  //symbol, 
+			return EntryData{ PositionType::LONG, 100, snapshot.last1min.close, snapshot.last1min.close - 35 };
 		}
 	};
 
@@ -60,12 +82,12 @@ namespace agpred {
 		}
 		~MA3EMA9Exit() override = default;
 
-		ExitData operator()(const Symbol& symbol, const Snapshot& snapshot) const override
+		ExitData operator()(const Position& position, const Symbol& symbol, const Snapshot& snapshot) const override
 		{
 			//std::cout << "MA3EMA9Exit: ExitData CALL()" << std::endl;
 
 			// PositionType::LONG to exit LONG positions...
-			return ExitData{PositionType::LONG, 0.0};  //symbol, 
+			return ExitData{ position.type(), 0.0 };  //symbol, 
 		}
 	};
 

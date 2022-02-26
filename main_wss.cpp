@@ -26,13 +26,13 @@ MA3EMA9Entry entry_ma("ma3_ema9 entry", 1, algo_ma_above);
 
 MA3EMA9Exit exit_ma("ma3_ema9 exit", algo_ma_below);
 
-StopLossExit exit_stop_loss("stop_loss exit");
+//StopLossExit exit_stop_loss("stop_loss exit");
 
 
 const std::array<AlgoBase* const, 2> algos({ &algo_ma_above, &algo_ma_below });
 
 const std::array<EntryBase* const, 1> entries({ &entry_ma });
-const std::array<ExitBase* const, 2> exits({ &exit_ma, &exit_stop_loss });
+const std::array<ExitBase* const, 2> exits({ &exit_ma });
 
 
 using Ctrl = AccountController<algos.size(), entries.size(), exits.size()>;

@@ -6,6 +6,7 @@
 #include "core/data_controller.h"
 
 #include "algos/ma3_ema9.h"
+#include "algos/long_low.h"
 
 #include "adapters/polygon_io.h"  // TODO not directly include this?
 #include "sim/simulator.h"  // TODO not directly include this?
@@ -16,21 +17,30 @@ using json = nlohmann::json;
 using namespace agpred;
 
 
+
 MA3EMA9Algo algo_ma_above("ma3_ema9", false);
 MA3EMA9Algo algo_ma_below("ma3_ema9", true);
+LongLowAlgo algo_long_low("profit_low", false);
 //MA3EMA9Algo algo2("ma3_ma9");
 
 MA3EMA9Entry entry_ma("ma3_ema9 entry", 1, algo_ma_above);
+LongLowEntry entry_long_low("profit_low entry", 1, algo_long_low);
 
 MA3EMA9Exit exit_ma("ma3_ema9 exit", algo_ma_below);
 
-StopLossExit exit_stop_loss("stop_loss exit");
+//StopLossExit exit_stop_loss("stop_loss exit");
+TakeProfitExit exit_take_profit("take_profit exit");
 
 
-const std::array<AlgoBase* const, 2> algos({ &algo_ma_above, &algo_ma_below });
+//const std::array<AlgoBase* const, 2> algos({ &algo_ma_above, &algo_ma_below });
+//const std::array<AlgoBase* const, 3> algos({ &algo_ma_above, &algo_ma_below, &algo_long_low });
+const std::array<AlgoBase* const, 1> algos({ &algo_long_low });
 
-const std::array<EntryBase* const, 1> entries({ &entry_ma });
-const std::array<ExitBase* const, 2> exits({ &exit_ma, &exit_stop_loss });
+//const std::array<EntryBase* const, 1> entries({ &entry_ma });
+//const std::array<EntryBase* const, 2> entries({ &entry_ma, &entry_long_low });
+const std::array<EntryBase* const, 1> entries({ &entry_long_low });
+//const std::array<ExitBase* const, 2> exits({ &exit_ma, &exit_take_profit });
+const std::array<ExitBase* const, 1> exits({ &exit_take_profit });
 
 
 using Ctrl = AccountController<algos.size(), entries.size(), exits.size()>;
@@ -79,11 +89,11 @@ int main(int argc, char* argv[])
     );
 
     // fetch symbol
-    const agpred::Symbol& symbol = agpred::Symbol::get_symbol("AAPL");
+    const agpred::Symbol& symbol = agpred::Symbol::get_symbol("SPY");
 
     // choose trading_day
-    //const auto now = std::chrono::system_clock::now();
-    const auto now = std::chrono::system_clock::now() - std::chrono::seconds(1 * 86400);
+    constexpr unsigned int DAYS_BACK = 1;
+    const auto now = std::chrono::system_clock::now() - std::chrono::seconds(DAYS_BACK * 86400);
     // start back-testing at 7:50 am ET
     const auto utc_day_start = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::floor<std::chrono::duration<int, std::ratio<86400>>>(now.time_since_epoch()));
     const auto et_day_start = utc_day_start + std::chrono::hours(7);  // TODO 6 if DST?
