@@ -92,7 +92,7 @@ namespace agpred {
 		// TODO
 		static const Symbol& get_symbol(const std::string& ticker);
 	private:
-		inline static std::map<std::string, Symbol> symbol_cache;
+		/*inline*/ static std::map<std::string, Symbol> symbol_cache;
 	};
 
 	struct _compare_symbol {
@@ -136,11 +136,16 @@ namespace agpred {
 		json data;
 
 	protected:
-		inline static id_t next_order_id = 1;
+		/*inline*/ static id_t next_order_id/* = 1*/;
 	};
 
 	struct PendingEntry : PendingOrder {
 		const EntryData entry_data = { PositionType::LONG, 0, 0.0 };
+
+		PendingEntry(const PendingOrder& pending_order, const EntryData& entry_data)
+			: PendingOrder(pending_order), entry_data(entry_data)
+		{
+		}
 
 		static PendingEntry fromEntryData(const EntryData& entry_data)
 		{
@@ -157,6 +162,11 @@ namespace agpred {
 	struct PendingExit : PendingOrder {
 		const id_t position_id = 0;
 		const ExitData exit_data = {PositionType::LONG, 0.0};
+
+		PendingExit(const PendingOrder &pending_order, const id_t& position_id, const ExitData& exit_data)
+			: PendingOrder(pending_order), position_id(position_id), exit_data(exit_data)
+		{
+		}
 
 		static PendingExit fromExitData(const id_t& position_id, const ExitData& exit_data)
 		{

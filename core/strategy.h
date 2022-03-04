@@ -30,7 +30,7 @@ namespace agpred {
 		const std::string name_;
 
 	private:
-		inline static size_t next_algo_id_ = 1;
+		/*inline*/ static size_t next_algo_id_/* = 1*/;
 	};
 
 

@@ -4,6 +4,10 @@
 using namespace agpred;
 
 
+id_t PendingOrder::next_order_id = 1;
+std::map<std::string, Symbol> Symbol::symbol_cache = {};
+
+
 // TODO
 const Symbol& Symbol::get_symbol(const std::string& ticker)
 {
