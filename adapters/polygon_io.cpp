@@ -19,6 +19,15 @@ using namespace agpred;
 static const json JSON_NULL = json::parse("null");
 
 
+#ifdef USE_PROXY_CACHE
+const auto cpr_ssl_opts = cpr::Ssl(cpr::ssl::TLSv1_2{}, cpr::ssl::VerifyHost{ false }, cpr::ssl::VerifyPeer{ false });  // TODO TLSv1_3 ?
+const auto cpr_proxy_opts = cpr::Proxies{ {"http", "http://192.168.50.119:3128"}, {"https", "http://192.168.50.119:3128"} };
+#else
+const auto cpr_ssl_opts = cpr::Ssl(cpr::ssl::TLSv1_3{});
+const auto cpr_proxy_opts = cpr::Proxies{};
+#endif
+
+
 inline void process_agg(Bar& dest, const json& agg)
 {
 	dest.timestamp = static_cast<double>(agg["t"].get<uint64_t>()) / 1.0e3;
@@ -268,7 +277,6 @@ void adapter::payload_rt_to_trade_data(TradeData& trade_data, const json& trade)
 }
 
 
-
 size_t PolygonIoAdapter::getAggregateHistory(xtensor_raw_interval& dest, const std::string& symbol, unsigned int interval, timestamp_t start_ts, timestamp_t end_ts, bool adjusted, unsigned int limit)
 {
 	std::string base_url = POLYGON_BASE_URI + "v2/aggs/ticker/" + std::string(symbol) + "/range/";
@@ -286,6 +294,8 @@ size_t PolygonIoAdapter::getAggregateHistory(xtensor_raw_interval& dest, const s
 
 	cpr::Response r = cpr::Get(
 		cpr::Url{ base_url },
+		cpr_ssl_opts,
+		cpr_proxy_opts,
 		cpr::Parameters{
 			{"adjusted", (adjusted ? "true" : "false")},
 			{"limit", std::to_string(limit)},
@@ -346,6 +356,8 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 	{
 		r = cpr::Get(
 			cpr::Url{ url },
+			cpr_ssl_opts,
+			cpr_proxy_opts,
 			cpr::Parameters{
 				{"limit", std::to_string(limit)},
 				{"reverse", "false"},
@@ -542,6 +554,8 @@ size_t PolygonIoAdapter::getQuoteHistoryBefore(std::queue<QuoteData>& quotes, co
 	const std::string url = POLYGON_BASE_URI + "vX/quotes/" + std::string(symbol);
 	cpr::Response r = cpr::Get(
 		cpr::Url{ url },  // see note above
+		cpr_ssl_opts,
+		cpr_proxy_opts,
 		cpr::Parameters{
 			{"limit", std::to_string(limit)},
 			{"order", "desc"},
@@ -628,6 +642,8 @@ size_t PolygonIoAdapter::getTradeHistoryBefore(std::queue<TradeData>& trades, co
 	
 	cpr::Response r = cpr::Get(
 		cpr::Url{ url },
+		cpr_ssl_opts,
+		cpr_proxy_opts,
 		cpr::Parameters{
 			{"limit", std::to_string(limit)},
 			{"order", "desc"},
@@ -710,6 +726,8 @@ size_t PolygonIoAdapter::getQuoteHistoryAfter(std::queue<QuoteData>& quotes, con
 	const std::string url = POLYGON_BASE_URI + "vX/quotes/" + std::string(symbol);
 	cpr::Response r = cpr::Get(
 		cpr::Url{ url },  // cpr::Url{ url },  // see note above
+		cpr_ssl_opts,
+		cpr_proxy_opts,
 		cpr::Parameters{
 			{"limit", std::to_string(limit)},
 			{"order", "asc"},
@@ -796,13 +814,17 @@ size_t PolygonIoAdapter::getQuoteHistoryBetween(std::queue<QuoteData>& quotes, c
 		if (!next_url.empty() && next_url.is_string())
 		{
 			r = cpr::Get(
-				cpr::Url{ next_url.get<std::string>() + "&apiKey=" + POLYGON_API_KEY }
+				cpr::Url{ next_url.get<std::string>() + "&apiKey=" + POLYGON_API_KEY },
+				cpr_ssl_opts,
+				cpr_proxy_opts
 			);
 		}
 		else
 		{
 			r = cpr::Get(
 				cpr::Url{ url },  // see note above
+				cpr_ssl_opts,
+				cpr_proxy_opts,
 				cpr::Parameters{
 					{"limit", std::to_string(limit)},
 					{"order", "asc"},
@@ -891,13 +913,17 @@ size_t PolygonIoAdapter::getTradeHistoryBetween(std::queue<TradeData>& trades, c
 		if (!next_url.empty() && next_url.is_string())
 		{
 			r = cpr::Get(
-				cpr::Url{ next_url.get<std::string>() + "&apiKey=" + POLYGON_API_KEY }
+				cpr::Url{ next_url.get<std::string>() + "&apiKey=" + POLYGON_API_KEY },
+				cpr_ssl_opts,
+				cpr_proxy_opts
 			);
 		}
 		else
 		{
 			r = cpr::Get(
 				cpr::Url{ url },
+				cpr_ssl_opts,
+				cpr_proxy_opts,
 				cpr::Parameters{
 					{"limit", std::to_string(limit)},
 					{"order", "asc"},

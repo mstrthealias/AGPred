@@ -17,6 +17,24 @@
           "type": "PATH"
         }
       ]
+    },
+    {
+      "name": "x64-Release",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "-DASIO_STANDALONE=1 -DOPENSSL_ROOT_DIR=C:/share/OpenSSL-Win64-1.1.1l -DNOMINMAX=1",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "variables": [
+        {
+          "name": "PYTHON_EXECUTABLE",
+          "value": "C:\\share\\Python39\\python.exe",
+          "type": "PATH"
+        }
+      ]
     }
   ]
 }

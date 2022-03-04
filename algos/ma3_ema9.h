@@ -22,6 +22,7 @@ namespace agpred {
 		{
 			// TODO
 			return snapshot.nbbo.bid >= position.avg_price() + 1.337;
+			//return snapshot.nbbo.bid >= position.avg_price() + 0.77;
 		}
 
 		ExitData operator() (const Position& position, const Symbol& symbol, const Snapshot& snapshot) const override
@@ -69,7 +70,7 @@ namespace agpred {
 			//std::cout << "MA3EMA9Entry: EntryData CALL()" << std::endl;
 
 			// TODO an actual entry ?
-			return EntryData{ PositionType::LONG, 100, snapshot.last1min.close, snapshot.last1min.close - 35 };
+			return EntryData{ PositionType::LONG, 100, snapshot.last1min.close, 0.0 };
 		}
 	};
 

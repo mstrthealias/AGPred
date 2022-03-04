@@ -66,9 +66,6 @@ int main(int argc, char* argv[])
     //// print numbers with 9 digit precision
     //std::cout.precision(9);
 
-    std::string hostname = "*.polygon.io";
-    std::string uri = "wss://socket.polygon.io/stocks";
-
     Simulator simulator;
     //SimulatedAccountAdapter account_adapter(simulator);
 
@@ -109,6 +106,7 @@ int main(int argc, char* argv[])
     ctrl.initSymbol(symbol, trading_start);
 
     ctrl.startSimulation(trading_start, back_test_duration);
+
     
     std::cout << "Back-Test complete." << std::endl;
     std::cout << "  Profit Loss: $" << account.getProfitLoss() << std::endl;
