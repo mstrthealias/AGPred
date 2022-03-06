@@ -49,6 +49,12 @@ void agpred::Downloader::onUpdate(const Symbol& symbol, const Snapshot& snapshot
 {
 	//(NUM_INTERVALS, NUM_TIMESTEMPS, NUM_COLUMNS)
 
+	auto nan_sum = xt::sum(xt::isnan(data))(0) + xt::sum(xt::isnan(data_processed))(0) + xt::sum(xt::isnan(outputs))(0);
+	if (nan_sum > 0) {
+		std::cout << "SKIP onUpdate() " << nan_sum << " nan value(s) found" << std::endl;
+		return;
+	}
+
 	//if (DEBUG_PRINT_DATA)
 	//std::cout << "onUpdate(" << symbol.symbol << ") data_processed.shape:" << std::endl << data_processed.shape() << std::endl;
 
@@ -129,14 +135,14 @@ void agpred::Downloader::onUpdate(const Symbol& symbol, const Snapshot& snapshot
 	if constexpr (DEBUG_DOWNLOADER)
 	{
 		if (static_cast<int64_t>(cur_pos_) - static_cast<int64_t>(STAGED_DELAY_OFFSET) >= 0) {
-			auto stage_proc_at_valid_output = xt::view(staged_proccessed, cur_pos_ - STAGED_DELAY_OFFSET, xt::all(), xt::all(), xt::all());
+			//auto stage_proc_at_valid_output = xt::view(staged_proccessed, cur_pos_ - STAGED_DELAY_OFFSET, xt::all(), xt::all(), xt::all());
 			//std::cout << "stage_proc_at_valid_output.shape() " << xt::xarray<real_t>(stage_proc_at_valid_output).shape() << std::endl;
-			std::cout << "stage_proc_avo_1min_last TS: " << static_cast<timestamp_t>(stage_proc_at_valid_output(0, NUM_TIMESTEMPS - 1, 0)) << std::endl;
+			//std::cout << "stage_proc_avo_1min_last TS: " << static_cast<timestamp_t>(stage_proc_at_valid_output(0, NUM_TIMESTEMPS - 1, 0)) << std::endl;
 
 			// Note outputs copied into this row: (cur_pos_ - STAGED_DELAY_OFFSET)
-			auto stage_outputs = xt::view(staged_outputs, cur_pos_ - STAGED_DELAY_OFFSET, xt::all());
+			//auto stage_outputs = xt::view(staged_outputs, cur_pos_ - STAGED_DELAY_OFFSET, xt::all());
 			//std::cout << "stage_outputs.shape() " << xt::xarray<real_t>(stage_outputs).shape() << std::endl;
-			std::cout << "stage_outputs TS: " << static_cast<timestamp_t>(stage_outputs(0)) << std::endl;
+			//std::cout << "stage_outputs TS: " << static_cast<timestamp_t>(stage_outputs(0)) << std::endl;
 		}
 	}
 

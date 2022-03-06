@@ -29,8 +29,9 @@ const auto cpr_proxy_opts = cpr::Proxies{};
 
 inline void process_agg(xtensor_ts_interval& dest_ts, xtensor_raw_interval& dest, const uint32_t i, const json& agg)
 {
-	dest_ts(i, ColPos::In::timestamp) = static_cast<timestamp_us_t>(agg["t"].get<uint64_t>());
-	dest(i, ColPos::In::timestamp) = static_cast<real_t>(static_cast<timestamp_us_t>(agg["t"].get<uint64_t>() / SEC_TO_US) - SEC_37_YEARS);  // TODO float timestamp, subtract 37 years to keep in range?
+	dest_ts(i, ColPos::In::timestamp) = static_cast<timestamp_us_t>(agg["t"].get<uint64_t>() * MS_TO_US);
+	dest(i, ColPos::In::timestamp) = static_cast<real_t>(agg["t"].get<uint64_t>() / static_cast<real_t>(SEC_TO_MS));
+	//dest(i, ColPos::In::timestamp) = static_cast<real_t>(static_cast<timestamp_us_t>(agg["t"].get<uint64_t>() / SEC_TO_US) - SEC_37_YEARS);  // TODO float timestamp, subtract 37 years to keep in range?
 	dest(i, ColPos::In::open) = agg["o"].get<double>();
 	dest(i, ColPos::In::high) = agg["h"].get<double>();
 	dest(i, ColPos::In::low) = agg["l"].get<double>();
@@ -306,7 +307,7 @@ size_t PolygonIoAdapter::getAggregateHistory(xtensor_ts_interval& dest_ts, xtens
 }
 
 
-size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_ts_255& ts_dest, xtensor_raw_255& dest, const std::string& symbol, timestamp_us_t end_ts, unsigned int limit)
+size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std::string& symbol, const xtensor_ts_255& ts_dest, timestamp_us_t end_ts, unsigned int limit)
 {
 	const auto end_time = static_cast<time_t>(end_ts / SEC_TO_US);
 	auto end_tm = tm();
@@ -373,14 +374,14 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_ts_255& ts_dest, xtensor_
 				const unsigned int& interval = std::get<0>(tpl);
 				const int i_loc = static_cast<int>(std::get<3>(tpl));
 				//const timestamp_s_t interval_seconds = static_cast<size_t>(interval) * 60;
-				const timestamp_us_t interval_us = static_cast<timestamp_us_t>(interval) * 60 * SEC_TO_US;
+				const timestamp_us_t interval_us = static_cast<timestamp_us_t>(interval) * MIN_TO_US;
 				auto i_dest = xt::dynamic_view(dest, { i_loc, xt::all(), xt::all() });  // shape: (timesteps, cols)
-				auto i_dest_ts = xt::dynamic_view(ts_dest, { i_loc, xt::all(), xt::all() });  // shape: (timesteps, cols)
+				const auto i_dest_ts = xt::dynamic_view(ts_dest, { i_loc, xt::all(), xt::all() });  // shape: (timesteps, cols)
 
 				if (ts_steps[i_loc] == 0)
 				{
 					// find the first non-zero timestamp
-					auto i_timestamps = xt::view(i_dest_ts, xt::all(), ColPos::In::timestamp);  // shape: (timesteps,)
+					const auto i_timestamps = xt::view(i_dest_ts, xt::all(), ColPos::In::timestamp);  // shape: (timesteps,)
 					auto i_where = xt::where(i_timestamps >= first_timestamp);
 					if (i_where.empty())
 					{
@@ -460,14 +461,14 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_ts_255& ts_dest, xtensor_
 					}
 
 					// TODO view for row?
-					auto& ask_size = i_dest(dest_row, ColPos::In::ask_size);
-					auto& bid_size = i_dest(dest_row, ColPos::In::bid_size);
 					auto& ask = i_dest(dest_row, ColPos::In::ask);
+					auto& bid = i_dest(dest_row, ColPos::In::bid);
 					auto& ask_high = i_dest(dest_row, ColPos::In::ask_high);
 					auto& ask_low = i_dest(dest_row, ColPos::In::ask_low);
-					auto& bid = i_dest(dest_row, ColPos::In::bid);
 					auto& bid_high = i_dest(dest_row, ColPos::In::bid_high);
 					auto& bid_low = i_dest(dest_row, ColPos::In::bid_low);
+					auto& ask_size = i_dest(dest_row, ColPos::In::ask_size);
+					auto& bid_size = i_dest(dest_row, ColPos::In::bid_size);
 					if (reset_bar)
 					{
 						// set bid/ask and reset the high/lows

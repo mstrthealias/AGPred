@@ -48,7 +48,7 @@ namespace agpred {
 	
 	using xtensor_processed_interval = xt::xtensor_fixed<real_t, shape_processed_interval_t>;
 	using xtensor_processed = xt::xtensor_fixed<real_t, shape_processed_t>;
-	using xtensor_outputs_interval = xt::xtensor_fixed<real_t, shape_outputs_interval_t>;
+	using xtensor_outputs_interval = xt::xtensor_fixed<double, shape_outputs_interval_t>;
 
 	enum class AGMode
 	{

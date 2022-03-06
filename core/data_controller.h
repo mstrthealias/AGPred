@@ -30,13 +30,13 @@ namespace agpred {
 
 		explicit ShiftTriggers(const timestamp_us_t& next_ts)
 			: next_ts(next_ts),
-			ts_dbl(static_cast<double>(next_ts) / 1.0e6),
-			flush10sec(static_cast<timestamp_s_t>(ts_dbl / 10.0) * 10 == next_ts / static_cast<timestamp_s_t>(1e6)),
-			flush1min(static_cast<timestamp_s_t>(ts_dbl / 60.0) * 60 == next_ts / static_cast<timestamp_s_t>(1e6)),
-			flush5min(static_cast<timestamp_s_t>(ts_dbl / 300.0) * 300 == next_ts / static_cast<timestamp_s_t>(1e6)),
-			flush15min(static_cast<timestamp_s_t>(ts_dbl / 900.0) * 900 == next_ts / static_cast<timestamp_s_t>(1e6)),
-			flush1hr(static_cast<timestamp_s_t>(ts_dbl / 3600.0) * 3600 == next_ts / static_cast<timestamp_s_t>(1e6)),
-			flush4hr(static_cast<timestamp_s_t>(ts_dbl / 14400.0) * 14400 == next_ts / static_cast<timestamp_s_t>(1e6))
+			ts_dbl(static_cast<double>(next_ts) / static_cast<double>(SEC_TO_US)),
+			flush10sec(static_cast<timestamp_s_t>(ts_dbl / 10.0) * 10 == next_ts / SEC_TO_US),
+			flush1min(static_cast<timestamp_s_t>(ts_dbl / 60.0) * 60 == next_ts / SEC_TO_US),
+			flush5min(static_cast<timestamp_s_t>(ts_dbl / 300.0) * 300 == next_ts / SEC_TO_US),
+			flush15min(static_cast<timestamp_s_t>(ts_dbl / 900.0) * 900 == next_ts / SEC_TO_US),
+			flush1hr(static_cast<timestamp_s_t>(ts_dbl / 3600.0) * 3600 == next_ts / SEC_TO_US),
+			flush4hr(static_cast<timestamp_s_t>(ts_dbl / 14400.0) * 14400 == next_ts / SEC_TO_US)
 		{
 		}
 	};

@@ -6,7 +6,6 @@
 #include <xtensor/xio.hpp>
 
 
-
 bool _xt_check_2d_sort(const xt::xarray<real_t>& a_vals, const ptrdiff_t& sort_index, const bool force)
 {
 	if (force)
@@ -49,24 +48,25 @@ void _xt_2d_sort_2a(xt::xarray<timestamp_us_t>& ts_vals, xt::xarray<real_t>& a_v
 {
 	//std::cout << "SORT" << std::endl;
 
+	auto timesteps = xt::row(ts_vals, sort_index);
 	// create temporary array to hold reversed values
-	const auto indexes = xt::row(ts_vals, sort_index);
-	xt::xarray<real_t> a_tmp = xt::zeros<real_t>(indexes.shape());
-	xt::xarray<timestamp_us_t> ts_tmp = xt::zeros<timestamp_us_t>(indexes.shape());
+	xt::xarray<real_t> a_tmp = xt::zeros<real_t>(timesteps.shape());
 
-	const size_t len = ts_vals.shape().at(0);
-	// assert(len == 6);
+	const size_t len = a_vals.shape().at(0);
 
-	// copy each column
+	// reverse ts_vals
+	{
+		// create temporary array to hold reversed values
+		xt::xarray<timestamp_us_t> ts_tmp = xt::zeros<timestamp_us_t>(timesteps.shape());
+		// copy into temporary array
+		std::copy(timesteps.crbegin(), timesteps.crend(), ts_tmp.begin());
+		// copy back to ts_vals
+		std::copy(ts_tmp.cbegin(), ts_tmp.cend(), timesteps.begin());
+	}
+
+	// reverse each column in a_vals
 	for (int i = 0; i < len; i++)
 	{
-		// copy into temporary array
-		auto row_ts = xt::row(ts_vals, i);
-		std::copy(row_ts.crbegin(), row_ts.crend(), ts_tmp.begin());
-		// copy back to a_vals
-		std::copy(ts_tmp.cbegin(), ts_tmp.cend(), row_ts.begin());
-
-		// repeat for actual data
 		// copy into temporary array
 		auto row = xt::row(a_vals, i);
 		std::copy(row.crbegin(), row.crend(), a_tmp.begin());

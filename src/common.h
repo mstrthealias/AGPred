@@ -15,7 +15,7 @@
 
 constexpr bool DEBUG_PRINT_DATA = false;
 constexpr bool DEBUG_PRINT_PROCESSED_DATA = false;
-constexpr bool DEBUG_PRINT_REQUESTS = true;
+constexpr bool DEBUG_PRINT_REQUESTS = false;
 constexpr bool DEBUG_ORDERS = false;
 
 
@@ -39,11 +39,12 @@ using dfs_ts_map_t = std::map<int, xt::xarray<timestamp_us_t>>;
 using interval_map_t = std::map<const char*, const int>;
 
 
+constexpr timestamp_ms_t SEC_TO_MS = static_cast<timestamp_ms_t>(1e3);
 constexpr timestamp_us_t SEC_TO_US = static_cast<timestamp_us_t>(1e6);
 constexpr timestamp_ns_t SEC_TO_NS = static_cast<timestamp_ns_t>(1e9);
 constexpr timestamp_us_t MIN_TO_US = static_cast<timestamp_us_t>(60) * static_cast<timestamp_us_t>(1e6);
 constexpr timestamp_us_t MS_TO_US = static_cast<timestamp_us_t>(1e3);
-constexpr timestamp_us_t US_TO_NS = static_cast<timestamp_us_t>(1e3);
+constexpr timestamp_ns_t US_TO_NS = static_cast<timestamp_ns_t>(1e3);
 
 constexpr timestamp_s_t SEC_50_YEARS = 31536000 * 50 + 86400 * static_cast<timestamp_s_t>(50 / 4);
 constexpr timestamp_s_t SEC_37_YEARS = 31536000 * 37 + 86400 * static_cast<timestamp_s_t>(37 / 4);
@@ -504,10 +505,10 @@ public:
 		adx_indicator,
 	};
 
-	static constexpr ptrdiff_t _NORM_NUM_COLS = 2;
+	static constexpr ptrdiff_t _NORM_NUM_COLS = 1;
 	enum Norm : ptrdiff_t
 	{
-		// 2 cols
+		// 1 cols
 		close_ln = _IN_NUM_COLS + _DEP_NUM_COLS + _REGR_NUM_COLS + _DIFF_NUM_COLS + _TA_NUM_COLS,
 		//close_next_norm,
 	};

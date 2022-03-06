@@ -10,6 +10,7 @@
 #include <xtensor/xfixed.hpp>
 #include <xtensor/xnpy.hpp>
 #include <xtensor/xview.hpp>
+#include <xtensor/xdynamic_view.hpp>
 #include <xtensor/xio.hpp>
 
 #include "../src/consolidate.h"
@@ -68,16 +69,26 @@ inline void run_preprocess(xtensor_processed_interval& data_processed, xtensor_o
 	// TODO TIMEFRAME, training
 	const bool training = TIMEFRAME == interval;
 
-	process_step1_single_2a(ts_raw_transposed, data_raw_transposed, symbol.symbol.c_str(), training, TIMEFRAME, interval, false);
-	auto& ts_step1 = ts_raw_transposed;
-	auto& a_step1 = data_raw_transposed;
-	auto processed = process_step2_single_2a(symbol.symbol.c_str(), ts_step1, a_step1, training, TIMEFRAME, interval, false);
+	/*
+	auto& a_step1 = process_step1_single(symbol.symbol.c_str(), data_raw_transposed, training, TIMEFRAME, interval, false);
+	auto processed = process_step2_single(symbol.symbol.c_str(), a_step1, training, TIMEFRAME, interval, false);
 
 	// TODO skip creating outputs (elsewhere) if !training?
 	xt::xarray<double> o_outputs;  // TODO include timestamp and/or close in outputs?
 	if (training)
 		o_outputs = xt::zeros<double>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(a_step1.shape().at(1)) });
-	process_step3_single_2a(processed, o_outputs, ts_step1, symbol.symbol.c_str(), a_step1, training, TIMEFRAME, interval, false);
+	process_step3_single(processed, o_outputs, symbol.symbol.c_str(), a_step1, training, TIMEFRAME, interval, false);
+	*/
+
+	process_step1_single_2a(ts_raw_transposed, data_raw_transposed, symbol.symbol.c_str(), training, TIMEFRAME, interval, false);
+	auto processed = process_step2_single_2a(symbol.symbol.c_str(), ts_raw_transposed, data_raw_transposed, training, TIMEFRAME, interval, false);
+
+	// TODO skip creating outputs (elsewhere) if !training?
+	xt::xarray<double> o_outputs;  // TODO include timestamp and/or close in outputs?
+	if (training)
+		o_outputs = xt::zeros<double>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(data_raw_transposed.shape().at(1)) });
+	process_step3_single_2a(processed, o_outputs, ts_raw_transposed, symbol.symbol.c_str(), data_raw_transposed, training, TIMEFRAME, interval, false);
+
 	if (training) {
 		const auto outputs_transposed = xt::transpose(o_outputs, { 1, 0 });
 		std::copy(outputs_transposed.crbegin(), outputs_transposed.crend(), data_outputs.rbegin());
@@ -911,7 +922,7 @@ inline void populate_next_full_bar(BarFullRef& bar, const timestamp_us_t& interv
 	bar.bid_size = bid_size;
 }
 
-inline void populate_next_bar(BarRef& bar, const timestamp_us_t& interval_us, const timestamp_t& next_ts, const real_t& ts, const real_t& price)
+inline void populate_next_bar(BarRef& bar, const timestamp_us_t& interval_us, const timestamp_us_t& next_ts, const timestamp_us_t& ts, const real_t& price)
 {
 	// reset this bar
 	bar.timestamp = static_cast<timestamp_us_t>(ts / interval_us) * interval_us;  // TODO verify
@@ -1367,42 +1378,45 @@ void DataController::initSymbol(const Symbol& symbol, std::chrono::seconds ts)
     {
 		// TODO yar, do not create temporary to perform this o.0
 		xtensor_ts_255 data_ts = xt::stack(xt::xtuple(
-				xt::xarray<timestamp_us_t>((*symbols_ts_1min_)[pos]),
-				xt::xarray<timestamp_us_t>((*symbols_ts_5min_)[pos]),
-				xt::xarray<timestamp_us_t>((*symbols_ts_15min_)[pos]),
-				xt::xarray<timestamp_us_t>((*symbols_ts_1hr_)[pos]),
-				xt::xarray<timestamp_us_t>((*symbols_ts_4hr_)[pos]),
-				xt::xarray<timestamp_us_t>((*symbols_ts_1d_)[pos]),
-				xt::xarray<timestamp_us_t>((*symbols_ts_1w_)[pos])
+			xt::dynamic_view((*symbols_ts_1min_)[pos], { xt::all(), xt::all() }),
+			xt::dynamic_view((*symbols_ts_5min_)[pos], { xt::all(), xt::all() }),
+			xt::dynamic_view((*symbols_ts_15min_)[pos], { xt::all(), xt::all() }),
+			xt::dynamic_view((*symbols_ts_1hr_)[pos], { xt::all(), xt::all() }),
+			xt::dynamic_view((*symbols_ts_4hr_)[pos], { xt::all(), xt::all() }),
+			xt::dynamic_view((*symbols_ts_1d_)[pos], { xt::all(), xt::all() }),
+			xt::dynamic_view((*symbols_ts_1w_)[pos], { xt::all(), xt::all() })
 		));
+
 		xtensor_raw_255 data = xt::stack(xt::xtuple(
-			xt::xarray<real_t>((*symbols_1min_)[pos]),
-			xt::xarray<real_t>((*symbols_5min_)[pos]),
-			xt::xarray<real_t>((*symbols_15min_)[pos]),
-			xt::xarray<real_t>((*symbols_1hr_)[pos]),
-			xt::xarray<real_t>((*symbols_4hr_)[pos]),
-			xt::xarray<real_t>((*symbols_1d_)[pos]),
-			xt::xarray<real_t>((*symbols_1w_)[pos])
+			xt::dynamic_view((*symbols_1min_)[pos], { xt::all(), xt::all() }),
+			xt::dynamic_view((*symbols_5min_)[pos], { xt::all(), xt::all() }),
+			xt::dynamic_view((*symbols_15min_)[pos], { xt::all(), xt::all() }),
+			xt::dynamic_view((*symbols_1hr_)[pos], { xt::all(), xt::all() }),
+			xt::dynamic_view((*symbols_4hr_)[pos], { xt::all(), xt::all() }),
+			xt::dynamic_view((*symbols_1d_)[pos], { xt::all(), xt::all() }),
+			xt::dynamic_view((*symbols_1w_)[pos], { xt::all(), xt::all() })
 		));
-		if (PolygonIoAdapter::mergeQuotesAggregates(data_ts, data, symbol.symbol, req_end_ts))
+		if (PolygonIoAdapter::mergeQuotesAggregates(data, symbol.symbol, data_ts, req_end_ts))
 		{
 			// TODO improve this o.0
 			// copy results back...
-			(*symbols_ts_1min_)[pos] = xt::view(data_ts, Timeframes::_1min, xt::all(), xt::all());
-			(*symbols_ts_5min_)[pos] = xt::view(data_ts, Timeframes::_5min, xt::all(), xt::all());
-			(*symbols_ts_15min_)[pos] = xt::view(data_ts, Timeframes::_15min, xt::all(), xt::all());
-			(*symbols_ts_1hr_)[pos] = xt::view(data_ts, Timeframes::_1hr, xt::all(), xt::all());
-			(*symbols_ts_4hr_)[pos] = xt::view(data_ts, Timeframes::_4hr, xt::all(), xt::all());
-			(*symbols_ts_1d_)[pos] = xt::view(data_ts, Timeframes::_1day, xt::all(), xt::all());
-			(*symbols_ts_1w_)[pos] = xt::view(data_ts, Timeframes::_1wk, xt::all(), xt::all());
 
-			(*symbols_1min_)[pos] = xt::view(data, Timeframes::_1min, xt::all(), xt::all());
-			(*symbols_5min_)[pos] = xt::view(data, Timeframes::_5min, xt::all(), xt::all());
-			(*symbols_15min_)[pos] = xt::view(data, Timeframes::_15min, xt::all(), xt::all());
-			(*symbols_1hr_)[pos] = xt::view(data, Timeframes::_1hr, xt::all(), xt::all());
-			(*symbols_4hr_)[pos] = xt::view(data, Timeframes::_4hr, xt::all(), xt::all());
-			(*symbols_1d_)[pos] = xt::view(data, Timeframes::_1day, xt::all(), xt::all());
-			(*symbols_1w_)[pos] = xt::view(data, Timeframes::_1wk, xt::all(), xt::all());
+			/* // Note timestep were constant, so no need to copy these back...
+			(*symbols_ts_1min_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_1min, xt::all(), xt::all() });
+			(*symbols_ts_5min_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_5min, xt::all(), xt::all() });
+			(*symbols_ts_15min_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_15min, xt::all(), xt::all() });
+			(*symbols_ts_1hr_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_1hr, xt::all(), xt::all() });
+			(*symbols_ts_4hr_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_4hr, xt::all(), xt::all() });
+			(*symbols_ts_1d_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_1day, xt::all(), xt::all() });
+			(*symbols_ts_1w_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_1wk, xt::all(), xt::all() });*/
+
+			(*symbols_1min_)[pos] = xt::dynamic_view(data, { Timeframes::_1min, xt::all(), xt::all() });
+			(*symbols_5min_)[pos] = xt::dynamic_view(data, { Timeframes::_5min, xt::all(), xt::all() });
+			(*symbols_15min_)[pos] = xt::dynamic_view(data, { Timeframes::_15min, xt::all(), xt::all() });
+			(*symbols_1hr_)[pos] = xt::dynamic_view(data, { Timeframes::_1hr, xt::all(), xt::all() });
+			(*symbols_4hr_)[pos] = xt::dynamic_view(data, { Timeframes::_4hr, xt::all(), xt::all() });
+			(*symbols_1d_)[pos] = xt::dynamic_view(data, { Timeframes::_1day, xt::all(), xt::all() });
+			(*symbols_1w_)[pos] = xt::dynamic_view(data, { Timeframes::_1wk, xt::all(), xt::all() });
 		}
     }
 

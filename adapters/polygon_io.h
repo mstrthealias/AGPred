@@ -48,7 +48,7 @@ namespace agpred {
 		 * mergeQuotesAggregates:
 		 *   1) Fetches up to 50000*MAX_HISTORY_QUOTE_REQUESTS of quotes history for today, used to aggregate bid(_high,_low)/ask(_high,_low) into 1min data {dest} xtensor array
 		 */
-		static size_t mergeQuotesAggregates(xtensor_ts_255& dest_ts, xtensor_raw_255& dest, const std::string& symbol, timestamp_us_t end_ts, unsigned int limit = MAX_LIMIT);
+		static size_t mergeQuotesAggregates(xtensor_raw_255& dest, const std::string& symbol, const xtensor_ts_255& dest_ts, timestamp_us_t end_ts, unsigned int limit = MAX_LIMIT);
 
 
 		/**

@@ -192,7 +192,7 @@ void process_trade(const json& trade, const int interval, timestamp_us_t& tsStep
 
 	std::cout << "Number of inputs/trades: " << trades.size() << std::endl;
 
-	real_t tsStep = static_cast<int>(static_cast<real_t>(trades[0]["t"].get<uint64_t>()) / 1.0e9 / 60) * 60.0;
+	timestamp_us_t tsStep = static_cast<int>(static_cast<real_t>(trades[0]["t"].get<uint64_t>()) / 1.0e9 / 60) * 60.0;
 	Bar bar;
 
 	for (const auto& trade : trades)
