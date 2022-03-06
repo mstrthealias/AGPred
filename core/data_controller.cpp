@@ -74,9 +74,9 @@ inline void run_preprocess(xtensor_processed_interval& data_processed, xtensor_o
 	auto processed = process_step2_single_2a(symbol.symbol.c_str(), ts_step1, a_step1, training, TIMEFRAME, interval, false);
 
 	// TODO skip creating outputs (elsewhere) if !training?
-	xt::xarray<real_t> o_outputs;  // TODO include timestamp and/or close in outputs?
+	xt::xarray<double> o_outputs;  // TODO include timestamp and/or close in outputs?
 	if (training)
-		o_outputs = xt::zeros<real_t>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(a_step1.shape().at(1)) });
+		o_outputs = xt::zeros<double>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(a_step1.shape().at(1)) });
 	process_step3_single_2a(processed, o_outputs, ts_step1, symbol.symbol.c_str(), a_step1, training, TIMEFRAME, interval, false);
 	if (training) {
 		const auto outputs_transposed = xt::transpose(o_outputs, { 1, 0 });
@@ -645,7 +645,7 @@ inline void update_open_close(BarRef& bar, const real_t& price)
 	}
 }
 
-inline void populate_full_bar(BarFullRef& bar, const int interval_seconds, const timestamp_us_t& next_ts, const timestamp_us_t& ts, const real_t& price, const uint32_t vol, const real_t& prev_bid, const real_t& prev_ask, const real_t& prev_bid_size, const real_t& prev_ask_size)
+inline void populate_full_bar(BarFullRef& bar, const int interval_seconds, const timestamp_us_t& next_ts, const timestamp_us_t& ts, const real_t& price, const uint32_t vol, const real_t& prev_bid, const real_t& prev_ask, const uint32_t prev_bid_size, const uint32_t prev_ask_size)
 {
 	const timestamp_us_t interval_us = static_cast<timestamp_us_t>(interval_seconds) * SEC_TO_US;
 	// reset this bar
@@ -876,7 +876,7 @@ void DataController::process_quote_data(const size_t& pos, const QuoteData& quot
 }
 
 
-inline void update_bid_ask(BarFullRef& bar, const real_t& bid, const real_t& ask, const real_t bid_size, const real_t ask_size)
+inline void update_bid_ask(BarFullRef& bar, const real_t& bid, const real_t& ask, const uint32_t bid_size, const uint32_t ask_size)
 {
 	// append to existing bar!
 	if (ask > bar.ask_high)
@@ -893,7 +893,7 @@ inline void update_bid_ask(BarFullRef& bar, const real_t& bid, const real_t& ask
 	bar.bid_size = bid_size;
 }
 
-inline void populate_next_full_bar(BarFullRef& bar, const timestamp_us_t& interval_us, const timestamp_us_t& next_ts, const timestamp_us_t& ts, const real_t& price, const real_t& bid, const real_t& ask, const real_t bid_size, const real_t ask_size)
+inline void populate_next_full_bar(BarFullRef& bar, const timestamp_us_t& interval_us, const timestamp_us_t& next_ts, const timestamp_us_t& ts, const real_t& price, const real_t& bid, const real_t& ask, const uint32_t bid_size, const uint32_t ask_size)
 {
 	// reset this bar
 	bar.timestamp = static_cast<timestamp_us_t>(ts / interval_us) * interval_us;  // TODO verify

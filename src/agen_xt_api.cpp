@@ -26,7 +26,7 @@ xt::pyarray<real_t> py_preprocess_single(const char* symbol, const xt::pyarray<r
 
 	// TODO outputs ...
 	// TODO skip creating outputs if !trainig?
-	xt::xarray<real_t> o_outputs = xt::zeros<real_t>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(a_step1.shape().at(1)) });  // TODO timestamp and/or close in outputs?
+	xt::xarray<double> o_outputs = xt::zeros<double>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(a_step1.shape().at(1)) });  // TODO timestamp and/or close in outputs?
 
 	process_step3_single(o_results, o_outputs, symbol, a_step1, training, timeframe, interval, ext_hours);
 

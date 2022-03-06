@@ -134,7 +134,7 @@ int LongLowAlgo::calc_prediction_signal(const xtensor_raw& raw, const xtensor_pr
             std::cout << "x_numeric.shape: " << x_numeric.shape() << std::endl;
         std::copy(x_numeric.cbegin(), x_numeric.cend(), t_features.flat<float>().data());
 
-        auto x_candles = xt::view(processed, xt::newaxis(), xt::all(), xt::all(), xt::range(40, 101));
+        auto x_candles = xt::view(processed, xt::newaxis(), xt::all(), xt::all(), xt::range(40, NUM_COLUMNS));
         if constexpr (DEBUG_PRINT_SHAPES)
             std::cout << "x_candles.shape: " << x_candles.shape() << std::endl;
         std::copy(x_candles.cbegin(), x_candles.cend(), t_candles.flat<float>().data());

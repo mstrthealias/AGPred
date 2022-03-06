@@ -640,9 +640,10 @@ void _process_step2_single(xt::xarray<real_t>& o_results, const char* symbol, co
 
 xt::xarray<real_t> process_step2_single(const char* symbol, const xt::xarray<real_t>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours)
 {
+	static_assert(NUM_COLUMNS >= ColPos::NUM_COLS);
 
 	// allocate the results array
-	xt::xarray<real_t> o_results = xt::zeros<real_t>({ 101, static_cast<int>(a_step1.shape().at(1)) });
+	xt::xarray<real_t> o_results = xt::zeros<real_t>({ NUM_COLUMNS, static_cast<int>(a_step1.shape().at(1)) });
 
 	// copy input rows to o_results
 	xt::row(o_results, ColPos::In::timestamp) = xt::row(a_step1, ColPos::In::timestamp);
@@ -656,7 +657,7 @@ xt::xarray<real_t> process_step2_single_2a(const char* symbol, const xt::xarray<
 {
 
 	// allocate the results array
-	xt::xarray<real_t> o_results = xt::zeros<real_t>({ 101, static_cast<int>(a_step1.shape().at(1)) });
+	xt::xarray<real_t> o_results = xt::zeros<real_t>({ NUM_COLUMNS, static_cast<int>(a_step1.shape().at(1)) });
 
 	// copy input rows to o_results
 	xt::row(o_results, ColPos::In::timestamp) = xt::row(ts_step1, ColPos::In::timestamp);  // TODO subtract 37 years?
@@ -667,7 +668,7 @@ xt::xarray<real_t> process_step2_single_2a(const char* symbol, const xt::xarray<
 }
 
 
-void process_step3_single(xt::xarray<real_t>& o_results, xt::xarray<real_t>& o_outputs, const char* symbol, const xt::xarray<real_t>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours, const bool was_sorted)
+void process_step3_single(xt::xarray<real_t>& o_results, xt::xarray<double>& o_outputs, const char* symbol, const xt::xarray<real_t>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours, const bool was_sorted)
 {
 
 	if (training && a_step1.shape().at(0) > static_cast<int>(ColPos::In::volume) + 1) {
@@ -695,7 +696,7 @@ void process_step3_single(xt::xarray<real_t>& o_results, xt::xarray<real_t>& o_o
 	}*/
 
 }
-void process_step3_single_2a(xt::xarray<real_t>& o_results, xt::xarray<real_t>& o_outputs, xt::xarray<timestamp_us_t>& ts_step1, const char* symbol, const xt::xarray<real_t>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours, const bool was_sorted)
+void process_step3_single_2a(xt::xarray<real_t>& o_results, xt::xarray<double>& o_outputs, xt::xarray<timestamp_us_t>& ts_step1, const char* symbol, const xt::xarray<real_t>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours, const bool was_sorted)
 {
 
 	// TODO o_outputs double to preserve ts
@@ -706,7 +707,7 @@ void process_step3_single_2a(xt::xarray<real_t>& o_results, xt::xarray<real_t>& 
 		if (!o_outputs.size())
 			throw std::logic_error("o_outputs must be initialized.");
 		do_outputs(o_outputs, symbol, o_results, a_step1, timeframe, interval);
-		xt::row(o_outputs, ColPos::Output::ts) = xt::row(ts_step1, ColPos::In::timestamp);  // copy the accurate TS  TODO / 1e6
+		xt::row(o_outputs, ColPos::Output::ts) = xt::row(ts_step1, ColPos::In::timestamp) / xt::xarray<double>(SEC_TO_US);  // copy the accurate TS 
 	}
 
 	// create a copy, removing initial nan values
@@ -746,7 +747,7 @@ void process_step1to3(const char* symbol, dfs_map_t& dfs, const int timeframe, c
 
 		// TODO outputs ...
 		// TODO skip creating outputs if !trainig?
-		xt::xarray<real_t> o_outputs = xt::zeros<real_t>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(a_step1.shape().at(1))});  // TODO timestamp and/or close in outputs?
+		xt::xarray<double> o_outputs = xt::zeros<double>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(a_step1.shape().at(1))});  // TODO timestamp and/or close in outputs?
 
 		process_step3_single(o_results, o_outputs, symbol, a_step1, training, timeframe, interval, ext_hours);
 
@@ -777,7 +778,7 @@ void process_step1to3_2a(const char* symbol, dfs_ts_map_t& dfs_ts, dfs_map_t& df
 
 		// TODO outputs ...
 		// TODO skip creating outputs if !trainig?
-		xt::xarray<real_t> o_outputs = xt::zeros<real_t>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(a_raw.shape().at(1))});  // TODO timestamp and/or close in outputs?
+		xt::xarray<double> o_outputs = xt::zeros<double>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(a_raw.shape().at(1))});  // TODO timestamp and/or close in outputs?
 
 		process_step3_single_2a(o_results, o_outputs, ts_raw, symbol, a_raw, training, timeframe, interval, ext_hours);
 
@@ -1678,7 +1679,7 @@ xt::xarray<real_t> do_market_inputs(const xt::xarray<real_t>& a_in)
 	return results;
 }
 
-void do_outputs(xt::xarray<real_t>& o_outputs, const char* symbol, const xt::xarray<real_t>& o_results, const xt::xarray<real_t>& a_step1, const unsigned int timeframe, const unsigned int interval)
+void do_outputs(xt::xarray<double>& o_outputs, const char* symbol, const xt::xarray<real_t>& o_results, const xt::xarray<real_t>& a_step1, const unsigned int timeframe, const unsigned int interval)
 {
 	assert(CHECK_FUTURE_CNT == 7);
 
