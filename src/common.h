@@ -10,6 +10,9 @@
 #include <xtensor/xarray.hpp>
 
 
+//#define AGPRED_DOUBLE_P
+
+
 constexpr bool DEBUG_PRINT_DATA = false;
 constexpr bool DEBUG_PRINT_PROCESSED_DATA = false;
 constexpr bool DEBUG_PRINT_REQUESTS = true;
@@ -17,23 +20,45 @@ constexpr bool DEBUG_ORDERS = false;
 
 
 using timestamp_t = size_t;
+using timestamp_s_t = size_t;
+using timestamp_ms_t = size_t;  //-e3
+using timestamp_us_t = size_t;  //-e6
+using timestamp_ns_t = size_t;  //-e9
+#ifdef AGPRED_DOUBLE_P
+using real_t = double;
+#else
+using real_t = float;
+#endif
 
 
-using dfs_map_t = std::map<int, xt::xarray<double>>;
+
+
+using dfs_map_t = std::map<int, xt::xarray<real_t>>;
+using dfs_ts_map_t = std::map<int, xt::xarray<timestamp_us_t>>;
 
 using interval_map_t = std::map<const char*, const int>;
 
 
+constexpr timestamp_us_t SEC_TO_US = static_cast<timestamp_us_t>(1e6);
+constexpr timestamp_ns_t SEC_TO_NS = static_cast<timestamp_ns_t>(1e9);
+constexpr timestamp_us_t MIN_TO_US = static_cast<timestamp_us_t>(60) * static_cast<timestamp_us_t>(1e6);
+constexpr timestamp_us_t MS_TO_US = static_cast<timestamp_us_t>(1e3);
+constexpr timestamp_us_t US_TO_NS = static_cast<timestamp_us_t>(1e3);
+
+constexpr timestamp_s_t SEC_50_YEARS = 31536000 * 50 + 86400 * static_cast<timestamp_s_t>(50 / 4);
+constexpr timestamp_s_t SEC_37_YEARS = 31536000 * 37 + 86400 * static_cast<timestamp_s_t>(37 / 4);
+
+
 std::ostream& operator<< (std::ostream& out, const xt::svector<size_t>& s);
 std::ostream& operator<< (std::ostream& out, const std::vector<int>& s);
-std::ostream& operator<< (std::ostream& out, const std::vector<double>& v);
+std::ostream& operator<< (std::ostream& out, const std::vector<real_t>& v);
 std::ostream& operator<< (std::ostream& out, const std::vector<std::vector<size_t>>& v);
 
 template <std::size_t... N>
 std::ostream& operator<< (std::ostream& out, const xt::xshape<N...>& v)
 {
 	out << '(';
-	std::copy(v.cbegin(), v.cend(), std::ostream_iterator<double>(out, ", "));
+	std::copy(v.cbegin(), v.cend(), std::ostream_iterator<real_t>(out, ", "));
 	out << "\b\b)";
 	return out;
 }
@@ -267,11 +292,11 @@ struct trade_ref_t
 };
 
 
-//typedef quote_ref_t<double, uint32_t, double> NBBO;
-//typedef quote_ref_t<double, double, double> NBBO;
-typedef quote_t<double, uint32_t, double> NBBO;
-typedef trade_t<double, uint32_t, timestamp_t> Trade;
-typedef quote_t<double, uint32_t, timestamp_t> Quote;
+//typedef quote_ref_t<real_t, uint32_t, real_t> NBBO;
+//typedef quote_ref_t<real_t, real_t, real_t> NBBO;
+typedef quote_t<real_t, uint32_t, timestamp_us_t> NBBO;
+typedef trade_t<real_t, uint32_t, timestamp_us_t> Trade;
+typedef quote_t<real_t, uint32_t, timestamp_us_t> Quote;
 
 
 std::ostream& operator<< (std::ostream& out, const Quote& quote);
@@ -346,10 +371,10 @@ struct bar_full_ref_t : bar_ref_t<Real, Volume, Time>
 };
 
 
-typedef bar_t<double, uint64_t, double, uint32_t> Bar;
+typedef bar_t<real_t, uint64_t, timestamp_us_t, uint32_t> Bar;
 
-typedef bar_ref_t<double, double, double> BarRef;
-typedef bar_full_ref_t<double, double, double, double> BarFullRef;
+typedef bar_ref_t<real_t, real_t, timestamp_us_t> BarRef;
+typedef bar_full_ref_t<real_t, real_t, timestamp_us_t, real_t> BarFullRef;
 
 std::ostream& operator<< (std::ostream& out, const Bar& bar);
 std::ostream& operator<< (std::ostream& out, const BarRef& bar);

@@ -15,14 +15,14 @@
 constexpr bool DEBUG_RING = false;
 
 
-static const agpred::xtensor_quotes zeros_quotes = xt::zeros<double>(agpred::shape_quotes_t());
-static const agpred::xtensor_trades zeros_trades = xt::zeros<double>(agpred::shape_trades_t());
+static const agpred::xtensor_quotes zeros_quotes = xt::zeros<real_t>(agpred::shape_quotes_t());
+static const agpred::xtensor_trades zeros_trades = xt::zeros<real_t>(agpred::shape_trades_t());
 
 
 /**
  * quotes_ring implements a circular buffer with a queue-like interface for QuoteData
  */
-template <size_t _Size = 15000, typename _Ttime = double, typename _Treal = double, typename _Tsize = double, class _Tcond = double>
+template <size_t _Size = 15000, typename _Ttime = real_t, typename _Treal = real_t, typename _Tsize = real_t, class _Tcond = real_t>
 class quotes_ring
 {
 public:
@@ -86,7 +86,7 @@ public:
 				std::cout << "push() full start->end " << prev_start << "->" << prev_end << " TO " << start_ << "->" << end_ << std::endl;
         }
 
-        timestamp_[end_] = static_cast<_Ttime>(static_cast<double>(_Val.quote.timestamp) / 1000.0);
+        timestamp_[end_] = static_cast<_Ttime>(static_cast<real_t>(_Val.quote.timestamp) / 1000.0);
         bid_[end_] = static_cast<_Treal>(_Val.quote.bid);
         ask_[end_] = static_cast<_Treal>(_Val.quote.ask);
         bid_size_[end_] = static_cast<_Tsize>(_Val.quote.bid_size);
@@ -147,8 +147,8 @@ public:
         return {
             {
                 static_cast<timestamp_t>(timestamp_[start_]),
-                static_cast<double>(bid_[start_]),
-                static_cast<double>(ask_[start_]),
+                static_cast<real_t>(bid_[start_]),
+                static_cast<real_t>(ask_[start_]),
                 static_cast<uint32_t>(bid_size_[start_]),
                 static_cast<uint32_t>(ask_size_[start_])
             },
@@ -166,8 +166,8 @@ public:
         return {
             {
                 static_cast<timestamp_t>(timestamp_[pos]),
-                static_cast<double>(bid_[pos]),
-                static_cast<double>(ask_[pos]),
+                static_cast<real_t>(bid_[pos]),
+                static_cast<real_t>(ask_[pos]),
                 static_cast<uint32_t>(bid_size_[pos]),
                 static_cast<uint32_t>(ask_size_[pos])
             },
@@ -219,14 +219,14 @@ public:
         // size_t i = 0;
         // for (const agpred::QuoteData& quote : *this)
         // {
-        //     quotes(i, 0) = static_cast<double>(quote.quote.timestamp / 1000);
+        //     quotes(i, 0) = static_cast<real_t>(quote.quote.timestamp / 1000);
         //     quotes(i, 1) = quote.quote.bid;
         //     quotes(i, 2) = quote.quote.ask;
-        //     quotes(i, 3) = static_cast<double>(quote.quote.bid_size);
-        //     quotes(i, 4) = static_cast<double>(quote.quote.ask_size);
-        //     quotes(i, 5) = static_cast<double>(static_cast<int32_t>(quote.cond[0]));
-        //     quotes(i, 6) = static_cast<double>(static_cast<int32_t>(quote.cond[1]));
-        //     quotes(i, 7) = static_cast<double>(static_cast<int32_t>(quote.cond[2]));
+        //     quotes(i, 3) = static_cast<real_t>(quote.quote.bid_size);
+        //     quotes(i, 4) = static_cast<real_t>(quote.quote.ask_size);
+        //     quotes(i, 5) = static_cast<real_t>(static_cast<int32_t>(quote.cond[0]));
+        //     quotes(i, 6) = static_cast<real_t>(static_cast<int32_t>(quote.cond[1]));
+        //     quotes(i, 7) = static_cast<real_t>(static_cast<int32_t>(quote.cond[2]));
         //     ++i;
         // }
 
@@ -235,14 +235,14 @@ public:
             std::copy(zeros_quotes.cbegin(), zeros_quotes.cend(), quotes.begin());
         }
 
-        auto timestamp = xt::view(quotes, xt::all(), 0);
-        auto bid = xt::view(quotes, xt::all(), 1);
-        auto ask = xt::view(quotes, xt::all(), 2);
-        auto bid_size = xt::view(quotes, xt::all(), 3);
-        auto ask_size = xt::view(quotes, xt::all(), 4);
-        auto cond1 = xt::view(quotes, xt::all(), 5);
-        auto cond2 = xt::view(quotes, xt::all(), 6);
-        auto cond3 = xt::view(quotes, xt::all(), 7);
+        auto timestamp = xt::view(quotes, xt::all(), static_cast<ptrdiff_t>(0));
+        auto bid = xt::view(quotes, xt::all(), static_cast<ptrdiff_t>(1));
+        auto ask = xt::view(quotes, xt::all(), static_cast<ptrdiff_t>(2));
+        auto bid_size = xt::view(quotes, xt::all(), static_cast<ptrdiff_t>(3));
+        auto ask_size = xt::view(quotes, xt::all(), static_cast<ptrdiff_t>(4));
+        auto cond1 = xt::view(quotes, xt::all(), static_cast<ptrdiff_t>(5));
+        auto cond2 = xt::view(quotes, xt::all(), static_cast<ptrdiff_t>(6));
+        auto cond3 = xt::view(quotes, xt::all(), static_cast<ptrdiff_t>(7));
 
         std::copy(timestamp_.cbegin() + start_, timestamp_.cbegin() + end_, timestamp.begin());
         std::copy(bid_.cbegin() + start_, bid_.cbegin() + end_, bid.begin());
@@ -275,7 +275,7 @@ private:
 /**
  * trades_ring implements a circular buffer with a queue-like interface for TradeData
  */
-template <size_t _Size = 15000, typename _Ttime = double, typename _Treal = double, typename _Tsize = double, class _Tcond = double>
+template <size_t _Size = 15000, typename _Ttime = real_t, typename _Treal = real_t, typename _Tsize = real_t, class _Tcond = real_t>
 class trades_ring
 {
 public:
@@ -340,7 +340,7 @@ public:
                 std::cout << "push() full start->end " << prev_start << "->" << prev_end << " TO " << start_ << "->" << end_ << std::endl;
         }
 
-        timestamp_[end_] = static_cast<_Ttime>(static_cast<double>(_Val.trade.timestamp) / 1000.0);
+        timestamp_[end_] = static_cast<_Ttime>(static_cast<real_t>(_Val.trade.timestamp) / 1000.0);
         price_[end_] = static_cast<_Treal>(_Val.trade.price);
         size_[end_] = static_cast<_Tsize>(_Val.trade.size);
         cond1_[end_] = static_cast<_Tcond>(static_cast<uint32_t>(_Val.cond[0]));
@@ -399,7 +399,7 @@ public:
         return {
             {
                 static_cast<timestamp_t>(timestamp_[start_]),
-                static_cast<double>(price_[start_]),
+                static_cast<real_t>(price_[start_]),
                 static_cast<uint32_t>(size_[start_])
             },
             { static_cast<TradeCondition>(static_cast<uint32_t>(cond1_[start_])),
@@ -415,7 +415,7 @@ public:
         return {
             {
                 static_cast<timestamp_t>(timestamp_[pos]),
-                static_cast<double>(price_[pos]),
+                static_cast<real_t>(price_[pos]),
                 static_cast<uint32_t>(size_[pos])
             },
             { static_cast<TradeCondition>(static_cast<uint32_t>(cond1_[pos])),
@@ -466,12 +466,12 @@ public:
             std::copy(zeros_trades.cbegin(), zeros_trades.cend(), trades.begin());
         }
 
-        auto timestamp = xt::view(trades, xt::all(), 0);
-        auto price = xt::view(trades, xt::all(), 1);
-        auto size = xt::view(trades, xt::all(), 2);
-        auto cond1 = xt::view(trades, xt::all(), 3);
-        auto cond2 = xt::view(trades, xt::all(), 4);
-        auto cond3 = xt::view(trades, xt::all(), 5);
+        auto timestamp = xt::view(trades, xt::all(), static_cast<ptrdiff_t>(0));
+        auto price = xt::view(trades, xt::all(), static_cast<ptrdiff_t>(1));
+        auto size = xt::view(trades, xt::all(), static_cast<ptrdiff_t>(2));
+        auto cond1 = xt::view(trades, xt::all(), static_cast<ptrdiff_t>(3));
+        auto cond2 = xt::view(trades, xt::all(), static_cast<ptrdiff_t>(4));
+        auto cond3 = xt::view(trades, xt::all(), static_cast<ptrdiff_t>(5));
 
         std::copy(timestamp_.cbegin() + start_, timestamp_.cbegin() + end_, timestamp.begin());
         std::copy(price_.cbegin() + start_, price_.cbegin() + end_, price.begin());
@@ -498,10 +498,10 @@ private:
 
 
 // TODO consolidate?
-using quotes_queue = quotes_ring<NUM_QUOTES, double, double, double, double>;
-using trades_queue = trades_ring<NUM_TRADES, double, double, double, double>;
-//using quotes_queue = quotes_ring<NUM_QUOTES, timestamp_t, double, uint32_t>;
-//using trades_queue = trades_ring<NUM_TRADES, timestamp_t, double, uint32_t>;
+using quotes_queue = quotes_ring<NUM_QUOTES, real_t, real_t, real_t, real_t>;
+using trades_queue = trades_ring<NUM_TRADES, real_t, real_t, real_t, real_t>;
+//using quotes_queue = quotes_ring<NUM_QUOTES, timestamp_t, real_t, uint32_t>;
+//using trades_queue = trades_ring<NUM_TRADES, timestamp_t, real_t, uint32_t>;
 
 
 /*

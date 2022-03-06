@@ -91,8 +91,9 @@ void process_agg_rt(const json& agg)
 }
 
 
-void process_trade(const json& trade, const int interval, double& tsStep, Bar& bar, std::vector<Bar>& bars)
+void process_trade(const json& trade, const int interval, timestamp_us_t& tsStep, Bar& bar, std::vector<Bar>& bars)
 {
+	const timestamp_us_t interval_us = interval / 1e6;  // us
 	bool updates_volume = false;
 	bool updates_high_low = false;
 	bool updates_open_close = false;
@@ -134,11 +135,11 @@ void process_trade(const json& trade, const int interval, double& tsStep, Bar& b
 	if (!updates_high_low && !updates_open_close && !updates_volume)
 		return;  // no more processing to do (for aggregate generation)
 
-	const double ts = static_cast<double>(trade["t"].get<uint64_t>()) / 1.0e9;
-	const auto& price = trade["p"].get<double>();
+	const timestamp_us_t ts = static_cast<timestamp_us_t>(trade["t"].get<uint64_t>() / US_TO_NS);  // ns->us
+	const real_t price = trade["p"].get<double>();
 	const auto& vol = trade["s"].get<uint32_t>();
 
-	const double nextTs = tsStep + interval;
+	const timestamp_us_t nextTs = tsStep + interval_us;
 	if (ts >= nextTs)
 	{
 		// create a new bar!
@@ -146,9 +147,9 @@ void process_trade(const json& trade, const int interval, double& tsStep, Bar& b
 			bars.push_back(bar);  // copy previous bar into bars
 
 		// reset this bar
-		bar.timestamp = static_cast<double>(static_cast<uint64_t>(ts / interval) * interval);  // TODO verify
+		bar.timestamp = static_cast<timestamp_us_t>(ts / interval_us) * interval_us;  // TODO verify
 		//bar.timestamp = nextTs;
-		if (!dbl_equal(bar.timestamp, nextTs)) {
+		if (bar.timestamp != nextTs) {  // !dbl_equal(bar.timestamp, nextTs)
 			std::cout << "Skip timestamp " << nextTs << " (to " << bar.timestamp << ")" << std::endl;
 		}
 		bar.volume = vol;
@@ -191,7 +192,7 @@ void process_trade(const json& trade, const int interval, double& tsStep, Bar& b
 
 	std::cout << "Number of inputs/trades: " << trades.size() << std::endl;
 
-	double tsStep = static_cast<int>(static_cast<double>(trades[0]["t"].get<uint64_t>()) / 1.0e9 / 60) * 60.0;
+	real_t tsStep = static_cast<int>(static_cast<real_t>(trades[0]["t"].get<uint64_t>()) / 1.0e9 / 60) * 60.0;
 	Bar bar;
 
 	for (const auto& trade : trades)
@@ -205,15 +206,16 @@ void process_trade(const json& trade, const int interval, double& tsStep, Bar& b
 }*/
 
 
-int process_trades_history(const json& trades, const int interval, const double& startTs, std::vector<Bar>& bars)
+int process_trades_history(const json& trades, const int interval, const timestamp_us_t& startTs, std::vector<Bar>& bars)
 {
 	if (!trades.is_array())
 		return -1; // trades must be an array of 'trades'
 
 	std::cout << "Number of inputs/trades: " << trades.size() << std::endl;
 
-	double tsStep = static_cast<int>(trades[0]["t"].get<uint64_t>() / 1.0e9 / 60) * 60.0;  // startTs;
-	//double tsStep = startTs;
+	timestamp_us_t tsStep = static_cast<timestamp_us_t>((trades[0]["t"].get<uint64_t>() / US_TO_NS) / (60 * SEC_TO_US)) * (60 * SEC_TO_US);  // startTs;
+	//timestamp_us_t tsStep = static_cast<int>(trades[0]["t"].get<uint64_t>() / 1.0e9 / 60) * 60.0;  // startTs;
+	//timestamp_us_t tsStep = startTs;
 	Bar bar;
 
 	for (const auto& trade : trades)
@@ -226,25 +228,25 @@ int process_trades_history(const json& trades, const int interval, const double&
 	return 0;
 }
 
-xt::xarray<double> bars_to_xt(const std::vector<Bar>& bars)
+xt::xarray<real_t> bars_to_xt(const std::vector<Bar>& bars)
 {
 	const int n_bars = static_cast<int>(bars.size());
-	xt::xarray<double> results = xt::zeros<double>({6, n_bars });
+	xt::xarray<real_t> results = xt::zeros<real_t>({6, n_bars });
 	int pos = 0;
 	for (const auto& bar : bars)
 	{
-		results(0, pos) = bar.timestamp;
+		results(0, pos) = static_cast<real_t>(bar.timestamp);  // TODO subtract 37 years ?
 		results(1, pos) = bar.open;
 		results(2, pos) = bar.high;
 		results(3, pos) = bar.low;
 		results(4, pos) = bar.close;
-		results(5, pos) = static_cast<double>(bar.volume);
+		results(5, pos) = static_cast<real_t>(bar.volume);
 		pos++;
 	}
 	return results;
 }
 
-xt::xarray<double> process_trades_json(const char* json_str, const int interval, const double& start_ts)
+xt::xarray<real_t> process_trades_json(const char* json_str, const int interval, const timestamp_us_t& start_ts)
 {
 	const json& trades = json::parse(json_str);
 

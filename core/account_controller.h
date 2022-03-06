@@ -68,7 +68,7 @@ namespace agpred {
 		std::map<id_t, PendingEntry> pending_entries_;  // TODO remove or ^?
 		std::map<id_t, PendingExit> pending_exits_;
 
-		double total_pl = 0.0;
+		real_t total_pl = 0.0;
 		size_t total_trades = 0;
 
 	public:
@@ -76,7 +76,7 @@ namespace agpred {
 			: adapter_(adapter), mode_(mode), algos_(algos), entries_(entries), exits_(exits), internal_stoploss_exit_("_internal_stoploss_ exit")
 		{
 			adapter.setCallbacks(
-				[AccountPtr = this](id_t order_id, const Symbol& symbol, OrderStatus status, size_t filled, size_t remaining, double avg_price)
+				[AccountPtr = this](id_t order_id, const Symbol& symbol, OrderStatus status, size_t filled, size_t remaining, real_t avg_price)
 				{
 					AccountPtr->onOrderStatus(order_id, symbol, status, filled, remaining, avg_price);
 				}
@@ -220,7 +220,7 @@ namespace agpred {
 		/**
 		 * @param order_id A unique order ID, set by client when creating the order (fe. next_order_id)
 		 */
-		void onOrderStatus(id_t order_id, const Symbol& symbol, OrderStatus status, size_t filled, size_t remaining, double avg_price)
+		void onOrderStatus(id_t order_id, const Symbol& symbol, OrderStatus status, size_t filled, size_t remaining, real_t avg_price)
 		{
 			// TODO
 			bool is_entry = false;
@@ -261,7 +261,7 @@ namespace agpred {
 
 		}
 
-		double getProfitLoss() const
+		real_t getProfitLoss() const
 		{
 			return total_pl;
 		}
@@ -353,7 +353,7 @@ namespace agpred {
 		 * TODO price is average of all fills for order_id
 		 * Note: handling as num_shares = total # of filled shares, and price is average of all filled shares...
 		 */
-		void onEntryFill(const Symbol& symbol, const PendingEntry& pending_entry, const size_t& num_shares, const double& price)
+		void onEntryFill(const Symbol& symbol, const PendingEntry& pending_entry, const size_t& num_shares, const real_t& price)
 		{
 			// TODO
 
@@ -378,7 +378,7 @@ namespace agpred {
 			//else {}  // have a partially filled entry
 		}
 
-		void onExitFill(const Symbol& symbol, const PendingExit& pending_exit, const size_t& num_shares, const double& price)
+		void onExitFill(const Symbol& symbol, const PendingExit& pending_exit, const size_t& num_shares, const real_t& price)
 		{
 			if (!hasPosition(pending_exit.position_id))
 				throw std::logic_error("position for exit does not exist");
@@ -398,7 +398,7 @@ namespace agpred {
 				if (!positions_.erase(pending_exit.position_id))
 					throw std::logic_error("invalid position");
 
-				const double pl = position.getClosedPL(price);
+				const real_t pl = position.getClosedPL(price);
 				total_pl += pl;
 				total_trades++;
 				std::cout << "  onExitFill(" << symbol.symbol << ") closed PL $" << pl << std::endl;

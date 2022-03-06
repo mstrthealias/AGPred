@@ -31,7 +31,7 @@ using namespace agpred;
 constexpr bool DEBUG_PRINT_SHAPES = false;
 constexpr bool DEBUG_PRINT_PREDICTIONS = false;
 
-constexpr double PREDICTION_THRESHHOLD = 0.51;
+constexpr real_t PREDICTION_THRESHHOLD = 0.51;
 
 
 xtensor_quotes cur_quotes;
@@ -55,12 +55,12 @@ std::vector<int> get_tensor_shape(const tensorflow::Tensor& tensor)
     return shape;
 }
 
-double mk_vec_sigmoid(double x) {
+real_t mk_vec_sigmoid(real_t x) {
     /// Specifically, `y = 1 / (1 + exp(-x))`.
     return 1.0 / (1 + std::exp(-x));
 }
 
-double mk_vec_prediction(double p, double t) {
+real_t mk_vec_prediction(real_t p, real_t t) {
     /// Specifically, `y = 1 / (1 + exp(-x))`.
     return p > t ? 1 : 0;
 }

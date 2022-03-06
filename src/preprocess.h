@@ -8,45 +8,51 @@
 
 // void prepare_market_inputs();
 
-xt::xarray<double> process_step1_single(const char* symbol, const xt::xarray<double>& a_orig, const bool training, const int timeframe, const int interval, const bool ext_hours);
+xt::xarray<real_t> process_step1_single(const char* symbol, const xt::xarray<real_t>& a_orig, const bool training, const int timeframe, const int interval, const bool ext_hours);
+void process_step1_single_2a(xt::xarray<timestamp_us_t>& ts_orig, xt::xarray<real_t>& a_orig, const char* symbol, const bool training, const int timeframe, const int interval, const bool ext_hours);
 
-xt::xarray<double> process_step2_single(const char* symbol, const xt::xarray<double>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours);
+xt::xarray<real_t> process_step2_single(const char* symbol, const xt::xarray<real_t>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours);
+xt::xarray<real_t> process_step2_single_2a(const char* symbol, const xt::xarray<timestamp_us_t>& ts_step1, const xt::xarray<real_t>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours);
 
-void process_step3_single(xt::xarray<double>& o_results, xt::xarray<double>& o_outputs, const char* symbol, const xt::xarray<double>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours);
+void process_step3_single(xt::xarray<real_t>& o_results, xt::xarray<real_t>& o_outputs, const char* symbol, const xt::xarray<real_t>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours, const bool was_sorted = false);
+void process_step3_single_2a(xt::xarray<real_t>& o_results, xt::xarray<real_t>& o_outputs, xt::xarray<timestamp_us_t>& ts_step1, const char* symbol, const xt::xarray<real_t>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours, const bool was_sorted = false);
 
 void process_step1to3(const char* symbol, dfs_map_t& dfs, const int timeframe, const bool ext_hours, const interval_map_t& interval_map);
+void process_step1to3_2a(const char* symbol, dfs_ts_map_t& dfs_ts, dfs_map_t& dfs, const int timeframe, const bool ext_hours, const interval_map_t& interval_map);
 
-void apply_candles(const char* symbol, xt::xarray<double>& o_results, const xt::xarray<double>& a_in);
+void apply_candles(const char* symbol, xt::xarray<real_t>& o_results, const xt::xarray<real_t>& a_in);
 
-void apply_step2(const char* symbol, xt::xarray<double>& o_results, const unsigned int timeframe, const unsigned int interval, const bool training, const bool ext_hours);
+void apply_step2(const char* symbol, xt::xarray<real_t>& o_results, const unsigned int timeframe, const unsigned int interval, const bool training, const bool ext_hours);
 
-void write_dataset(const char* symbol, xt::xarray<double>& o_results);
+void write_dataset(const char* symbol, const xt::xarray<real_t>& o_results);
+void write_dataset_2a(const char* symbol, const xt::xarray<real_t>& o_results, const xt::xarray<timestamp_us_t>& ts_raw);
 
-xt::xarray<double> do_fill(const xt::xarray<double>& a_in, const bool ext_hours);
+xt::xarray<real_t> do_fill(const xt::xarray<real_t>& a_in, const bool ext_hours);
 
-xt::xarray<double> do_filter_pre(const xt::xarray<double>& a_in);
+xt::xarray<real_t> do_filter_pre(const xt::xarray<real_t>& a_in);
 
-xt::xarray<double> do_filter_post(const xt::xarray<double>& a_in, const bool training, const bool ext_hours);
+xt::xarray<real_t> do_filter_post(const xt::xarray<real_t>& a_in, const bool training, const bool ext_hours);
 
-TA_RetCode do_dep_columns(xt::xarray<double>& o_results, const bool training);
+TA_RetCode do_dep_columns(xt::xarray<real_t>& o_results, const bool training);
 
-TA_RetCode add_regr(xt::xarray<double>& o_results, const unsigned int interval);
+TA_RetCode add_regr(xt::xarray<real_t>& o_results, const unsigned int interval);
 
-TA_RetCode do_ta(xt::xarray<double>& o_results);
+TA_RetCode do_ta(xt::xarray<real_t>& o_results);
 
-void do_diffs(xt::xarray<double>& o_results);
+void do_diffs(xt::xarray<real_t>& o_results);
 
-void apply_regr(xt::xarray<double>& o_results, const unsigned int interval);
+void apply_regr(xt::xarray<real_t>& o_results, const unsigned int interval);
 
-void do_norm(xt::xarray<double>& o_results, const unsigned int interval);
+void do_norm(xt::xarray<real_t>& o_results, const unsigned int interval);
 
-xt::xarray<double> do_cleanup_initial(const xt::xarray<double>& a_in, const unsigned int interval);
+xt::xarray<real_t> do_cleanup_initial(const xt::xarray<real_t>& a_in, const unsigned int interval);
+void do_cleanup_initial_2a(xt::xarray<timestamp_us_t>& ts_in, xt::xarray<real_t>& a_in, const unsigned int interval);
 
-xt::xarray<double> do_cleanup_final(xt::xarray<double>& a_in);
+xt::xarray<real_t> do_cleanup_final(xt::xarray<real_t>& a_in);
 
-xt::xarray<double> do_market_inputs(const xt::xarray<double>& a_in);
+xt::xarray<real_t> do_market_inputs(const xt::xarray<real_t>& a_in);
 
-void do_outputs(xt::xarray<double>& o_outputs, const char* symbol, const xt::xarray<double>& o_results, const xt::xarray<double>& a_step1, const unsigned int timeframe, const unsigned int interval);
+void do_outputs(xt::xarray<real_t>& o_outputs, const char* symbol, const xt::xarray<real_t>& o_results, const xt::xarray<real_t>& a_step1, const unsigned int timeframe, const unsigned int interval);
 
 
 static constexpr std::array<std::tuple<ColPosType, ptrdiff_t>, 94> COLS_FORMAT1 = {

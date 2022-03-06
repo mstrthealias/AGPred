@@ -23,46 +23,62 @@ using namespace agpred;
 
 static const json JSON_NULL = json::parse("null");
 
-
 // TODO move this (stuff) into class?!  // TODO don't use a class?
 // DataController should only be constructed once...
 static bool dc_initialized = false;
 
 
+/*template<typename T>
+timestamp_us_t norm_1min_us(T ts)
+{
+	return static_cast<timestamp_us_t>(static_cast<timestamp_us_t>(ts) / static_cast<timestamp_us_t>(60e6))
+		* static_cast<timestamp_us_t>(60e6);
+}
+
+template<typename T>
+timestamp_us_t norm_1min_s_to_us(T ts) {
+	return static_cast<timestamp_us_t>(static_cast<timestamp_us_t>(ts) / static_cast<timestamp_us_t>(60))
+		* static_cast<timestamp_us_t>(60)
+		* SEC_TO_US;
+}*/
+
 /*void zero_symbols_data(std::array<xtensor_raw, MAX_ACTIVE_SYMBOLS>& data)
 {
 	for (auto& symbolData : data)
-		symbolData = xt::zeros<double>({ 255, NUM_TIMESTEMPS, NUM_COLUMNS, NUM_INTERVALS });
+		symbolData = xt::zeros<real_t>({ 255, NUM_TIMESTEMPS, NUM_COLUMNS, NUM_INTERVALS });
 }
 
-void zero_processed_data(std::array<xt::xtensor_fixed<double, shape_processed_t>, MAX_ACTIVE_SYMBOLS>& data)
+void zero_processed_data(std::array<xt::xtensor_fixed<real_t, shape_processed_t>, MAX_ACTIVE_SYMBOLS>& data)
 {
 	for (auto& symbolData : data)
-		symbolData = xt::zeros<double>({ 255, NUM_TIMESTEMPS, NUM_COLUMNS, NUM_INTERVALS });
+		symbolData = xt::zeros<real_t>({ 255, NUM_TIMESTEMPS, NUM_COLUMNS, NUM_INTERVALS });
 }*/
 
 
 // Note: data_outputs is only populated if interval==TIMEFRAME
-inline void run_preprocess(xtensor_processed_interval& data_processed, xtensor_outputs_interval& data_outputs, const Symbol& symbol, const int interval, const xtensor_raw_interval& data_raw)
+inline void run_preprocess(xtensor_processed_interval& data_processed, xtensor_outputs_interval& data_outputs, const Symbol& symbol, const int interval, const xtensor_ts_interval& ts_raw, const xtensor_raw_interval& data_raw)
 {
 	//std::cout << interval << "min raw:" << std::endl << data_raw << std::endl;
 	//std::cout << interval << "min raw shape:" << std::endl << data_raw.shape() << std::endl;
 
 	// must transpose raw data to (features, timesteps) for preprocess...
-	const xt::xarray<double> data_raw_transposed = xt::transpose(data_raw, { 1, 0 });
+	xt::xarray<timestamp_us_t> ts_raw_transposed = xt::transpose(ts_raw, { 1, 0 });
+	xt::xarray<real_t> data_raw_transposed = xt::transpose(data_raw, { 1, 0 });
 
 	// process interval data (returned in ASC order, input is in DESC order):
 	// TODO TIMEFRAME, training
 	const bool training = TIMEFRAME == interval;
 
-	auto a_step1 = process_step1_single(symbol.symbol.c_str(), data_raw_transposed, training, TIMEFRAME, interval, false);
-	auto processed = process_step2_single(symbol.symbol.c_str(), a_step1, training, TIMEFRAME, interval, false);
+	process_step1_single_2a(ts_raw_transposed, data_raw_transposed, symbol.symbol.c_str(), training, TIMEFRAME, interval, false);
+	auto& ts_step1 = ts_raw_transposed;
+	auto& a_step1 = data_raw_transposed;
+	auto processed = process_step2_single_2a(symbol.symbol.c_str(), ts_step1, a_step1, training, TIMEFRAME, interval, false);
 
 	// TODO skip creating outputs (elsewhere) if !training?
-	xt::xarray<double> o_outputs;  // TODO include timestamp and/or close in outputs?
+	xt::xarray<real_t> o_outputs;  // TODO include timestamp and/or close in outputs?
 	if (training)
-		o_outputs = xt::zeros<double>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(a_step1.shape().at(1)) });
-	process_step3_single(processed, o_outputs, symbol.symbol.c_str(), a_step1, training, TIMEFRAME, interval, false);
+		o_outputs = xt::zeros<real_t>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(a_step1.shape().at(1)) });
+	process_step3_single_2a(processed, o_outputs, ts_step1, symbol.symbol.c_str(), a_step1, training, TIMEFRAME, interval, false);
 	if (training) {
 		const auto outputs_transposed = xt::transpose(o_outputs, { 1, 0 });
 		std::copy(outputs_transposed.crbegin(), outputs_transposed.crend(), data_outputs.rbegin());
@@ -79,8 +95,8 @@ inline void run_preprocess(xtensor_processed_interval& data_processed, xtensor_o
 
 		/*
 		// log timestamps with xt::row() for verification
-		xt::xarray<double> processed_transposed_heap = xt::transpose(data_processed, { 1, 0 });
-		xt::xarray<double> tss2 = xt::row(processed_transposed_heap, ColPos::In::timestamp);
+		xt::xarray<real_t> processed_transposed_heap = xt::transpose(data_processed, { 1, 0 });
+		xt::xarray<real_t> tss2 = xt::row(processed_transposed_heap, ColPos::In::timestamp);
 		std::cout << interval << "min processed_transposed tss:" << std::endl << tss2 << std::endl;
 		std::cout << interval << "min processed_transposed tss shape: " << tss2.shape() << std::endl;
 		*/
@@ -105,6 +121,14 @@ DataController::DataController(const AGMode mode, const fn_snapshot on_snapshot,
 	latest_quotes_(new std::array<quotes_queue, MAX_ACTIVE_SYMBOLS>()),
 	symbols_outputs_(new std::array<xtensor_outputs_interval, MAX_ACTIVE_SYMBOLS>()),
 
+	symbols_ts_1min_(new std::array<xtensor_ts_interval, MAX_ACTIVE_SYMBOLS>()),
+	symbols_ts_5min_(new std::array<xtensor_ts_interval, MAX_ACTIVE_SYMBOLS>()),
+	symbols_ts_15min_(new std::array<xtensor_ts_interval, MAX_ACTIVE_SYMBOLS>()),
+	symbols_ts_1hr_(new std::array<xtensor_ts_interval, MAX_ACTIVE_SYMBOLS>()),
+	symbols_ts_4hr_(new std::array<xtensor_ts_interval, MAX_ACTIVE_SYMBOLS>()),
+	symbols_ts_1d_(new std::array<xtensor_ts_interval, MAX_ACTIVE_SYMBOLS>()),
+	symbols_ts_1w_(new std::array<xtensor_ts_interval, MAX_ACTIVE_SYMBOLS>()),
+
 	symbols_1min_(new std::array<xtensor_raw_interval, MAX_ACTIVE_SYMBOLS>()),
 	symbols_5min_(new std::array<xtensor_raw_interval, MAX_ACTIVE_SYMBOLS>()),
 	symbols_15min_(new std::array<xtensor_raw_interval, MAX_ACTIVE_SYMBOLS>()),
@@ -124,63 +148,63 @@ DataController::DataController(const AGMode mode, const fn_snapshot on_snapshot,
 	// TODO some form of latest_* initialization that dynamically handles different MAX_ACTIVE_SYMBOLS sizes?
 	latest_1min_({
 		BarFullRef{
-			{ (*symbols_1min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[0](ROW_POS, ColPos::In::open), (*symbols_1min_)[0](ROW_POS, ColPos::In::high), (*symbols_1min_)[0](ROW_POS, ColPos::In::low), (*symbols_1min_)[0](ROW_POS, ColPos::In::close), (*symbols_1min_)[0](ROW_POS, ColPos::In::volume) },
+			{ (*symbols_ts_1min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[0](ROW_POS, ColPos::In::open), (*symbols_1min_)[0](ROW_POS, ColPos::In::high), (*symbols_1min_)[0](ROW_POS, ColPos::In::low), (*symbols_1min_)[0](ROW_POS, ColPos::In::close), (*symbols_1min_)[0](ROW_POS, ColPos::In::volume) },
 			(*symbols_1min_)[0](ROW_POS, ColPos::In::bid), (*symbols_1min_)[0](ROW_POS, ColPos::In::bid_high), (*symbols_1min_)[0](ROW_POS, ColPos::In::bid_low),
 			(*symbols_1min_)[0](ROW_POS, ColPos::In::ask), (*symbols_1min_)[0](ROW_POS, ColPos::In::ask_high), (*symbols_1min_)[0](ROW_POS, ColPos::In::ask_low),
 			(*symbols_1min_)[0](ROW_POS, ColPos::In::bid_size), (*symbols_1min_)[0](ROW_POS, ColPos::In::ask_size) },
 		BarFullRef{
-			{ (*symbols_1min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[1](ROW_POS, ColPos::In::open), (*symbols_1min_)[1](ROW_POS, ColPos::In::high), (*symbols_1min_)[1](ROW_POS, ColPos::In::low), (*symbols_1min_)[1](ROW_POS, ColPos::In::close), (*symbols_1min_)[1](ROW_POS, ColPos::In::volume) },
+			{ (*symbols_ts_1min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[1](ROW_POS, ColPos::In::open), (*symbols_1min_)[1](ROW_POS, ColPos::In::high), (*symbols_1min_)[1](ROW_POS, ColPos::In::low), (*symbols_1min_)[1](ROW_POS, ColPos::In::close), (*symbols_1min_)[1](ROW_POS, ColPos::In::volume) },
 			(*symbols_1min_)[1](ROW_POS, ColPos::In::bid), (*symbols_1min_)[1](ROW_POS, ColPos::In::bid_high), (*symbols_1min_)[1](ROW_POS, ColPos::In::bid_low),
 			(*symbols_1min_)[1](ROW_POS, ColPos::In::ask), (*symbols_1min_)[1](ROW_POS, ColPos::In::ask_high), (*symbols_1min_)[1](ROW_POS, ColPos::In::ask_low),
 			(*symbols_1min_)[1](ROW_POS, ColPos::In::bid_size), (*symbols_1min_)[1](ROW_POS, ColPos::In::ask_size) },
 		BarFullRef{
-			{ (*symbols_1min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[2](ROW_POS, ColPos::In::open), (*symbols_1min_)[2](ROW_POS, ColPos::In::high), (*symbols_1min_)[2](ROW_POS, ColPos::In::low), (*symbols_1min_)[2](ROW_POS, ColPos::In::close), (*symbols_1min_)[2](ROW_POS, ColPos::In::volume) },
+			{ (*symbols_ts_1min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[2](ROW_POS, ColPos::In::open), (*symbols_1min_)[2](ROW_POS, ColPos::In::high), (*symbols_1min_)[2](ROW_POS, ColPos::In::low), (*symbols_1min_)[2](ROW_POS, ColPos::In::close), (*symbols_1min_)[2](ROW_POS, ColPos::In::volume) },
 			(*symbols_1min_)[2](ROW_POS, ColPos::In::bid), (*symbols_1min_)[2](ROW_POS, ColPos::In::bid_high), (*symbols_1min_)[2](ROW_POS, ColPos::In::bid_low),
 			(*symbols_1min_)[2](ROW_POS, ColPos::In::ask), (*symbols_1min_)[2](ROW_POS, ColPos::In::ask_high), (*symbols_1min_)[2](ROW_POS, ColPos::In::ask_low),
 			(*symbols_1min_)[2](ROW_POS, ColPos::In::bid_size), (*symbols_1min_)[2](ROW_POS, ColPos::In::ask_size) } }),
 	latest_5min_({
-		BarRef{ (*symbols_5min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[0](ROW_POS, ColPos::In::open), (*symbols_5min_)[0](ROW_POS, ColPos::In::high), (*symbols_5min_)[0](ROW_POS, ColPos::In::low), (*symbols_5min_)[0](ROW_POS, ColPos::In::close), (*symbols_5min_)[0](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_5min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[1](ROW_POS, ColPos::In::open), (*symbols_5min_)[1](ROW_POS, ColPos::In::high), (*symbols_5min_)[1](ROW_POS, ColPos::In::low), (*symbols_5min_)[1](ROW_POS, ColPos::In::close), (*symbols_5min_)[1](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_5min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[2](ROW_POS, ColPos::In::open), (*symbols_5min_)[2](ROW_POS, ColPos::In::high), (*symbols_5min_)[2](ROW_POS, ColPos::In::low), (*symbols_5min_)[2](ROW_POS, ColPos::In::close), (*symbols_5min_)[2](ROW_POS, ColPos::In::volume) } }),
+		BarRef{ (*symbols_ts_5min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[0](ROW_POS, ColPos::In::open), (*symbols_5min_)[0](ROW_POS, ColPos::In::high), (*symbols_5min_)[0](ROW_POS, ColPos::In::low), (*symbols_5min_)[0](ROW_POS, ColPos::In::close), (*symbols_5min_)[0](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_ts_5min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[1](ROW_POS, ColPos::In::open), (*symbols_5min_)[1](ROW_POS, ColPos::In::high), (*symbols_5min_)[1](ROW_POS, ColPos::In::low), (*symbols_5min_)[1](ROW_POS, ColPos::In::close), (*symbols_5min_)[1](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_ts_5min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[2](ROW_POS, ColPos::In::open), (*symbols_5min_)[2](ROW_POS, ColPos::In::high), (*symbols_5min_)[2](ROW_POS, ColPos::In::low), (*symbols_5min_)[2](ROW_POS, ColPos::In::close), (*symbols_5min_)[2](ROW_POS, ColPos::In::volume) } }),
 	latest_15min_({
-		BarRef{ (*symbols_15min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[0](ROW_POS, ColPos::In::open), (*symbols_15min_)[0](ROW_POS, ColPos::In::high), (*symbols_15min_)[0](ROW_POS, ColPos::In::low), (*symbols_15min_)[0](ROW_POS, ColPos::In::close), (*symbols_15min_)[0](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_15min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[1](ROW_POS, ColPos::In::open), (*symbols_15min_)[1](ROW_POS, ColPos::In::high), (*symbols_15min_)[1](ROW_POS, ColPos::In::low), (*symbols_15min_)[1](ROW_POS, ColPos::In::close), (*symbols_15min_)[1](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_15min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[2](ROW_POS, ColPos::In::open), (*symbols_15min_)[2](ROW_POS, ColPos::In::high), (*symbols_15min_)[2](ROW_POS, ColPos::In::low), (*symbols_15min_)[2](ROW_POS, ColPos::In::close), (*symbols_15min_)[2](ROW_POS, ColPos::In::volume) } }),
+		BarRef{ (*symbols_ts_15min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[0](ROW_POS, ColPos::In::open), (*symbols_15min_)[0](ROW_POS, ColPos::In::high), (*symbols_15min_)[0](ROW_POS, ColPos::In::low), (*symbols_15min_)[0](ROW_POS, ColPos::In::close), (*symbols_15min_)[0](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_ts_15min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[1](ROW_POS, ColPos::In::open), (*symbols_15min_)[1](ROW_POS, ColPos::In::high), (*symbols_15min_)[1](ROW_POS, ColPos::In::low), (*symbols_15min_)[1](ROW_POS, ColPos::In::close), (*symbols_15min_)[1](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_ts_15min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[2](ROW_POS, ColPos::In::open), (*symbols_15min_)[2](ROW_POS, ColPos::In::high), (*symbols_15min_)[2](ROW_POS, ColPos::In::low), (*symbols_15min_)[2](ROW_POS, ColPos::In::close), (*symbols_15min_)[2](ROW_POS, ColPos::In::volume) } }),
 	latest_1hr_({
-		BarRef{ (*symbols_1hr_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[0](ROW_POS, ColPos::In::open), (*symbols_1hr_)[0](ROW_POS, ColPos::In::high), (*symbols_1hr_)[0](ROW_POS, ColPos::In::low), (*symbols_1hr_)[0](ROW_POS, ColPos::In::close), (*symbols_1hr_)[0](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_1hr_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[1](ROW_POS, ColPos::In::open), (*symbols_1hr_)[1](ROW_POS, ColPos::In::high), (*symbols_1hr_)[1](ROW_POS, ColPos::In::low), (*symbols_1hr_)[1](ROW_POS, ColPos::In::close), (*symbols_1hr_)[1](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_1hr_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[2](ROW_POS, ColPos::In::open), (*symbols_1hr_)[2](ROW_POS, ColPos::In::high), (*symbols_1hr_)[2](ROW_POS, ColPos::In::low), (*symbols_1hr_)[2](ROW_POS, ColPos::In::close), (*symbols_1hr_)[2](ROW_POS, ColPos::In::volume) } }),
+		BarRef{ (*symbols_ts_1hr_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[0](ROW_POS, ColPos::In::open), (*symbols_1hr_)[0](ROW_POS, ColPos::In::high), (*symbols_1hr_)[0](ROW_POS, ColPos::In::low), (*symbols_1hr_)[0](ROW_POS, ColPos::In::close), (*symbols_1hr_)[0](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_ts_1hr_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[1](ROW_POS, ColPos::In::open), (*symbols_1hr_)[1](ROW_POS, ColPos::In::high), (*symbols_1hr_)[1](ROW_POS, ColPos::In::low), (*symbols_1hr_)[1](ROW_POS, ColPos::In::close), (*symbols_1hr_)[1](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_ts_1hr_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[2](ROW_POS, ColPos::In::open), (*symbols_1hr_)[2](ROW_POS, ColPos::In::high), (*symbols_1hr_)[2](ROW_POS, ColPos::In::low), (*symbols_1hr_)[2](ROW_POS, ColPos::In::close), (*symbols_1hr_)[2](ROW_POS, ColPos::In::volume) } }),
 	latest_4hr_({
-		BarRef{ (*symbols_4hr_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[0](ROW_POS, ColPos::In::open), (*symbols_4hr_)[0](ROW_POS, ColPos::In::high), (*symbols_4hr_)[0](ROW_POS, ColPos::In::low), (*symbols_4hr_)[0](ROW_POS, ColPos::In::close), (*symbols_4hr_)[0](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_4hr_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[1](ROW_POS, ColPos::In::open), (*symbols_4hr_)[1](ROW_POS, ColPos::In::high), (*symbols_4hr_)[1](ROW_POS, ColPos::In::low), (*symbols_4hr_)[1](ROW_POS, ColPos::In::close), (*symbols_4hr_)[1](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_4hr_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[2](ROW_POS, ColPos::In::open), (*symbols_4hr_)[2](ROW_POS, ColPos::In::high), (*symbols_4hr_)[2](ROW_POS, ColPos::In::low), (*symbols_4hr_)[2](ROW_POS, ColPos::In::close), (*symbols_4hr_)[2](ROW_POS, ColPos::In::volume) } }),
+		BarRef{ (*symbols_ts_4hr_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[0](ROW_POS, ColPos::In::open), (*symbols_4hr_)[0](ROW_POS, ColPos::In::high), (*symbols_4hr_)[0](ROW_POS, ColPos::In::low), (*symbols_4hr_)[0](ROW_POS, ColPos::In::close), (*symbols_4hr_)[0](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_ts_4hr_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[1](ROW_POS, ColPos::In::open), (*symbols_4hr_)[1](ROW_POS, ColPos::In::high), (*symbols_4hr_)[1](ROW_POS, ColPos::In::low), (*symbols_4hr_)[1](ROW_POS, ColPos::In::close), (*symbols_4hr_)[1](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_ts_4hr_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[2](ROW_POS, ColPos::In::open), (*symbols_4hr_)[2](ROW_POS, ColPos::In::high), (*symbols_4hr_)[2](ROW_POS, ColPos::In::low), (*symbols_4hr_)[2](ROW_POS, ColPos::In::close), (*symbols_4hr_)[2](ROW_POS, ColPos::In::volume) } }),
 	latest_1d_({
-		BarRef{ (*symbols_1d_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[0](ROW_POS, ColPos::In::open), (*symbols_1d_)[0](ROW_POS, ColPos::In::high), (*symbols_1d_)[0](ROW_POS, ColPos::In::low), (*symbols_1d_)[0](ROW_POS, ColPos::In::close), (*symbols_1d_)[0](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_1d_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[1](ROW_POS, ColPos::In::open), (*symbols_1d_)[1](ROW_POS, ColPos::In::high), (*symbols_1d_)[1](ROW_POS, ColPos::In::low), (*symbols_1d_)[1](ROW_POS, ColPos::In::close), (*symbols_1d_)[1](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_1d_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[2](ROW_POS, ColPos::In::open), (*symbols_1d_)[2](ROW_POS, ColPos::In::high), (*symbols_1d_)[2](ROW_POS, ColPos::In::low), (*symbols_1d_)[2](ROW_POS, ColPos::In::close), (*symbols_1d_)[2](ROW_POS, ColPos::In::volume) } }),
+		BarRef{ (*symbols_ts_1d_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[0](ROW_POS, ColPos::In::open), (*symbols_1d_)[0](ROW_POS, ColPos::In::high), (*symbols_1d_)[0](ROW_POS, ColPos::In::low), (*symbols_1d_)[0](ROW_POS, ColPos::In::close), (*symbols_1d_)[0](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_ts_1d_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[1](ROW_POS, ColPos::In::open), (*symbols_1d_)[1](ROW_POS, ColPos::In::high), (*symbols_1d_)[1](ROW_POS, ColPos::In::low), (*symbols_1d_)[1](ROW_POS, ColPos::In::close), (*symbols_1d_)[1](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_ts_1d_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[2](ROW_POS, ColPos::In::open), (*symbols_1d_)[2](ROW_POS, ColPos::In::high), (*symbols_1d_)[2](ROW_POS, ColPos::In::low), (*symbols_1d_)[2](ROW_POS, ColPos::In::close), (*symbols_1d_)[2](ROW_POS, ColPos::In::volume) } }),
 	latest_1w_({
-		BarRef{ (*symbols_1w_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[0](ROW_POS, ColPos::In::open), (*symbols_1w_)[0](ROW_POS, ColPos::In::high), (*symbols_1w_)[0](ROW_POS, ColPos::In::low), (*symbols_1w_)[0](ROW_POS, ColPos::In::close), (*symbols_1w_)[0](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_1w_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[1](ROW_POS, ColPos::In::open), (*symbols_1w_)[1](ROW_POS, ColPos::In::high), (*symbols_1w_)[1](ROW_POS, ColPos::In::low), (*symbols_1w_)[1](ROW_POS, ColPos::In::close), (*symbols_1w_)[1](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_1w_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[2](ROW_POS, ColPos::In::open), (*symbols_1w_)[2](ROW_POS, ColPos::In::high), (*symbols_1w_)[2](ROW_POS, ColPos::In::low), (*symbols_1w_)[2](ROW_POS, ColPos::In::close), (*symbols_1w_)[2](ROW_POS, ColPos::In::volume) } }),
+		BarRef{ (*symbols_ts_1w_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[0](ROW_POS, ColPos::In::open), (*symbols_1w_)[0](ROW_POS, ColPos::In::high), (*symbols_1w_)[0](ROW_POS, ColPos::In::low), (*symbols_1w_)[0](ROW_POS, ColPos::In::close), (*symbols_1w_)[0](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_ts_1w_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[1](ROW_POS, ColPos::In::open), (*symbols_1w_)[1](ROW_POS, ColPos::In::high), (*symbols_1w_)[1](ROW_POS, ColPos::In::low), (*symbols_1w_)[1](ROW_POS, ColPos::In::close), (*symbols_1w_)[1](ROW_POS, ColPos::In::volume) },
+		BarRef{ (*symbols_ts_1w_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[2](ROW_POS, ColPos::In::open), (*symbols_1w_)[2](ROW_POS, ColPos::In::high), (*symbols_1w_)[2](ROW_POS, ColPos::In::low), (*symbols_1w_)[2](ROW_POS, ColPos::In::close), (*symbols_1w_)[2](ROW_POS, ColPos::In::volume) } }),
 
 	// TODO some form of snapshots_ initialization that dynamically handles different MAX_ACTIVE_SYMBOLS sizes?
 	snapshots_({
 		Snapshot{
-				{ 0.0, 0.0, 0.0, 0, 0 },
+				{ 0, 0.0, 0.0, 0, 0 },
 				(*symbols_1min_)[0](ROW_POS, ColPos::In::close),
 				latest_1min_[0],
 				latest_5min_[0],
 				latest_15min_[0],
 				latest_1hr_[0] },
 		Snapshot{
-				{ 0.0, 0.0, 0.0, 0, 0 },
+				{ 0, 0.0, 0.0, 0, 0 },
 				(*symbols_1min_)[1](ROW_POS, ColPos::In::close),
 				latest_1min_[1],
 				latest_5min_[1],
 				latest_15min_[1],
 				latest_1hr_[1] },
 		Snapshot{
-				{ 0.0, 0.0, 0.0, 0, 0 },
+				{ 0, 0.0, 0.0, 0, 0 },
 				(*symbols_1min_)[2](ROW_POS, ColPos::In::close),
 				latest_1min_[2],
 				latest_5min_[2],
@@ -232,7 +256,44 @@ DataController::~DataController()
 		symbols_outputs_ = nullptr;
 	}
 
-	// cleanup raw xarrays
+	// cleanup raw ts xarrays
+	if (symbols_ts_1min_ != nullptr)
+	{
+		delete symbols_ts_1min_;
+		symbols_ts_1min_ = nullptr;
+	}
+	if (symbols_ts_5min_ != nullptr)
+	{
+		delete symbols_ts_5min_;
+		symbols_ts_5min_ = nullptr;
+	}
+	if (symbols_ts_15min_ != nullptr)
+	{
+		delete symbols_ts_15min_;
+		symbols_ts_15min_ = nullptr;
+	}
+	if (symbols_ts_1hr_ != nullptr)
+	{
+		delete symbols_ts_1hr_;
+		symbols_ts_1hr_ = nullptr;
+	}
+	if (symbols_ts_4hr_ != nullptr)
+	{
+		delete symbols_ts_4hr_;
+		symbols_ts_4hr_ = nullptr;
+	}
+	if (symbols_ts_1d_ != nullptr)
+	{
+		delete symbols_ts_1d_;
+		symbols_ts_1d_ = nullptr;
+	}
+	if (symbols_ts_1w_ != nullptr)
+	{
+		delete symbols_ts_1w_;
+		symbols_ts_1w_ = nullptr;
+	}
+
+    // cleanup raw xarrays
 	if (symbols_1min_ != nullptr)
 	{
 		delete symbols_1min_;
@@ -326,7 +387,6 @@ void DataController::shift(const ShiftTriggers& triggers, const size_t& pos)
 		{
 			// shift down
 			auto& data_1min = (*symbols_1min_)[pos];
-
 			if (DEBUG_PRINT_DATA)
 			{
 				std::cout << "1min data (before):" << std::endl << data_1min << std::endl;
@@ -334,9 +394,12 @@ void DataController::shift(const ShiftTriggers& triggers, const size_t& pos)
 				//std::cout << "1min latest close:" << latest_1min_[pos].close << std::endl;
 				//std::cout << "1min raw shape: " << data_1min.shape() << std::endl;
 			}
-
 			const auto data_copy = xt::roll(data_1min, shift_pos, 0);
 			data_1min = data_copy;
+
+			auto& ts_1min = (*symbols_ts_1min_)[pos];
+			const auto ts_copy = xt::roll(ts_1min, shift_pos, 0);
+			ts_1min = ts_copy;
 		}
 		if (triggers.flush5min)  // 5min
 		{
@@ -344,6 +407,10 @@ void DataController::shift(const ShiftTriggers& triggers, const size_t& pos)
 			auto& data_5min = (*symbols_5min_)[pos];
 			const auto data_copy = xt::roll(data_5min, shift_pos, 0);
 			data_5min = data_copy;
+
+			auto& ts_5min = (*symbols_ts_5min_)[pos];
+			const auto ts_copy = xt::roll(ts_5min, shift_pos, 0);
+			ts_5min = ts_copy;
 			
 			if (DEBUG_PRINT_DATA)
 			{
@@ -357,7 +424,11 @@ void DataController::shift(const ShiftTriggers& triggers, const size_t& pos)
 			auto& data_15min = (*symbols_15min_)[pos];
 			const auto data_copy = xt::roll(data_15min, shift_pos, 0);
 			data_15min = data_copy;
-			
+
+			auto& ts_15min = (*symbols_ts_15min_)[pos];
+			const auto ts_copy = xt::roll(ts_15min, shift_pos, 0);
+			ts_15min = ts_copy;
+
 			if (DEBUG_PRINT_DATA)
 			{
 				std::cout << "15min data:" << std::endl << data_15min << std::endl;
@@ -370,6 +441,10 @@ void DataController::shift(const ShiftTriggers& triggers, const size_t& pos)
 			auto& data_1hr = (*symbols_1hr_)[pos];
 			const auto data_copy = xt::roll(data_1hr, shift_pos, 0);
 			data_1hr = data_copy;
+
+			auto& ts_1hr = (*symbols_ts_1hr_)[pos];
+			const auto ts_copy = xt::roll(ts_1hr, shift_pos, 0);
+			ts_1hr = ts_copy;
 			
 			if (DEBUG_PRINT_DATA)
 			{
@@ -383,6 +458,10 @@ void DataController::shift(const ShiftTriggers& triggers, const size_t& pos)
 			auto& data_4hr = (*symbols_4hr_)[pos];
 			const auto data_copy = xt::roll(data_4hr, shift_pos, 0);
 			data_4hr = data_copy;
+
+			auto& ts_4hr = (*symbols_ts_4hr_)[pos];
+			const auto ts_copy = xt::roll(ts_4hr, shift_pos, 0);
+			ts_4hr = ts_copy;
 			
 			if (DEBUG_PRINT_DATA)
 			{
@@ -404,11 +483,11 @@ void DataController::do_update(const ShiftTriggers& triggers, const size_t& pos)
 
 		// preprocess all timeframes now...
 		// process data (returned in ASC order, opposite of input):
-		run_preprocess((*proc_symbols_1min_)[pos], symbol_outputs, symbol, 1, (*symbols_1min_)[pos]);
-		run_preprocess((*proc_symbols_5min_)[pos], symbol_outputs, symbol, 5, (*symbols_5min_)[pos]);
-		run_preprocess((*proc_symbols_15min_)[pos], symbol_outputs, symbol, 15, (*symbols_15min_)[pos]);
-		run_preprocess((*proc_symbols_1hr_)[pos], symbol_outputs, symbol, 60, (*symbols_1hr_)[pos]);
-		run_preprocess((*proc_symbols_4hr_)[pos], symbol_outputs, symbol, 240, (*symbols_4hr_)[pos]);
+		run_preprocess((*proc_symbols_1min_)[pos], symbol_outputs, symbol, 1, (*symbols_ts_1min_)[pos], (*symbols_1min_)[pos]);
+		run_preprocess((*proc_symbols_5min_)[pos], symbol_outputs, symbol, 5, (*symbols_ts_5min_)[pos], (*symbols_5min_)[pos]);
+		run_preprocess((*proc_symbols_15min_)[pos], symbol_outputs, symbol, 15, (*symbols_ts_15min_)[pos], (*symbols_15min_)[pos]);
+		run_preprocess((*proc_symbols_1hr_)[pos], symbol_outputs, symbol, 60, (*symbols_ts_1hr_)[pos], (*symbols_1hr_)[pos]);
+		run_preprocess((*proc_symbols_4hr_)[pos], symbol_outputs, symbol, 240, (*symbols_ts_4hr_)[pos], (*symbols_4hr_)[pos]);
 
 		// notify AccountController (or other listener)
 		if (on_update_ || on_update_outputs_)
@@ -478,8 +557,8 @@ void DataController::process_trade(const size_t& pos, const json& trade)
 	// Note: assuming trade["T"] has been handled/verified
 	//
 
-	const double ts = static_cast<double>(trade["t"].get<uint64_t>()) / 1.0e9;
-	const auto& price = trade["p"].get<double>();
+	const timestamp_us_t ts = trade["t"].get<uint64_t>() / US_TO_NS;  //ns->us
+	const real_t price = trade["p"].get<double>();
 	const auto& vol = trade["s"].get<uint32_t>();
 	const json& conds = trade.value("c", JSON_NULL);
 
@@ -503,8 +582,8 @@ void DataController::process_trade_rt(const size_t& pos, const json& trade)
 	// Note: assuming trade["ev"]/trade["sym"] has been handled/verified
 	//
 	
-	const double ts = static_cast<double>(trade["t"].get<uint64_t>()) / 1.0e3;
-	const auto& price = trade["p"].get<double>();
+	const timestamp_us_t ts = trade["t"].get<uint64_t>() / US_TO_NS;  //ns->us
+	const real_t price = trade["p"].get<double>();
 	const auto& vol = trade["s"].get<uint32_t>();
 	const json& conds = trade.value("c", JSON_NULL);
 	
@@ -526,7 +605,7 @@ void DataController::process_trade_rt(const size_t& pos, const json& trade)
 
 void DataController::process_trade_data(const size_t& pos, const TradeData& trade)
 {
-	const auto ts = static_cast<double>(trade.trade.timestamp / 1000);
+	const auto ts = trade.trade.timestamp;
 
 	// TODO this is a terrible way to handle conditions
 	json cond_json;
@@ -543,7 +622,7 @@ void DataController::process_trade_data(const size_t& pos, const TradeData& trad
 }
 
 
-inline void update_high_low(BarRef& bar, const double& price)
+inline void update_high_low(BarRef& bar, const real_t& price)
 {
 	if (price > bar.high)
 		bar.high = price;
@@ -551,7 +630,7 @@ inline void update_high_low(BarRef& bar, const double& price)
 		bar.low = price;
 }
 
-inline void update_open_close(BarRef& bar, const double& price)
+inline void update_open_close(BarRef& bar, const real_t& price)
 {
 	bar.close = price;
 	if (bar.open == 0)
@@ -567,13 +646,14 @@ inline void update_open_close(BarRef& bar, const double& price)
 	}
 }
 
-inline void populate_full_bar(BarFullRef& bar, const int interval_seconds, const timestamp_t& next_ts, const double& ts, const double& price, const uint32_t vol, const double& prev_bid, const double& prev_ask, const double& prev_bid_size, const double& prev_ask_size)
+inline void populate_full_bar(BarFullRef& bar, const int interval_seconds, const timestamp_us_t& next_ts, const timestamp_us_t& ts, const real_t& price, const uint32_t vol, const real_t& prev_bid, const real_t& prev_ask, const real_t& prev_bid_size, const real_t& prev_ask_size)
 {
+	const timestamp_us_t interval_us = static_cast<timestamp_us_t>(interval_seconds) * SEC_TO_US;
 	// reset this bar
-	bar.timestamp = static_cast<double>(static_cast<timestamp_t>(ts / interval_seconds) * interval_seconds);  // TODO verify
+	bar.timestamp = (ts / interval_us) * interval_us;  // TODO verify
 	//bar.timestamp = next_ts;
-	if (static_cast<timestamp_t>(bar.timestamp) != next_ts && next_ts > interval_seconds) {
-		std::cout << "populate_full_bar() Skip timestamp " << next_ts << " (to " << static_cast<timestamp_t>(bar.timestamp) << ")" << std::endl;
+	if (bar.timestamp != next_ts && next_ts > interval_us) {
+		std::cout << "populate_full_bar() Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
 	}
 	bar.volume = vol;
 	bar.low = bar.high = bar.open = bar.close = price;
@@ -588,23 +668,25 @@ inline void populate_full_bar(BarFullRef& bar, const int interval_seconds, const
 	bar.ask_size = prev_ask_size;
 }
 
-inline void populate_bar(BarRef& bar, const int interval_seconds, const timestamp_t& next_ts, const double& ts, const double& price, const uint32_t vol)
+inline void populate_bar(BarRef& bar, const int interval_seconds, const timestamp_us_t& next_ts, const timestamp_us_t& ts, const real_t& price, const uint32_t vol)
 {
+	const timestamp_us_t interval_us = static_cast<timestamp_us_t>(interval_seconds) * SEC_TO_US;
 	// reset this bar
-	bar.timestamp = static_cast<double>(static_cast<uint64_t>(ts / interval_seconds) * interval_seconds);  // TODO verify
+	bar.timestamp = (ts / interval_us) * interval_us;  // TODO verify
 	//bar.timestamp = next_ts;
-	if (static_cast<timestamp_t>(bar.timestamp) != next_ts && next_ts > interval_seconds) {
-		std::cout << "populate_bar() Skip timestamp " << next_ts << " (to " << static_cast<timestamp_t>(bar.timestamp) << ")" << std::endl;
+	if (bar.timestamp != next_ts && next_ts > interval_us) {
+		std::cout << "populate_bar() Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
 	}
 	bar.volume = vol;
 	bar.low = bar.high = bar.open = bar.close = price;
 }
 
-void DataController::process_trade_finish(const size_t& pos, const json& conds, const double& ts, const double& price, const uint32_t vol)
+void DataController::process_trade_finish(const size_t& pos, const json& conds, const timestamp_us_t& ts, const real_t& price, const uint32_t vol)
 {
 	// flush into 1min bar
 	const int interval_seconds = 60;
-	timestamp_t& ts_step = cur_timesteps_[pos];
+	const timestamp_us_t interval_us = static_cast<timestamp_us_t>(interval_seconds) * SEC_TO_US;
+	timestamp_us_t& ts_step = cur_timesteps_[pos];
 
 	bool updates_volume = false;
 	bool updates_high_low = false;
@@ -648,13 +730,13 @@ void DataController::process_trade_finish(const size_t& pos, const json& conds, 
 	BarRef& bar_1d = latest_1d_[pos];
 	BarRef& bar_1w = latest_1w_[pos];
 	
-	const timestamp_t next_ts = ts_step + interval_seconds;
-	if (ts >= static_cast<double>(next_ts))
+	const timestamp_us_t next_ts = ts_step + interval_us;
+	if (ts >= next_ts)
 	{
-		const double prev_bid = bar_1min.bid;
-		const double prev_ask = bar_1min.ask;
-		const double prev_bid_size = bar_1min.bid_size;
-		const double prev_ask_size = bar_1min.ask_size;
+		const real_t prev_bid = bar_1min.bid;
+		const real_t prev_ask = bar_1min.ask;
+		const real_t prev_bid_size = bar_1min.bid_size;
+		const real_t prev_ask_size = bar_1min.ask_size;
 
 		// shift bars
 		// Note: this introduces delay to the flush routine (by waiting for next timestamp before processing previous)
@@ -695,7 +777,7 @@ void DataController::process_trade_finish(const size_t& pos, const json& conds, 
 		if (triggers.flush1w)
 			populate_bar(bar_1w, interval_seconds * 5, next_ts, ts, price, vol);*/
 
-		ts_step = static_cast<timestamp_t>(bar_1min.timestamp);  // next_ts;
+		ts_step = bar_1min.timestamp;  // next_ts;
 	}
 	else
 	{
@@ -738,10 +820,10 @@ void DataController::process_quote(const size_t& pos, const json& quote)
 {
 	// Note: assuming quote["T"] has been handled/verified
 
-	const double ts = static_cast<double>(quote["t"].get<uint64_t>()) / 1.0e9;
-	const auto& askPrice = quote["P"].get<double>();
+	const timestamp_us_t ts = quote["t"].get<uint64_t>() / US_TO_NS;  //ns->us
+	const real_t askPrice = quote["P"].get<double>();
 	const auto& askSize = quote["S"].get<uint32_t>();
-	const auto& bidPrice = quote["p"].get<double>();
+	const real_t bidPrice = quote["p"].get<double>();
 	const auto& bidSize = quote["s"].get<uint32_t>();
 
 	process_quote_finish(pos, ts, askPrice, askSize, bidPrice, bidSize);
@@ -765,10 +847,10 @@ void DataController::process_quote_rt(const size_t& pos, const json& quote)
 {
 	// Note: assuming quote["ev"]/quote["sym"] has been handled/verified
 
-	const double ts = static_cast<double>(quote["t"].get<uint64_t>()) / 1.0e3;
-	const auto& askPrice = quote["ap"].get<double>();
+	const timestamp_us_t ts = quote["t"].get<uint64_t>() / US_TO_NS;
+	const real_t askPrice = quote["ap"].get<double>();
 	const auto& askSize = quote["as"].get<uint32_t>();
-	const auto& bidPrice = quote["bp"].get<double>();
+	const real_t bidPrice = quote["bp"].get<double>();
 	const auto& bidSize = quote["bs"].get<uint32_t>();
 
 	process_quote_finish(pos, ts, askPrice, askSize, bidPrice, bidSize);
@@ -791,13 +873,11 @@ void DataController::process_quote_rt(const size_t& pos, const json& quote)
 
 void DataController::process_quote_data(const size_t& pos, const QuoteData& quote)
 {
-	const auto ts = static_cast<double>(quote.quote.timestamp / 1000);
-
-	process_quote_finish(pos, ts, quote.quote.ask, quote.quote.ask_size, quote.quote.bid, quote.quote.bid_size);
+	process_quote_finish(pos, quote.quote.timestamp, quote.quote.ask, quote.quote.ask_size, quote.quote.bid, quote.quote.bid_size);
 }
 
 
-inline void update_bid_ask(BarFullRef& bar, const double& bid, const double& ask, const double bid_size, const double ask_size)
+inline void update_bid_ask(BarFullRef& bar, const real_t& bid, const real_t& ask, const real_t bid_size, const real_t ask_size)
 {
 	// append to existing bar!
 	if (ask > bar.ask_high)
@@ -814,13 +894,13 @@ inline void update_bid_ask(BarFullRef& bar, const double& bid, const double& ask
 	bar.bid_size = bid_size;
 }
 
-inline void populate_next_full_bar(BarFullRef& bar, const int interval_seconds, const timestamp_t& next_ts, const double& ts, const double& price, const double& bid, const double& ask, const double bid_size, const double ask_size)
+inline void populate_next_full_bar(BarFullRef& bar, const timestamp_us_t& interval_us, const timestamp_us_t& next_ts, const timestamp_us_t& ts, const real_t& price, const real_t& bid, const real_t& ask, const real_t bid_size, const real_t ask_size)
 {
 	// reset this bar
-	bar.timestamp = static_cast<Bar::time_type>(static_cast<uint64_t>(ts / interval_seconds) * interval_seconds);  // TODO verify
+	bar.timestamp = static_cast<timestamp_us_t>(ts / interval_us) * interval_us;  // TODO verify
 	//bar.timestamp = next_ts;
-	if (static_cast<timestamp_t>(bar.timestamp) != next_ts && next_ts > interval_seconds) {
-		std::cout << "populate_next_full_bar() Skip timestamp " << next_ts << " (to " << static_cast<timestamp_t>(bar.timestamp) << ")" << std::endl;
+	if (bar.timestamp != next_ts && next_ts > interval_us) {
+		std::cout << "populate_next_full_bar() Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
 	}
 	bar.volume = 0;  // so far, 0 volume in this bar
 	bar.low = bar.high = bar.open = bar.close = price;  // TODO copy last close price ?
@@ -832,23 +912,25 @@ inline void populate_next_full_bar(BarFullRef& bar, const int interval_seconds, 
 	bar.bid_size = bid_size;
 }
 
-inline void populate_next_bar(BarRef& bar, const int interval_seconds, const timestamp_t& next_ts, const double& ts, const double& price)
+inline void populate_next_bar(BarRef& bar, const timestamp_us_t& interval_us, const timestamp_t& next_ts, const real_t& ts, const real_t& price)
 {
 	// reset this bar
-	bar.timestamp = static_cast<Bar::time_type>(static_cast<uint64_t>(ts / interval_seconds) * interval_seconds);  // TODO verify
+	bar.timestamp = static_cast<timestamp_us_t>(ts / interval_us) * interval_us;  // TODO verify
 	//bar.timestamp = next_ts;
-	if (static_cast<timestamp_t>(bar.timestamp) != next_ts && next_ts > interval_seconds) {
-		std::cout << "populate_next_bar() Skip timestamp " << next_ts << " (to " << static_cast<timestamp_t>(bar.timestamp) << ")" << std::endl;
+	if (bar.timestamp != next_ts && next_ts > interval_us) {
+		std::cout << "populate_next_bar() Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
 	}
 	bar.volume = 0;  // so far, 0 volume in this bar
 	bar.low = bar.high = bar.open = bar.close = price;  // TODO copy last close price ?
 }
 
-void DataController::process_quote_finish(const size_t& pos, const double& ts, const double& askPrice, const uint32_t& askSize, const double& bidPrice, const uint32_t& bidSize)
+void DataController::process_quote_finish(const size_t& pos, const timestamp_us_t& ts, const real_t& askPrice, const uint32_t& askSize, const real_t& bidPrice, const uint32_t& bidSize)
 {
 	// flush into 1min bar
-	const int interval_seconds = 60;
-	timestamp_t& ts_step = cur_timesteps_[pos];
+	constexpr int interval_seconds = 60;
+	constexpr timestamp_us_t interval_us = static_cast<timestamp_us_t>(interval_seconds) * SEC_TO_US;
+
+	timestamp_us_t& ts_step = cur_timesteps_[pos];
 
 	/*
 	// TODO consider condition?
@@ -902,18 +984,18 @@ void DataController::process_quote_finish(const size_t& pos, const double& ts, c
 	//BarRef& bar_1d = latest_1d_[pos];
 	//BarRef& bar_1w = latest_1w_[pos];
 
-	const timestamp_t next_ts = ts_step + interval_seconds;
-	if (ts >= static_cast<double>(next_ts))
+	const timestamp_us_t next_ts = ts_step + interval_us;
+	if (ts >= next_ts)
 	{
 		// copy last close price into new bars
-		const double price = bar_1min.close;
+		const real_t price = bar_1min.close;
 
 		const ShiftTriggers triggers(next_ts);
 
 		// shift bars
 		// Note: this introduces delay to the flush routine (by waiting for next timestamp before processing previous)
 		//   This should be changed after moving to a faster network, then preempt end-of-interval
-		if (next_ts > interval_seconds) {  // only shift if this is not the first timestep
+		if (next_ts > interval_us) {  // only shift if this is not the first timestep
 			// call update before shifting
 			do_update(triggers, pos);
 			
@@ -922,31 +1004,31 @@ void DataController::process_quote_finish(const size_t& pos, const double& ts, c
 
 		if (triggers.flush1min)
 		{
-			populate_next_full_bar(bar_1min, interval_seconds, next_ts, ts, price, bidPrice, askPrice, bidSize, askSize);
+			populate_next_full_bar(bar_1min, interval_us, next_ts, ts, price, bidPrice, askPrice, bidSize, askSize);
 		}
 		if (triggers.flush5min)
 		{
-			populate_next_bar(bar_5min, interval_seconds * 5, next_ts, ts, price);
+			populate_next_bar(bar_5min, interval_us * 5, next_ts, ts, price);
 		}
 		if (triggers.flush15min)
 		{
-			populate_next_bar(bar_15min, interval_seconds * 15, next_ts, ts, price);
+			populate_next_bar(bar_15min, interval_us * 15, next_ts, ts, price);
 		}
 		if (triggers.flush1hr)
 		{
-			populate_next_bar(bar_1hr, interval_seconds * 60, next_ts, ts, price);
+			populate_next_bar(bar_1hr, interval_us * 60, next_ts, ts, price);
 		}
 		if (triggers.flush4hr)
 		{
-			populate_next_bar(bar_4hr, interval_seconds * 240, next_ts, ts, price);
+			populate_next_bar(bar_4hr, interval_us * 240, next_ts, ts, price);
 		}
 		// Note: never flush 1d/1w (TODO flush 1d if after hours starts? or 1w if after hours starts on friday?)
 		/*if (triggers.flush1d)
-			populate_next_bar(bar_1d, interval_seconds, next_ts, ts, price);
+			populate_next_bar(bar_1d, interval_us, next_ts, ts, price);
 		if (triggers.flush1w)
-			populate_next_bar(bar_1w, interval_seconds, next_ts, ts, price);*/
+			populate_next_bar(bar_1w, interval_us, next_ts, ts, price);*/
 		
-		ts_step = static_cast<timestamp_t>(bar_1min.timestamp);  // next_ts;
+		ts_step = bar_1min.timestamp;  // next_ts;
 	}
 	else
 	{
@@ -1051,9 +1133,9 @@ void DataController::startSimulation(std::chrono::seconds start_ts, std::chrono:
 	}
 
 	// now download the most recent quotes, and most recent trades
-	timestamp_t req_start_ts = static_cast<timestamp_t>(start_ts.count());
-	timestamp_t max_end_ts = req_start_ts + (static_cast<timestamp_t>(60) * num_minutes.count());
-	timestamp_t end_ts = 0;
+	timestamp_us_t req_start_ts = static_cast<timestamp_us_t>(start_ts.count()) * SEC_TO_US;
+	timestamp_us_t max_end_ts = req_start_ts + (MIN_TO_US * num_minutes.count());
+	timestamp_us_t end_ts = 0;
 
 	// TODO handle multiple symbols
 	if (symbols_pos_.size() > 1)
@@ -1091,7 +1173,7 @@ void DataController::startSimulation(std::chrono::seconds start_ts, std::chrono:
 				// TODO continue if quotes empty?
 				// last ts
 				if (!tmp_quotes.empty())
-					end_ts = tmp_quotes.back().quote.timestamp / 1000;
+					end_ts = tmp_quotes.back().quote.timestamp;
 			}
 			else
 			{
@@ -1116,7 +1198,7 @@ void DataController::startSimulation(std::chrono::seconds start_ts, std::chrono:
 				// pop from trades, and flush those until next trade is later than this quote
 				while (!tmp_trades.empty() && tmp_trades.front().trade.timestamp < quote.quote.timestamp)
 				{
-					if (tmp_trades.front().trade.timestamp / 1000.0 > max_end_ts) {
+					if (tmp_trades.front().trade.timestamp > max_end_ts) {
 						tmp_trades.pop();
 						continue;
 					}
@@ -1128,7 +1210,7 @@ void DataController::startSimulation(std::chrono::seconds start_ts, std::chrono:
 					tmp_trades.pop();
 				}
 
-				if (quote.quote.timestamp / 1000.0 > max_end_ts) {
+				if (quote.quote.timestamp > max_end_ts) {
 					continue;
 				}
 
@@ -1141,7 +1223,7 @@ void DataController::startSimulation(std::chrono::seconds start_ts, std::chrono:
 			// flush remaining trades (they have timestamp > than the last handled quote timestamp)
 			while (!tmp_trades.empty())
 			{
-				if (tmp_trades.front().trade.timestamp / 1000.0 > max_end_ts) {
+				if (tmp_trades.front().trade.timestamp > max_end_ts) {
 					tmp_trades.pop();
 					continue;
 				}
@@ -1207,90 +1289,115 @@ void DataController::initSymbol(const Symbol& symbol, std::chrono::seconds ts)
 	zero_pos(pos);
 
 	// load initial data
-	const timestamp_t req_end_ts = (static_cast<timestamp_t>(ts.count()) / 60) * 60;
-	timestamp_t req_start_ts_1min = 0;
+    const timestamp_us_t req_end_ts = static_cast<timestamp_us_t>(ts.count() / 60) * 60 * SEC_TO_US;
+    //const timestamp_us_t req_end_ts = norm_1min_s_to_us(ts.count());
+    timestamp_us_t req_start_ts_1min = 0;
 
     for (const auto& tpl : INTERVAL_INITIAL_DOWNLOADS)
     {
-	    switch (std::get<0>(tpl))
-	    {
-	    case 1:
-		    {
-				req_start_ts_1min = req_end_ts - std::get<1>(tpl);
-			    xtensor_raw_interval& dest = (*symbols_1min_)[pos];
-			    PolygonIoAdapter::getAggregateHistory(dest, symbol.symbol, std::get<0>(tpl), req_start_ts_1min, req_end_ts, true, std::get<2>(tpl));
-			    break;
-		    }
-	    case 5:
-		    {
-			    const timestamp_t end_ts = (req_end_ts / 300) * 300;
-			    const timestamp_t start_ts = end_ts - std::get<1>(tpl);
-			    xtensor_raw_interval& dest = (*symbols_5min_)[pos];
-			    PolygonIoAdapter::getAggregateHistory(dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true,std::get<2>(tpl));
-			    break;
-		    }
-	    case 15:
-		    {
-			    const timestamp_t end_ts = (req_end_ts / 900) * 900;
-			    const timestamp_t start_ts = end_ts - std::get<1>(tpl);
-			    xtensor_raw_interval& dest = (*symbols_15min_)[pos];
-			    PolygonIoAdapter::getAggregateHistory(dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
-			    break;
-		    }
-	    case 60:
-		    {
-			    const timestamp_t end_ts = (req_end_ts / 3600) * 3600;
-			    const timestamp_t start_ts = end_ts - std::get<1>(tpl);
-			    xtensor_raw_interval& dest = (*symbols_1hr_)[pos];
-			    PolygonIoAdapter::getAggregateHistory(dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
-			    break;
-		    }
-	    case 240:
-		    {
-			    const timestamp_t end_ts = (req_end_ts / 3600) * 3600;
-			    const timestamp_t start_ts = end_ts - std::get<1>(tpl);
-			    xtensor_raw_interval& dest = (*symbols_4hr_)[pos];
-			    PolygonIoAdapter::getAggregateHistory(dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
-			    break;
-		    }
-	    case 1440:
-		    {
-			    const timestamp_t end_ts = (req_end_ts / 3600) * 3600;
-			    const timestamp_t start_ts = end_ts - std::get<1>(tpl);
-			    xtensor_raw_interval& dest = (*symbols_1d_)[pos];
-			    PolygonIoAdapter::getAggregateHistory(dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
-			    break;
-		    }
-	    case 10080:
-		    {
-			    const timestamp_t end_ts = (req_end_ts / 3600) * 3600;
-			    const timestamp_t start_ts = end_ts - std::get<1>(tpl);
-			    xtensor_raw_interval& dest = (*symbols_1w_)[pos];
-			    PolygonIoAdapter::getAggregateHistory(dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
-			    break;
-		    }
-	    default:
-		    break;
-	    }
+		switch (std::get<0>(tpl))
+		{
+		case 1:
+			{
+				req_start_ts_1min = req_end_ts - std::get<1>(tpl) * SEC_TO_US;
+				xtensor_ts_interval& dest_ts = (*symbols_ts_1min_)[pos];
+				xtensor_raw_interval& dest = (*symbols_1min_)[pos];
+				PolygonIoAdapter::getAggregateHistory(dest_ts, dest, symbol.symbol, std::get<0>(tpl), req_start_ts_1min, req_end_ts, true, std::get<2>(tpl));
+				break;
+			}
+		case 5:
+			{
+				const timestamp_us_t end_ts = static_cast<timestamp_us_t>(req_end_ts / (300 * SEC_TO_US)) * 300 * SEC_TO_US;
+				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * SEC_TO_US;
+				xtensor_ts_interval& dest_ts = (*symbols_ts_5min_)[pos];
+				xtensor_raw_interval& dest = (*symbols_5min_)[pos];
+				PolygonIoAdapter::getAggregateHistory(dest_ts, dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
+				break;
+			}
+		case 15:
+			{
+				const timestamp_us_t end_ts = static_cast<timestamp_us_t>(req_end_ts / (900 * SEC_TO_US)) * 900 * SEC_TO_US;
+				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * SEC_TO_US;
+				xtensor_ts_interval& dest_ts = (*symbols_ts_15min_)[pos];
+				xtensor_raw_interval& dest = (*symbols_15min_)[pos];
+				PolygonIoAdapter::getAggregateHistory(dest_ts, dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
+				break;
+			}
+		case 60:
+			{
+				const timestamp_us_t end_ts = static_cast<timestamp_us_t>(req_end_ts / (3600 * SEC_TO_US)) * 3600 * SEC_TO_US;
+				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * SEC_TO_US;
+				xtensor_ts_interval& dest_ts = (*symbols_ts_1hr_)[pos];
+				xtensor_raw_interval& dest = (*symbols_1hr_)[pos];
+				PolygonIoAdapter::getAggregateHistory(dest_ts, dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
+				break;
+			}
+		case 240:
+			{
+				const timestamp_us_t end_ts = static_cast<timestamp_us_t>(req_end_ts / (3600 * SEC_TO_US)) * 3600 * SEC_TO_US;
+				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * SEC_TO_US;
+				xtensor_ts_interval& dest_ts = (*symbols_ts_4hr_)[pos];
+				xtensor_raw_interval& dest = (*symbols_4hr_)[pos];
+				PolygonIoAdapter::getAggregateHistory(dest_ts, dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
+				break;
+			}
+		case 1440:
+			{
+				const timestamp_us_t end_ts = static_cast<timestamp_us_t>(req_end_ts / (3600 * SEC_TO_US)) * 3600 * SEC_TO_US;
+				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * SEC_TO_US;
+				xtensor_ts_interval& dest_ts = (*symbols_ts_1d_)[pos];
+				xtensor_raw_interval& dest = (*symbols_1d_)[pos];
+				PolygonIoAdapter::getAggregateHistory(dest_ts, dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
+				break;
+			}
+		case 10080:
+			{
+				const timestamp_us_t end_ts = static_cast<timestamp_us_t>(req_end_ts / (3600 * SEC_TO_US)) * 3600 * SEC_TO_US;
+				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * SEC_TO_US;
+				xtensor_ts_interval& dest_ts = (*symbols_ts_1w_)[pos];
+				xtensor_raw_interval& dest = (*symbols_1w_)[pos];
+				PolygonIoAdapter::getAggregateHistory(dest_ts, dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
+				break;
+			}
+		default:
+			break;
+		}
     }
 
 	// now download quotes/NBBO up to this timestamp, and merge the bid/ask prices... (and load latest NUM_QUOTES quotes)
     {
 		// TODO yar, do not create temporary to perform this o.0
-		xtensor_raw_255 data = xt::stack(xt::xtuple(
-			xt::xarray<double>((*symbols_1min_)[pos]),
-			xt::xarray<double>((*symbols_5min_)[pos]),
-			xt::xarray<double>((*symbols_15min_)[pos]),
-			xt::xarray<double>((*symbols_1hr_)[pos]),
-			xt::xarray<double>((*symbols_4hr_)[pos]),
-			xt::xarray<double>((*symbols_1d_)[pos]),
-			xt::xarray<double>((*symbols_1w_)[pos])
+		xtensor_ts_255 data_ts = xt::stack(xt::xtuple(
+				xt::xarray<timestamp_us_t>((*symbols_ts_1min_)[pos]),
+				xt::xarray<timestamp_us_t>((*symbols_ts_5min_)[pos]),
+				xt::xarray<timestamp_us_t>((*symbols_ts_15min_)[pos]),
+				xt::xarray<timestamp_us_t>((*symbols_ts_1hr_)[pos]),
+				xt::xarray<timestamp_us_t>((*symbols_ts_4hr_)[pos]),
+				xt::xarray<timestamp_us_t>((*symbols_ts_1d_)[pos]),
+				xt::xarray<timestamp_us_t>((*symbols_ts_1w_)[pos])
 		));
-		if (PolygonIoAdapter::mergeQuotesAggregates(data, symbol.symbol, req_end_ts))
+		xtensor_raw_255 data = xt::stack(xt::xtuple(
+			xt::xarray<real_t>((*symbols_1min_)[pos]),
+			xt::xarray<real_t>((*symbols_5min_)[pos]),
+			xt::xarray<real_t>((*symbols_15min_)[pos]),
+			xt::xarray<real_t>((*symbols_1hr_)[pos]),
+			xt::xarray<real_t>((*symbols_4hr_)[pos]),
+			xt::xarray<real_t>((*symbols_1d_)[pos]),
+			xt::xarray<real_t>((*symbols_1w_)[pos])
+		));
+		if (PolygonIoAdapter::mergeQuotesAggregates(data_ts, data, symbol.symbol, req_end_ts))
 		{
 			// TODO improve this o.0
 			//std::cout << "1min row shape: " << xt::dynamic_view(data, { Timeframes::_1min, xt::all(), xt::all() }).shape() << std::endl;
 			// copy results back...
+			(*symbols_ts_1min_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_1min, xt::all(), xt::all() });
+			(*symbols_ts_5min_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_5min, xt::all(), xt::all() });
+			(*symbols_ts_15min_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_15min, xt::all(), xt::all() });
+			(*symbols_ts_1hr_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_1hr, xt::all(), xt::all() });
+			(*symbols_ts_4hr_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_4hr, xt::all(), xt::all() });
+			(*symbols_ts_1d_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_1day, xt::all(), xt::all() });
+			(*symbols_ts_1w_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_1wk, xt::all(), xt::all() });
+
 			(*symbols_1min_)[pos] = xt::dynamic_view(data, { Timeframes::_1min, xt::all(), xt::all() });
 			(*symbols_5min_)[pos] = xt::dynamic_view(data, { Timeframes::_5min, xt::all(), xt::all() });
 			(*symbols_15min_)[pos] = xt::dynamic_view(data, { Timeframes::_15min, xt::all(), xt::all() });
@@ -1305,13 +1412,13 @@ void DataController::initSymbol(const Symbol& symbol, std::chrono::seconds ts)
     {
 		// must transpose raw data to (features, timesteps) for preprocess...
 		auto& symbol_outputs = (*symbols_outputs_)[pos];
-		run_preprocess((*proc_symbols_1min_)[pos], symbol_outputs, symbol, 1, (*symbols_1min_)[pos]);
-		run_preprocess((*proc_symbols_5min_)[pos], symbol_outputs, symbol, 5, (*symbols_5min_)[pos]);
-		run_preprocess((*proc_symbols_15min_)[pos], symbol_outputs, symbol, 15, (*symbols_15min_)[pos]);
-		run_preprocess((*proc_symbols_1hr_)[pos], symbol_outputs, symbol, 60, (*symbols_1hr_)[pos]);
-		run_preprocess((*proc_symbols_4hr_)[pos], symbol_outputs, symbol, 240, (*symbols_4hr_)[pos]);
-		run_preprocess((*proc_symbols_1d_)[pos], symbol_outputs, symbol, 1440, (*symbols_1d_)[pos]);
-		run_preprocess((*proc_symbols_1w_)[pos], symbol_outputs, symbol, 10080, (*symbols_1w_)[pos]);
+		run_preprocess((*proc_symbols_1min_)[pos], symbol_outputs, symbol, 1, (*symbols_ts_1min_)[pos], (*symbols_1min_)[pos]);
+		run_preprocess((*proc_symbols_5min_)[pos], symbol_outputs, symbol, 5, (*symbols_ts_5min_)[pos], (*symbols_5min_)[pos]);
+		run_preprocess((*proc_symbols_15min_)[pos], symbol_outputs, symbol, 15, (*symbols_ts_15min_)[pos], (*symbols_15min_)[pos]);
+		run_preprocess((*proc_symbols_1hr_)[pos], symbol_outputs, symbol, 60, (*symbols_ts_1hr_)[pos], (*symbols_1hr_)[pos]);
+		run_preprocess((*proc_symbols_4hr_)[pos], symbol_outputs, symbol, 240, (*symbols_ts_4hr_)[pos], (*symbols_4hr_)[pos]);
+		run_preprocess((*proc_symbols_1d_)[pos], symbol_outputs, symbol, 1440, (*symbols_ts_1d_)[pos], (*symbols_1d_)[pos]);
+		run_preprocess((*proc_symbols_1w_)[pos], symbol_outputs, symbol, 10080, (*symbols_ts_1w_)[pos], (*symbols_1w_)[pos]);
     }
 
     {

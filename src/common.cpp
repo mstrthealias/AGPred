@@ -1,12 +1,12 @@
 #include "common.h"
 
 
-std::ostream& operator<< (std::ostream& out, const std::vector<double>& v)
+std::ostream& operator<< (std::ostream& out, const std::vector<real_t>& v)
 {
     out << '[';  // (std::is_floating_point<T>::value ? '[' : '(');
     if (!v.empty()) {
         const auto vSize = v.size();
-        for (std::vector<double>::size_type i = 0; i < vSize; ++i)
+        for (std::vector<real_t>::size_type i = 0; i < vSize; ++i)
             std::cout << v[i] << (i == vSize - 1 ? "" : ", ");
     }
     out << ']';  // (std::is_floating_point<T>::value ? ']' : ')');
@@ -16,7 +16,7 @@ std::ostream& operator<< (std::ostream& out, const std::vector<double>& v)
 std::ostream& operator<< (std::ostream& out, const std::vector<int>& s)
 {
     out << '(';
-    std::copy(s.cbegin(), s.cend(), std::ostream_iterator<double>(out, ", "));
+    std::copy(s.cbegin(), s.cend(), std::ostream_iterator<int>(out, ", "));
     out << "\b\b)";
     return out;
 }
@@ -24,7 +24,7 @@ std::ostream& operator<< (std::ostream& out, const std::vector<int>& s)
 std::ostream& operator<< (std::ostream& out, const xt::svector<size_t>& s)
 {
     out << '(';
-    std::copy(s.cbegin(), s.cend(), std::ostream_iterator<double>(out, ", "));
+    std::copy(s.cbegin(), s.cend(), std::ostream_iterator<size_t>(out, ", "));
     out << "\b\b)";
     return out;
 }

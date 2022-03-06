@@ -4,6 +4,8 @@
 
 #include <string>
 
+#include "../src/common.h"
+
 
 namespace agpred {
 
@@ -15,7 +17,7 @@ namespace agpred {
 
 		//backend?
 
-		double pl = 0;
+		real_t pl = 0;
 
 		//activity
 

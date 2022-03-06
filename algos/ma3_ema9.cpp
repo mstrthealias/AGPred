@@ -17,19 +17,19 @@ int agpred::calc_raw_signal(const xtensor_raw& raw)
 	//std::cout << "dumpRaw() data_processed.shape:" << std::endl << raw.shape() << std::endl;
 
 	// copy 1 minute interval
-	xt::xarray<double> data_1min = xt::view(raw, 0, xt::all(), xt::all());
+	xt::xarray<real_t> data_1min = xt::view(raw, static_cast<ptrdiff_t>(0), xt::all(), xt::all());
 	//std::cout << "dumpRaw() data_1min.shape:" << std::endl << data_1min.shape() << std::endl;
 
 	// transpose that-way sorts correct order
 	data_1min = xt::transpose(data_1min, { 1, 0 });
 	
 	// reverse order
-	if (_xt_2d_sort(data_1min, ColPos::In::timestamp))
+	if (_xt_2d_sort(data_1min, ColPos::In::timestamp, false))
 	{
 		//std::cout << "...sorted" << std::endl;
 	}
 	
-	//xt::xarray<double> row0row0 = xt::row(data_1min, ColPos::In::timestamp);
+	//xt::xarray<real_t> row0row0 = xt::row(data_1min, ColPos::In::timestamp);
 	//std::cout << "dumpRaw() row[0]row[0].shape:" << std::endl << row0row0.shape() << std::endl;
 	//std::cout << "dumpRaw() row[0]row[0]:" << std::endl << row0row0 << std::endl;
 
@@ -38,11 +38,11 @@ int agpred::calc_raw_signal(const xtensor_raw& raw)
 
 	const size_t n_len = data_1min.shape().at(1);
 	// copy rows for TALib
-	const auto r_close = xt::xarray<double>(xt::row(data_1min, ColPos::In::close));
+	const auto r_close = xt::xarray<real_t>(xt::row(data_1min, ColPos::In::close));
 
 	const auto base_adj = 1;
-	const double& cur_close = r_close[n_len - base_adj];
-	const double& prev_close = r_close[n_len - base_adj - 1];
+	const real_t& cur_close = r_close[n_len - base_adj];
+	const real_t& prev_close = r_close[n_len - base_adj - 1];
 	
 	bool crossed_above_ma3 = false;
 	bool crossed_below_ma3 = false;
@@ -56,7 +56,11 @@ int agpred::calc_raw_signal(const xtensor_raw& raw)
 		int outBegIdx = 0;
 		int outNBElement = 0;
 		std::fill(vals.begin(), vals.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		const TA_RetCode retCode = TA_MA(0, n_len, r_close.data(), 3, TA_MAType_SMA, &outBegIdx, &outNBElement, vals.data() + TA_MA_Lookback(3, TA_MAType_SMA));
+#else
+		const TA_RetCode retCode = TA_S_MA(0, n_len, r_close.data(), 3, TA_MAType_SMA, &outBegIdx, &outNBElement, vals.data() + TA_MA_Lookback(3, TA_MAType_SMA));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "SMA3 error: " << retCode << std::endl;
@@ -77,7 +81,11 @@ int agpred::calc_raw_signal(const xtensor_raw& raw)
 		int outBegIdx = 0;
 		int outNBElement = 0;
 		std::fill(vals.begin(), vals.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		const TA_RetCode retCode = TA_MA(0, n_len, r_close.data(), 9, TA_MAType_EMA, &outBegIdx, &outNBElement, vals.data() + TA_MA_Lookback(9, TA_MAType_EMA));
+#else
+		const TA_RetCode retCode = TA_S_MA(0, n_len, r_close.data(), 9, TA_MAType_EMA, &outBegIdx, &outNBElement, vals.data() + TA_MA_Lookback(9, TA_MAType_EMA));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "EMA9 error: " << retCode << std::endl;

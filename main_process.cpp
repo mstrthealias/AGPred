@@ -28,7 +28,7 @@ static const int SRC_COLS = 6;
 
 
 
-xt::xarray<double> temp_array()
+xt::xarray<real_t> temp_array()
 {
     /* // (3, 6)
     return {
@@ -46,6 +46,7 @@ xt::xarray<double> temp_array()
     };
 }
 
+
 xt::xarray<double> load_npy_src(const std::string& filename)
 {
     std::cout << "Loading " << filename << "..." << std::endl;
@@ -54,7 +55,7 @@ xt::xarray<double> load_npy_src(const std::string& filename)
     return data;
 }
 
-int yar1(const xt::xarray<double>& input)
+int yar1(const xt::xarray<real_t>& input)
 {
 
     TA_RetCode retCode;
@@ -62,7 +63,7 @@ int yar1(const xt::xarray<double>& input)
     int outNBElement = 0;
 
     // Access data directly through xt::view
-    const auto close_p = xt::xarray<double>(xt::row(input, 4));
+    const auto close_p = xt::xarray<real_t>(xt::row(input, 4));
 
     std::cout << "input: " << close_p << std::endl;
 
@@ -75,7 +76,11 @@ int yar1(const xt::xarray<double>& input)
     std::vector<double> res(n_rows + 1);
 
     //TA_MAType_SMA
+#ifdef AGPRED_DOUBLE_P
     retCode = TA_LINEARREG_SLOPE(0, n_rows, close_p.data(), 3, &outBegIdx, &outNBElement, res.data());
+#else
+    retCode = TA_S_LINEARREG_SLOPE(0, n_rows, close_p.data(), 3, &outBegIdx, &outNBElement, res.data());
+#endif
     if (retCode != TA_SUCCESS)
     {
         std::cout << "LINEARREG_SLOPE error: " << retCode << std::endl;
@@ -86,7 +91,7 @@ int yar1(const xt::xarray<double>& input)
 
     res.pop_back();
     // res.push_back(0.0);
-    std::cout << "res: " << res  << std::endl;
+    //std::cout << "res: " << res  << std::endl;
 
     return 0;
 }
@@ -97,7 +102,7 @@ const auto _xt_ = xt::placeholders::_;
 int main(int argc, char* argv[])
 {
     /*
-    xt::xarray<double> a_tmp = temp_array();
+    xt::xarray<real_t> a_tmp = temp_array();
     std::cout << "a_tmp: " << a_tmp << std::endl;
     std::cout << "a_tmp.shape: " << a_tmp.shape() << std::endl;
 
@@ -124,13 +129,15 @@ int main(int argc, char* argv[])
     std::string npy_file = "pyfiles/_tmp.AAPL." + std::to_string(TIMEFRAME) + ".tohlcv.npy";
     xt::xarray<double> input = load_npy_src(npy_file);
 
-    dfs_map_t dfs = { {TIMEFRAME, input} };
+    dfs_map_t dfs = { {TIMEFRAME, xt::xarray<real_t>(input)} };
+    dfs_ts_map_t dfs_ts = { {TIMEFRAME, xt::xarray<timestamp_us_t>(xt::view(input, ColPos::In::timestamp, xt::all()))} };
+
     const std::map<const char*, const int> interval_map = {
-        {"1min", 1}
+            {"1min", 1}
     };
 
     //yar1(input);
-    process_step1to3("APPL", dfs, TIMEFRAME, false, interval_map);
+    process_step1to3_2a("APPL", dfs_ts, dfs, TIMEFRAME, false, interval_map);
 
 
     retCode = TA_Shutdown();

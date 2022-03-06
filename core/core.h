@@ -23,17 +23,21 @@ namespace agpred {
 	constexpr int RT_REPORT_TIMESTEPS = 11;  // TODO NUM_TIMESTEMPS ?
 
 	// this is how much raw data is tracked for each symbol; note that not all timestamps fill 255 rows
+	using shape_ts_interval_255_t = xt::xshape<RT_MAX_TIMESTEPS, 1>;  // (timesteps, 1)
+	using shape_ts_255_t = xt::xshape<NUM_INTERVALS, RT_MAX_TIMESTEPS, 1>;  // (timeframe, timesteps, 1)
 	using shape_raw_interval_255_t = xt::xshape<RT_MAX_TIMESTEPS, NUM_RAW_COLUMNS>;  // (timesteps, cols)
 	using shape_raw_255_t = xt::xshape<NUM_INTERVALS, RT_MAX_TIMESTEPS, NUM_RAW_COLUMNS>;  // (timeframe, timesteps, cols)
 	using shape_raw_t = xt::xshape<NUM_INTERVALS, RT_REPORT_TIMESTEPS, NUM_RAW_COLUMNS>;  // (timeframe, timesteps, cols)
 	using shape_trades_t = xt::xshape<NUM_TRADES, NUM_TRADE_COLUMNS>;  // (timesteps, cols)
 	using shape_quotes_t = xt::xshape<NUM_QUOTES, NUM_QUOTE_COLUMNS>;  // (timesteps, cols)
 
-	using xtensor_raw_interval = xt::xtensor_fixed<double, shape_raw_interval_255_t>;
-	using xtensor_raw_255 = xt::xtensor_fixed<double, shape_raw_255_t>;
-	using xtensor_raw = xt::xtensor_fixed<double, shape_raw_t>;
-	using xtensor_trades = xt::xtensor_fixed<double, shape_trades_t>;
-	using xtensor_quotes = xt::xtensor_fixed<double, shape_quotes_t>;
+	using xtensor_ts_interval = xt::xtensor_fixed<timestamp_us_t , shape_ts_interval_255_t>;
+	using xtensor_ts_255 = xt::xtensor_fixed<timestamp_us_t, shape_ts_255_t>;
+	using xtensor_raw_interval = xt::xtensor_fixed<real_t, shape_raw_interval_255_t>;
+	using xtensor_raw_255 = xt::xtensor_fixed<real_t, shape_raw_255_t>;
+	using xtensor_raw = xt::xtensor_fixed<real_t, shape_raw_t>;
+	using xtensor_trades = xt::xtensor_fixed<real_t, shape_trades_t>;
+	using xtensor_quotes = xt::xtensor_fixed<real_t, shape_quotes_t>;
 
 	// TODO processed
 	// this is how much processed data is tracked for each symbol
@@ -42,9 +46,9 @@ namespace agpred {
 	using shape_processed_t = xt::xshape<NUM_INTERVALS, NUM_TIMESTEMPS, NUM_COLUMNS>;  // TODO move NUM_INTERVALS to end?
 	using shape_outputs_interval_t = xt::xshape<RT_MAX_TIMESTEPS, ColPos::_OUTPUT_NUM_COLS>;  // (timesteps) for single column
 	
-	using xtensor_processed_interval = xt::xtensor_fixed<double, shape_processed_interval_t>;
-	using xtensor_processed = xt::xtensor_fixed<double, shape_processed_t>;
-	using xtensor_outputs_interval = xt::xtensor_fixed<double, shape_outputs_interval_t>;
+	using xtensor_processed_interval = xt::xtensor_fixed<real_t, shape_processed_interval_t>;
+	using xtensor_processed = xt::xtensor_fixed<real_t, shape_processed_t>;
+	using xtensor_outputs_interval = xt::xtensor_fixed<real_t, shape_outputs_interval_t>;
 
 	enum class AGMode
 	{
@@ -109,8 +113,8 @@ namespace agpred {
 		const PositionType type;
 
 		const size_t size;
-		const double limit_price;
-		const double stoploss;  // if non-zero, the system will manage the exit at this stop-loss price
+		const real_t limit_price;
+		const real_t stoploss;  // if non-zero, the system will manage the exit at this stop-loss price
 
 		/*
             'target': self.target,
@@ -127,7 +131,7 @@ namespace agpred {
 
 		const PositionType type;
 
-		const double limit_price;
+		const real_t limit_price;
 	};
 
 
@@ -185,7 +189,7 @@ namespace agpred {
 	struct Snapshot {
 		NBBO nbbo;  // TODO NBBO or just pass latest 1min Bar?
 
-		const double& price;  // last price
+		const real_t& price;  // last price
 
 		//Bar partial1min;  // TODO
 

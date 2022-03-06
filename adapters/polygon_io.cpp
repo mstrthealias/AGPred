@@ -28,35 +28,15 @@ const auto cpr_proxy_opts = cpr::Proxies{};
 #endif
 
 
-inline void process_agg(Bar& dest, const json& agg)
+inline void process_agg(xtensor_ts_interval& dest_ts, xtensor_raw_interval& dest, const uint32_t i, const json& agg)
 {
-	dest.timestamp = static_cast<double>(agg["t"].get<uint64_t>()) / 1.0e3;
-	dest.open = agg["o"].get<double>();
-	dest.high = agg["h"].get<double>();
-	dest.low = agg["l"].get<double>();
-	dest.close = agg["c"].get<double>();
-	dest.volume = agg["v"].get<uint32_t>();
-
-	/*
-	agg["o"];  // open
-	agg["c"];  // close
-	agg["h"];  // high
-	agg["l"];  // low
-	agg["n"];  // number of transactions in the aggregate window
-	agg["t"];  // timestamp for the start of the aggregate window
-	agg["v"];  // volume
-	agg["vw"]; // vwap
-	*/
-}
-
-inline void process_agg2(xtensor_raw_interval& dest, const uint32_t i, const json& agg)
-{
-	dest(i, ColPos::In::timestamp) = static_cast<double>(agg["t"].get<uint64_t>()) / 1.0e3;
+	dest_ts(i, ColPos::In::timestamp) = static_cast<timestamp_us_t>(agg["t"].get<uint64_t>());
+	dest(i, ColPos::In::timestamp) = static_cast<real_t>(static_cast<timestamp_us_t>(agg["t"].get<uint64_t>() / SEC_TO_US) - SEC_37_YEARS);  // TODO float timestamp, subtract 37 years to keep in range?
 	dest(i, ColPos::In::open) = agg["o"].get<double>();
 	dest(i, ColPos::In::high) = agg["h"].get<double>();
 	dest(i, ColPos::In::low) = agg["l"].get<double>();
 	dest(i, ColPos::In::close) = agg["c"].get<double>();
-	dest(i, ColPos::In::volume) = static_cast<double>(agg["v"].get<uint32_t>());
+	dest(i, ColPos::In::volume) = static_cast<real_t>(agg["v"].get<uint32_t>());
 
 	/*
 	agg["o"];  // open
@@ -72,11 +52,10 @@ inline void process_agg2(xtensor_raw_interval& dest, const uint32_t i, const jso
 
 inline void payload_v2_to_quote_data(QuoteData& quote_data, const json& quote)
 {
-	const timestamp_t cur_ts = quote["t"].get<uint64_t>() / static_cast<timestamp_t>(1e6);
-	//const timestamp_t cur_ts = quote["t"].get<uint64_t>() / static_cast<timestamp_t>(1e9);
-	const auto& askPrice = quote["P"].get<double>();
+	const timestamp_us_t cur_ts = quote["t"].get<uint64_t>() / US_TO_NS;  //ns->us
+	const real_t askPrice = quote["P"].get<double>();
 	const auto& askSize = quote["S"].get<uint32_t>();
-	const auto& bidPrice = quote["p"].get<double>();
+	const real_t bidPrice = quote["p"].get<double>();
 	const auto& bidSize = quote["s"].get<uint32_t>();
 
 	QuoteCondition conds[] = { QuoteCondition::Invalid, QuoteCondition::Invalid, QuoteCondition::Invalid };
@@ -109,11 +88,10 @@ inline void payload_v2_to_quote_data(QuoteData& quote_data, const json& quote)
 
 inline void payload_vx_to_quote_data(QuoteData& quote_data, const json& quote)
 {
-	const timestamp_t cur_ts = quote["sip_timestamp"].get<uint64_t>() / static_cast<timestamp_t>(1e6);
-	//const timestamp_t cur_ts = quote["sip_timestamp"].get<uint64_t>() / static_cast<timestamp_t>(1e9);
-	const auto& askPrice = quote["ask_price"].get<double>();
+	const timestamp_us_t cur_ts = quote["sip_timestamp"].get<uint64_t>() / US_TO_NS;  //ns->us
+	const real_t askPrice = quote["ask_price"].get<double>();
 	const auto& askSize = quote["ask_size"].get<uint32_t>();
-	const auto& bidPrice = quote["bid_price"].get<double>();
+	const real_t bidPrice = quote["bid_price"].get<double>();
 	const auto& bidSize = quote["bid_size"].get<uint32_t>();
 
 	QuoteCondition conds[] = { QuoteCondition::Invalid, QuoteCondition::Invalid, QuoteCondition::Invalid };
@@ -146,11 +124,10 @@ inline void payload_vx_to_quote_data(QuoteData& quote_data, const json& quote)
 
 void adapter::payload_rt_to_quote_data(QuoteData& quote_data, const json& quote)
 {
-	const timestamp_t cur_ts = quote["t"].get<uint64_t>() / static_cast<timestamp_t>(1e6);
-	//const timestamp_t cur_ts = quote["t"].get<uint64_t>() / static_cast<timestamp_t>(1e9);
-	const auto& askPrice = quote["ap"].get<double>();
+	const timestamp_us_t cur_ts = quote["t"].get<uint64_t>() / US_TO_NS;  //ns->us
+	const real_t askPrice = quote["ap"].get<double>();
 	const auto& askSize = quote["as"].get<uint32_t>();
-	const auto& bidPrice = quote["bp"].get<double>();
+	const real_t bidPrice = quote["bp"].get<double>();
 	const auto& bidSize = quote["bs"].get<uint32_t>();
 
 	QuoteCondition conds[] = { QuoteCondition::Invalid, QuoteCondition::Invalid, QuoteCondition::Invalid };
@@ -199,9 +176,8 @@ void adapter::payload_rt_to_quote_data(QuoteData& quote_data, const json& quote)
 
 inline void payload_vx_to_trade_data(TradeData& trade_data, const json& trade)
 {
-	const timestamp_t cur_ts = trade["sip_timestamp"].get<uint64_t>() / static_cast<timestamp_t>(1e6);
-	//const timestamp_t cur_ts = trade["sip_timestamp"].get<uint64_t>() / static_cast<timestamp_t>(1e9);
-	const auto& price = trade["price"].get<double>();
+	const timestamp_us_t cur_ts = trade["sip_timestamp"].get<uint64_t>() / US_TO_NS;  //ns->us
+	const real_t price = trade["price"].get<double>();
 	const auto& size = trade["size"].get<uint32_t>();
 
 	TradeCondition conds[] = { TradeCondition::PLACEHOLDER, TradeCondition::PLACEHOLDER, TradeCondition::PLACEHOLDER };
@@ -232,9 +208,8 @@ inline void payload_vx_to_trade_data(TradeData& trade_data, const json& trade)
 
 void adapter::payload_rt_to_trade_data(TradeData& trade_data, const json& trade)
 {
-	const timestamp_t cur_ts = trade["t"].get<uint64_t>() / static_cast<timestamp_t>(1e6);
-	//const timestamp_t cur_ts = trade["t"].get<uint64_t>() / static_cast<timestamp_t>(1e9);
-	const auto& price = trade["p"].get<double>();
+	const timestamp_us_t cur_ts = trade["t"].get<uint64_t>() / US_TO_NS;
+	const real_t price = trade["p"].get<double>();
 	const auto& size = trade["s"].get<uint32_t>();
 
 	TradeCondition conds[] = { TradeCondition::PLACEHOLDER, TradeCondition::PLACEHOLDER, TradeCondition::PLACEHOLDER };
@@ -277,7 +252,7 @@ void adapter::payload_rt_to_trade_data(TradeData& trade_data, const json& trade)
 }
 
 
-size_t PolygonIoAdapter::getAggregateHistory(xtensor_raw_interval& dest, const std::string& symbol, unsigned int interval, timestamp_t start_ts, timestamp_t end_ts, bool adjusted, unsigned int limit)
+size_t PolygonIoAdapter::getAggregateHistory(xtensor_ts_interval& dest_ts, xtensor_raw_interval& dest, const std::string& symbol, unsigned int interval, timestamp_us_t start_ts, timestamp_us_t end_ts, bool adjusted, unsigned int limit)
 {
 	std::string base_url = POLYGON_BASE_URI + "v2/aggs/ticker/" + std::string(symbol) + "/range/";
 	if (interval < 60)
@@ -290,7 +265,7 @@ size_t PolygonIoAdapter::getAggregateHistory(xtensor_raw_interval& dest, const s
 		base_url = base_url + "1/week/";
 	else
 		assert(false);
-	base_url = base_url + std::to_string(start_ts * 1000) + "/" + std::to_string(end_ts * 1000);
+	base_url = base_url + std::to_string(start_ts / MS_TO_US) + "/" + std::to_string(end_ts / MS_TO_US);
 
 	cpr::Response r = cpr::Get(
 		cpr::Url{ base_url },
@@ -323,9 +298,8 @@ size_t PolygonIoAdapter::getAggregateHistory(xtensor_raw_interval& dest, const s
 			if (i >= RT_MAX_TIMESTEPS)
 				break;
 			//// create view referencing the current row/timestep
-			//xt::xview<double, uint32_t> row = xt::view(dest, xt::range(i, i + 1), xt::all());
-			process_agg2(dest, i++, agg);
-			//process_agg(bars[i++], agg);
+			//xt::xview<real_t, uint32_t> row = xt::view(dest, xt::range(i, i + 1), xt::all());
+			process_agg(dest_ts, dest, i++, agg);
 		}
 	}
 
@@ -333,9 +307,9 @@ size_t PolygonIoAdapter::getAggregateHistory(xtensor_raw_interval& dest, const s
 }
 
 
-size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std::string& symbol, timestamp_t end_ts, unsigned int limit)
+size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_ts_255& ts_dest, xtensor_raw_255& dest, const std::string& symbol, timestamp_us_t end_ts, unsigned int limit)
 {
-	const auto end_time = static_cast<time_t>(end_ts);
+	const auto end_time = static_cast<time_t>(end_ts / SEC_TO_US);
 	auto end_tm = tm();
 	localtime_s(&end_tm, &end_time);  // Note: formatting day only, so assuming string localtime will match ET tz
 
@@ -345,12 +319,12 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 	time_t tmp_time;
 
 	std::array<size_t, NUM_INTERVALS> cur_rows = { 0, 0, 0, 0, 0, 0, 0 };  // fe. 1min, 5min, 15min, 1hr, 4hr, 1d, 1wk
-	std::array<timestamp_t, NUM_INTERVALS> ts_steps = { 0, 0, 0, 0, 0, 0, 0 };
+	std::array<timestamp_us_t, NUM_INTERVALS> ts_steps = { 0, 0, 0, 0, 0, 0, 0 };
 	
 	size_t res_cnt;
 	size_t count = 0;
 	unsigned int req_cnt = 0;
-	std::string last_timestamp = std::to_string((end_ts - 60 * 60 * 8) * static_cast<long long>(1e9));
+	std::string last_timestamp = std::to_string((end_ts - 60 * 60 * 8 * SEC_TO_US) * US_TO_NS);  // TODO range...
 	cpr::Response r;
 	do
 	{
@@ -362,7 +336,7 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 				{"limit", std::to_string(limit)},
 				{"reverse", "false"},
 				{"timestamp", last_timestamp},  // Used for pagination (offset at which to start the results). Using the timestamp of the last result to retrieve next page. // nanosec
-				{"timestampLimit", std::to_string(end_ts * static_cast<long long>(1e9))}, // nanosec, fe. sec*9
+				{"timestampLimit", std::to_string(end_ts * US_TO_NS)}, // nanosec
 				{"apiKey", POLYGON_API_KEY}
 			}
 		);
@@ -383,14 +357,14 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 
 			// update last_timestamp to the timestamp of the last result (to retrieve the next page, if res_cnt >= limit)
 			auto& first_entry = res["results"].front();
-			auto first_timestamp = first_entry["t"].get<uint64_t>() / static_cast<uint64_t>(1e9);
-			tmp_time = static_cast<time_t>(first_timestamp);
+			const timestamp_us_t first_timestamp = first_entry["t"].get<uint64_t>() / US_TO_NS;
+			tmp_time = static_cast<time_t>(first_timestamp / SEC_TO_US);
 			ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 			std::cout << "mergeQuotesAggregates() first_timestamp: " << tmp_str;  //  << std::endl
 
 			auto& last_entry = res["results"].back();
 			last_timestamp = std::to_string(last_entry["t"].get<uint64_t>());  // nanosecond
-			tmp_time = static_cast<time_t>(last_entry["t"].get<uint64_t>() / static_cast<uint64_t>(1e9));
+			tmp_time = static_cast<time_t>(last_entry["t"].get<uint64_t>() / SEC_TO_NS);
 			ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 			std::cout << "mergeQuotesAggregates() last_timestamp: " << tmp_str;  // << std::endl
 			////std::cout << "mergeQuotesAggregates() last_timestamp: " << last_timestamp << std::endl;
@@ -399,13 +373,15 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 			{
 				const unsigned int& interval = std::get<0>(tpl);
 				const int i_loc = static_cast<int>(std::get<3>(tpl));
-				const size_t interval_seconds = static_cast<size_t>(interval) * 60;
+				//const timestamp_s_t interval_seconds = static_cast<size_t>(interval) * 60;
+				const timestamp_us_t interval_us = static_cast<timestamp_us_t>(interval) * 60 * SEC_TO_US;
 				auto i_dest = xt::dynamic_view(dest, { i_loc, xt::all(), xt::all() });  // shape: (timesteps, cols)
+				auto i_dest_ts = xt::dynamic_view(ts_dest, { i_loc, xt::all(), xt::all() });  // shape: (timesteps, cols)
 
 				if (ts_steps[i_loc] == 0)
 				{
 					// find the first non-zero timestamp
-					auto i_timestamps = xt::view(i_dest, xt::all(), 0);  // shape: (timesteps,)
+					auto i_timestamps = xt::view(i_dest_ts, xt::all(), ColPos::In::timestamp);  // shape: (timesteps,)
 					auto i_where = xt::where(i_timestamps >= first_timestamp);
 					if (i_where.empty())
 					{
@@ -427,7 +403,7 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 
 						// TODO include times in message?
 						auto next_pos_ts = i_timestamps(next_pos);
-						tmp_time = static_cast<time_t>(next_pos_ts);
+						tmp_time = static_cast<time_t>(next_pos_ts / SEC_TO_US);
 						ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 						std::cout << "mergeQuotesAggregates() [" << interval << "] next_pos TS: " << tmp_str;  // << std::endl
 
@@ -435,23 +411,23 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 					}
 					
 					// set the row pointer to the matched timestamp
-					ts_steps[i_loc] = static_cast<timestamp_t>(i_timestamps(next_pos));
+					ts_steps[i_loc] = i_timestamps(next_pos);
 					cur_rows[i_loc] = next_pos;
 				}
 
-				auto& dest_ts = ts_steps[i_loc];
+				timestamp_us_t& dest_ts = ts_steps[i_loc];
 				auto& dest_row = cur_rows[i_loc];
-				//tmp_time = static_cast<time_t>(dest_ts);
+				//tmp_time = static_cast<time_t>(dest_ts / SEC_TO_US);
 				//ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 				//std::cout << "mergeQuotesAggregates() [" << interval << "] in  dest_ts: " << tmp_str;  // << std::endl
 
 				for (const json& quote : res["results"])
 				{
 					// seek dest_row to the position of the row in dest to update
-					const timestamp_t cur_ts = quote["t"].get<uint64_t>() / static_cast<timestamp_t>(1e9);
-					const auto& askPrice = quote["P"].get<double>();
+					const timestamp_us_t cur_ts = quote["t"].get<uint64_t>() / US_TO_NS;
+					const real_t askPrice = quote["P"].get<double>();
 					const auto& askSize = quote["S"].get<uint32_t>();
-					const auto& bidPrice = quote["p"].get<double>();
+					const real_t bidPrice = quote["p"].get<double>();
 					const auto& bidSize = quote["s"].get<uint32_t>();
 					bool reset_bar = false;
 					
@@ -461,7 +437,7 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 						if (dest_row < 1)
 							break;
 						dest_row--;
-						dest_ts = static_cast<timestamp_t>(i_dest(dest_row, ColPos::In::timestamp));  // TODO subtract instead?
+						dest_ts = static_cast<timestamp_us_t>(i_dest_ts(dest_row, ColPos::In::timestamp));  // TODO subtract instead?
 					}
 					if (cur_ts >= dest_ts && dest_row < 1)
 					{
@@ -470,7 +446,7 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 					}
 
 
-					const timestamp_t next_ts = dest_ts + interval_seconds;
+					const timestamp_us_t next_ts = dest_ts + interval_us;
 					if (cur_ts >= next_ts)
 					{
 						if (dest_row < 1)
@@ -519,7 +495,7 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 					}
 				}
 
-				//tmp_time = static_cast<time_t>(dest_ts);
+				//tmp_time = static_cast<time_t>(dest_ts / SEC_TO_US);
 				//ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 				//std::cout << "mergeQuotesAggregates() [" << interval << "] out dest_ts: " << tmp_str;  // << std::endl
 			}
@@ -531,24 +507,18 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 }
 
 
-size_t PolygonIoAdapter::getQuoteHistoryBefore(std::queue<QuoteData>& quotes, const std::string& symbol, timestamp_t end_ts, const size_t limit)
+size_t PolygonIoAdapter::getQuoteHistoryBefore(std::queue<QuoteData>& quotes, const std::string& symbol, timestamp_us_t end_ts, const size_t limit)
 {
 	if (limit > MAX_LIMIT)
 		throw std::logic_error("limit must be <= MAX_LIMIT");
 
-	const auto end_time = static_cast<time_t>(end_ts);
-	auto end_tm = tm();
-	localtime_s(&end_tm, &end_time);  // Note: formatting day only, so assuming string localtime will match ET tz
-	
 	char tmp_str[26];
 	time_t tmp_time;
 
 	// download the latest quotes (in reverse order)
-	tmp_time = static_cast<time_t>(end_ts);
+	tmp_time = static_cast<time_t>(end_ts / SEC_TO_US);
 	ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 	std::cout << "getQuoteHistoryBefore() end_ts: " << tmp_str;  //  << std::endl
-
-	//last_timestamp = std::to_string(end_ts * static_cast<long long>(1e9));
 
 	// Note: using the vX version of endpoint here, since it handles desc order with max timestamp:
 	const std::string url = POLYGON_BASE_URI + "vX/quotes/" + std::string(symbol);
@@ -559,13 +529,8 @@ size_t PolygonIoAdapter::getQuoteHistoryBefore(std::queue<QuoteData>& quotes, co
 		cpr::Parameters{
 			{"limit", std::to_string(limit)},
 			{"order", "desc"},
-			{"timestamp.lte", std::to_string(end_ts * static_cast<long long>(1e9))},  // nanosec, fe. sec*9
+			{"timestamp.lte", std::to_string(end_ts * US_TO_NS)},  // nanosec
 			{"apiKey", POLYGON_API_KEY}
-			// for v2 (original) version of endpoint:
-			//{"limit", std::to_string(limit)},
-			//{"reverse", "true"},
-			////{"timestamp", last_timestamp},  // Used for pagination (offset at which to start the results). Using the timestamp of the last result to retrieve next page. // nanosec
-			//{"timestampLimit", std::to_string(end_ts * static_cast<long long>(1e9))},  // nanosec, fe. sec*9
 		}
 	);
 
@@ -608,11 +573,11 @@ size_t PolygonIoAdapter::getQuoteHistoryBefore(std::queue<QuoteData>& quotes, co
 
 		if (DEBUG_PRINT_REQUESTS)
 		{
-			tmp_time = static_cast<time_t>(quotes.front().quote.timestamp / 1000);
+			tmp_time = static_cast<time_t>(quotes.front().quote.timestamp / SEC_TO_US);
 			ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 			std::cout << "getQuoteHistoryBefore() front timestamp: " << tmp_str;  //  << std::endl
 
-			tmp_time = static_cast<time_t>(quotes.back().quote.timestamp / 1000);
+			tmp_time = static_cast<time_t>(quotes.back().quote.timestamp / SEC_TO_US);
 			ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 			std::cout << "getQuoteHistoryBefore() back timestamp: " << tmp_str;  // << std::endl
 		}
@@ -621,7 +586,7 @@ size_t PolygonIoAdapter::getQuoteHistoryBefore(std::queue<QuoteData>& quotes, co
 }
 
 
-size_t PolygonIoAdapter::getTradeHistoryBefore(std::queue<TradeData>& trades, const std::string& symbol, timestamp_t end_ts, const size_t limit)
+size_t PolygonIoAdapter::getTradeHistoryBefore(std::queue<TradeData>& trades, const std::string& symbol, timestamp_us_t end_ts, const size_t limit)
 {
 	if (limit > MAX_LIMIT)
 		throw std::logic_error("limit must be <= MAX_LIMIT");
@@ -634,12 +599,10 @@ size_t PolygonIoAdapter::getTradeHistoryBefore(std::queue<TradeData>& trades, co
 	// download the latest trades (in reverse order)
 
 	// TODO
-	tmp_time = static_cast<time_t>(end_ts);
+	tmp_time = static_cast<time_t>(end_ts / SEC_TO_US);
 	ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 	std::cout << "getTradeHistoryBefore() end_ts: " << tmp_str;  //  << std::endl
 
-	//last_timestamp = std::to_string(end_ts * static_cast<long long>(1e9));
-	
 	cpr::Response r = cpr::Get(
 		cpr::Url{ url },
 		cpr_ssl_opts,
@@ -647,7 +610,7 @@ size_t PolygonIoAdapter::getTradeHistoryBefore(std::queue<TradeData>& trades, co
 		cpr::Parameters{
 			{"limit", std::to_string(limit)},
 			{"order", "desc"},
-			{"timestamp.lte", std::to_string(end_ts * static_cast<long long>(1e9))},  // nanosec, fe. sec*9
+			{"timestamp.lte", std::to_string(end_ts * US_TO_NS)},  // nanosec
 			{"apiKey", POLYGON_API_KEY}
 		}
 	);
@@ -689,11 +652,11 @@ size_t PolygonIoAdapter::getTradeHistoryBefore(std::queue<TradeData>& trades, co
 		
 		if (DEBUG_PRINT_REQUESTS)
 		{
-			tmp_time = static_cast<time_t>(trades.front().trade.timestamp / 1000);
+			tmp_time = static_cast<time_t>(trades.front().trade.timestamp / SEC_TO_US);
 			ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 			std::cout << "getTradeHistoryBefore() front timestamp: " << tmp_str;  //  << std::endl
 
-			tmp_time = static_cast<time_t>(trades.back().trade.timestamp / 1000);
+			tmp_time = static_cast<time_t>(trades.back().trade.timestamp / SEC_TO_US);
 			ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 			std::cout << "getTradeHistoryBefore() back timestamp: " << tmp_str;  // << std::endl
 		}
@@ -704,7 +667,7 @@ size_t PolygonIoAdapter::getTradeHistoryBefore(std::queue<TradeData>& trades, co
 
 
 
-size_t PolygonIoAdapter::getQuoteHistoryAfter(std::queue<QuoteData>& quotes, const std::string& symbol, const timestamp_t start_ts, const size_t limit)
+size_t PolygonIoAdapter::getQuoteHistoryAfter(std::queue<QuoteData>& quotes, const std::string& symbol, const timestamp_us_t start_ts, const size_t limit)
 {
 	if (limit > MAX_LIMIT)
 		throw std::logic_error("limit must be <= MAX_LIMIT");
@@ -715,12 +678,10 @@ size_t PolygonIoAdapter::getQuoteHistoryAfter(std::queue<QuoteData>& quotes, con
 	// download the latest quotes (in reverse order)
 	if (DEBUG_PRINT_REQUESTS)
 	{
-		tmp_time = static_cast<time_t>(start_ts);
+		tmp_time = static_cast<time_t>(start_ts / SEC_TO_US);
 		ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 		std::cout << "getQuoteHistoryAfter() start_ts: " << tmp_str;  //  << std::endl
 	}
-
-	//last_timestamp = std::to_string(end_ts * static_cast<long long>(1e9));
 
 	// Note: using the vX version of endpoint here
 	const std::string url = POLYGON_BASE_URI + "vX/quotes/" + std::string(symbol);
@@ -731,7 +692,7 @@ size_t PolygonIoAdapter::getQuoteHistoryAfter(std::queue<QuoteData>& quotes, con
 		cpr::Parameters{
 			{"limit", std::to_string(limit)},
 			{"order", "asc"},
-			{"timestamp.gte", std::to_string(start_ts * static_cast<long long>(1e9))},  // nanosec, fe. sec*9
+			{"timestamp.gte", std::to_string(start_ts * US_TO_NS)},  // nanosec
 			{"apiKey", POLYGON_API_KEY}
 		}
 	);
@@ -753,13 +714,12 @@ size_t PolygonIoAdapter::getQuoteHistoryAfter(std::queue<QuoteData>& quotes, con
 		if (DEBUG_PRINT_REQUESTS)
 		{
 			auto& first_entry = res["results"].front();
-			auto first_timestamp = first_entry["sip_timestamp"].get<uint64_t>() / static_cast<uint64_t>(1e9);
-			tmp_time = static_cast<time_t>(first_timestamp);
+			tmp_time = static_cast<time_t>(first_entry["sip_timestamp"].get<uint64_t>() / SEC_TO_NS);
 			ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 			std::cout << "getQuoteHistoryAfter() first_timestamp: " << tmp_str;  //  << std::endl
 
 			auto& last_entry = res["results"].back();
-			tmp_time = static_cast<time_t>(last_entry["sip_timestamp"].get<uint64_t>() / static_cast<uint64_t>(1e9));
+			tmp_time = static_cast<time_t>(last_entry["sip_timestamp"].get<uint64_t>() / SEC_TO_NS);
 			ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 			std::cout << "getQuoteHistoryAfter() last_timestamp: " << tmp_str;  // << std::endl
 		}
@@ -787,7 +747,7 @@ size_t PolygonIoAdapter::getQuoteHistoryAfter(std::queue<QuoteData>& quotes, con
 	}
 	return res_cnt;
 }
-size_t PolygonIoAdapter::getQuoteHistoryBetween(std::queue<QuoteData>& quotes, const std::string& symbol, const timestamp_t start_ts, timestamp_t end_ts)
+size_t PolygonIoAdapter::getQuoteHistoryBetween(std::queue<QuoteData>& quotes, const std::string& symbol, const timestamp_us_t start_ts, timestamp_us_t end_ts)
 {
 	const size_t limit = 50000;  // TODO static constant?
 
@@ -800,10 +760,9 @@ size_t PolygonIoAdapter::getQuoteHistoryBetween(std::queue<QuoteData>& quotes, c
 	char tmp_str[26];
 	time_t tmp_time;
 	// download the latest quotes (in reverse order)
-	tmp_time = static_cast<time_t>(start_ts);
+	tmp_time = static_cast<time_t>(start_ts / SEC_TO_US);
 	ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 	std::cout << "getQuoteHistoryBetween() start_ts: " << tmp_str;  //  << std::endl
-	//last_timestamp = std::to_string(end_ts * static_cast<long long>(1e9));
 	*/
 	
 	size_t count = 0;
@@ -828,8 +787,8 @@ size_t PolygonIoAdapter::getQuoteHistoryBetween(std::queue<QuoteData>& quotes, c
 				cpr::Parameters{
 					{"limit", std::to_string(limit)},
 					{"order", "asc"},
-					{"timestamp.gte", std::to_string(start_ts * static_cast<long long>(1e9))},  // nanosec, fe. sec*9
-					{"timestamp.lt", std::to_string(end_ts * static_cast<long long>(1e9))},  // nanosec, fe. sec*9  // TODO lt or lte?
+					{"timestamp.gte", std::to_string(start_ts * US_TO_NS)},  // nanosec
+					{"timestamp.lt", std::to_string(end_ts * US_TO_NS)},  // nanosec  // TODO lt or lte?
 					{"apiKey", POLYGON_API_KEY}
 				}
 			);
@@ -883,7 +842,7 @@ size_t PolygonIoAdapter::getQuoteHistoryBetween(std::queue<QuoteData>& quotes, c
 	return count;
 }
 
-size_t PolygonIoAdapter::getTradeHistoryBetween(std::queue<TradeData>& trades, const std::string& symbol, timestamp_t start_ts, timestamp_t end_ts)
+size_t PolygonIoAdapter::getTradeHistoryBetween(std::queue<TradeData>& trades, const std::string& symbol, timestamp_us_t start_ts, timestamp_us_t end_ts)
 {
 	const size_t limit = 50000;  // TODO static constant?
 
@@ -895,14 +854,13 @@ size_t PolygonIoAdapter::getTradeHistoryBetween(std::queue<TradeData>& trades, c
 	// TODO
 	char tmp_str[26];
 	time_t tmp_time;
-	tmp_time = static_cast<time_t>(start_ts);
+	tmp_time = static_cast<time_t>(start_ts / SEC_TO_US);
 	ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 	std::cout << "getTradeHistoryBetween() start_ts: " << tmp_str;  //  << std::endl
 
-	tmp_time = static_cast<time_t>(end_ts);
+	tmp_time = static_cast<time_t>(end_ts / SEC_TO_US);
 	ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 	std::cout << "getTradeHistoryBetween() end_ts: " << tmp_str;  //  << std::endl
-	//last_timestamp = std::to_string(end_ts * static_cast<long long>(1e9));
 	*/
 	
 	size_t count = 0;
@@ -927,8 +885,8 @@ size_t PolygonIoAdapter::getTradeHistoryBetween(std::queue<TradeData>& trades, c
 				cpr::Parameters{
 					{"limit", std::to_string(limit)},
 					{"order", "asc"},
-					{"timestamp.gte", std::to_string(start_ts * static_cast<long long>(1e9))},  // nanosec, fe. sec*9
-					{"timestamp.lt", std::to_string(end_ts * static_cast<long long>(1e9))},  // nanosec, fe. sec*9  // TODO lt or lte?
+					{"timestamp.gte", std::to_string(start_ts * US_TO_NS)},  // nanosec
+					{"timestamp.lt", std::to_string(end_ts * US_TO_NS)},  // nanosec  // TODO lt or lte?
 					{"apiKey", POLYGON_API_KEY}
 				}
 			);

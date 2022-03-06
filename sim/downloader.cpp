@@ -23,18 +23,18 @@ using shape_staged_trades_t = xt::xshape<STAGED_SIZE, NUM_TRADES, NUM_TRADE_COLU
 using shape_staged_quotes_t = xt::xshape<STAGED_SIZE, NUM_QUOTES, NUM_QUOTE_COLUMNS - STAGED_COL_ADJ>;  // (stages, timesteps, cols)
 using shape_staged_outputs_t = xt::xshape<STAGED_SIZE, ColPos::_OUTPUT_NUM_COLS - STAGED_COL_ADJ>;
 
-using xtensor_staged_processed = xt::xtensor_fixed<double, shape_staged_processed_t>;
-using xtensor_staged_trades = xt::xtensor_fixed<double, shape_staged_trades_t>;
-using xtensor_staged_quotes = xt::xtensor_fixed<double, shape_staged_quotes_t>;
-using xtensor_staged_outputs = xt::xtensor_fixed<double, shape_staged_outputs_t>;
+using xtensor_staged_processed = xt::xtensor_fixed<real_t, shape_staged_processed_t>;
+using xtensor_staged_trades = xt::xtensor_fixed<real_t, shape_staged_trades_t>;
+using xtensor_staged_quotes = xt::xtensor_fixed<real_t, shape_staged_quotes_t>;
+using xtensor_staged_outputs = xt::xtensor_fixed<real_t, shape_staged_outputs_t>;
 
 xtensor_quotes cur_quotes;
 xtensor_trades cur_trades;
 
-xtensor_staged_processed staged_proccessed = xt::zeros<double>(shape_staged_processed_t());
-xtensor_staged_trades staged_trades = xt::zeros<double>(shape_staged_trades_t());
-xtensor_staged_quotes staged_quotes = xt::zeros<double>(shape_staged_quotes_t());
-xtensor_staged_outputs staged_outputs = xt::zeros<double>(shape_staged_outputs_t());
+xtensor_staged_processed staged_proccessed = xt::zeros<real_t>(shape_staged_processed_t());
+xtensor_staged_trades staged_trades = xt::zeros<real_t>(shape_staged_trades_t());
+xtensor_staged_quotes staged_quotes = xt::zeros<real_t>(shape_staged_quotes_t());
+xtensor_staged_outputs staged_outputs = xt::zeros<real_t>(shape_staged_outputs_t());
 
 
 void agpred::Downloader::onSimComplete(const Symbol& symbol) 
@@ -70,7 +70,7 @@ void agpred::Downloader::onUpdate(const Symbol& symbol, const Snapshot& snapshot
 		//assert(static_cast<int64_t>(cur_pos_) - static_cast<int64_t>(STAGED_DELAY_OFFSET) >= 0);  // must have shifted cur_pos_?
 
 		// the last 8 rowsof outputs are invalid...
-		xt::xarray<double> outputs_last_valid = xt::view(outputs, outputs.shape().at(0) - (STAGED_DELAY_OFFSET + 1), xt::all());  // TODO minus 1?
+		xt::xarray<real_t> outputs_last_valid = xt::view(outputs, outputs.shape().at(0) - (STAGED_DELAY_OFFSET + 1), xt::all());  // TODO minus 1?
 
 		auto stage_outputs = xt::view(staged_outputs, cur_pos_ - STAGED_DELAY_OFFSET, xt::all());
 		if constexpr (STAGED_INCLUDE_TIMESTAMPS) {
@@ -130,12 +130,12 @@ void agpred::Downloader::onUpdate(const Symbol& symbol, const Snapshot& snapshot
 	{
 		if (static_cast<int64_t>(cur_pos_) - static_cast<int64_t>(STAGED_DELAY_OFFSET) >= 0) {
 			auto stage_proc_at_valid_output = xt::view(staged_proccessed, cur_pos_ - STAGED_DELAY_OFFSET, xt::all(), xt::all(), xt::all());
-			//std::cout << "stage_proc_at_valid_output.shape() " << xt::xarray<double>(stage_proc_at_valid_output).shape() << std::endl;
+			//std::cout << "stage_proc_at_valid_output.shape() " << xt::xarray<real_t>(stage_proc_at_valid_output).shape() << std::endl;
 			std::cout << "stage_proc_avo_1min_last TS: " << static_cast<timestamp_t>(stage_proc_at_valid_output(0, NUM_TIMESTEMPS - 1, 0)) << std::endl;
 
 			// Note outputs copied into this row: (cur_pos_ - STAGED_DELAY_OFFSET)
 			auto stage_outputs = xt::view(staged_outputs, cur_pos_ - STAGED_DELAY_OFFSET, xt::all());
-			//std::cout << "stage_outputs.shape() " << xt::xarray<double>(stage_outputs).shape() << std::endl;
+			//std::cout << "stage_outputs.shape() " << xt::xarray<real_t>(stage_outputs).shape() << std::endl;
 			std::cout << "stage_outputs TS: " << static_cast<timestamp_t>(stage_outputs(0)) << std::endl;
 		}
 	}

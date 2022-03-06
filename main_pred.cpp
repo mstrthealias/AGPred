@@ -32,12 +32,12 @@ static const int SRC_SAMPLES = 2126;
 static const int SRC_COLS = 6;
 
 
-double mk_vec_sigmoid(double x) {
+real_t mk_vec_sigmoid(real_t x) {
     /// Specifically, `y = 1 / (1 + exp(-x))`.
     return 1 / (1 + std::exp(-x));
 }
 
-double mk_vec_prediction(double p, double t) {
+real_t mk_vec_prediction(real_t p, real_t t) {
     /// Specifically, `y = 1 / (1 + exp(-x))`.
     return p > t ? 1 : 0;
 }

@@ -22,15 +22,15 @@ typedef int(*TA_CDL_Func_Lookback)(
 	void);
 
 typedef int(*TA_CDL_OptPen_Func_Lookback)(
-	TA_Real optInPenetration);
+	double optInPenetration);
 
 typedef TA_RetCode(*TA_CDL_Func)(
 	TA_Integer  startIdx,
 	TA_Integer  endIdx,
-	const TA_Real inOpen[],
-	const TA_Real inHigh[],
-	const TA_Real inLow[],
-	const TA_Real inClose[],
+	const real_t inOpen[],
+	const real_t inHigh[],
+	const real_t inLow[],
+	const real_t inClose[],
 	TA_Integer* outBegIdx,
 	TA_Integer* outNbElement,
 	TA_Integer outInteger[]);
@@ -38,15 +38,16 @@ typedef TA_RetCode(*TA_CDL_Func)(
 typedef TA_RetCode(*TA_CDL_OptPen_Func)(
 	TA_Integer  startIdx,
 	TA_Integer  endIdx,
-	const TA_Real inOpen[],
-	const TA_Real inHigh[],
-	const TA_Real inLow[],
-	const TA_Real inClose[],
-	TA_Real optInPenetration,
+	const real_t inOpen[],
+	const real_t inHigh[],
+	const real_t inLow[],
+	const real_t inClose[],
+    double optInPenetration,
 	TA_Integer* outBegIdx,
 	TA_Integer* outNbElement,
 	TA_Integer outInteger[]);
 
+#ifdef AGPRED_DOUBLE_P
 const std::vector<std::tuple<TA_CDL_Func, TA_CDL_Func_Lookback>> CANDLE_FUNCTIONS1 = {
 	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_CDL2CROWS, &TA_CDL2CROWS_Lookback),
 	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_CDL3BLACKCROWS, &TA_CDL3BLACKCROWS_Lookback),
@@ -103,7 +104,6 @@ const std::vector<std::tuple<TA_CDL_Func, TA_CDL_Func_Lookback>> CANDLE_FUNCTION
 	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_CDLUPSIDEGAP2CROWS, &TA_CDLUPSIDEGAP2CROWS_Lookback),
 	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_CDLXSIDEGAP3METHODS, &TA_CDLXSIDEGAP3METHODS_Lookback),
 };
-
 const std::vector<std::tuple<const TA_CDL_OptPen_Func, const TA_CDL_OptPen_Func_Lookback>> CANDLE_FUNCTIONS2 = {
 	std::make_tuple<TA_CDL_OptPen_Func, TA_CDL_OptPen_Func_Lookback>(&TA_CDLABANDONEDBABY, &TA_CDLABANDONEDBABY_Lookback),
 	std::make_tuple<TA_CDL_OptPen_Func, TA_CDL_OptPen_Func_Lookback>(&TA_CDLDARKCLOUDCOVER, &TA_CDLDARKCLOUDCOVER_Lookback),
@@ -113,10 +113,78 @@ const std::vector<std::tuple<const TA_CDL_OptPen_Func, const TA_CDL_OptPen_Func_
 	std::make_tuple<TA_CDL_OptPen_Func, TA_CDL_OptPen_Func_Lookback>(&TA_CDLMORNINGDOJISTAR, &TA_CDLMORNINGDOJISTAR_Lookback),
 	std::make_tuple<TA_CDL_OptPen_Func, TA_CDL_OptPen_Func_Lookback>(&TA_CDLMORNINGSTAR, &TA_CDLMORNINGSTAR_Lookback),
 };
+#else
+const std::vector<std::tuple<TA_CDL_Func, TA_CDL_Func_Lookback>> CANDLE_FUNCTIONS1 = {
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDL2CROWS, &TA_CDL2CROWS_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDL3BLACKCROWS, &TA_CDL3BLACKCROWS_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDL3INSIDE, &TA_CDL3INSIDE_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDL3LINESTRIKE, &TA_CDL3LINESTRIKE_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDL3OUTSIDE, &TA_CDL3OUTSIDE_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDL3STARSINSOUTH, &TA_CDL3STARSINSOUTH_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDL3WHITESOLDIERS, &TA_CDL3WHITESOLDIERS_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLADVANCEBLOCK, &TA_CDLADVANCEBLOCK_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLBELTHOLD, &TA_CDLBELTHOLD_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLBREAKAWAY, &TA_CDLBREAKAWAY_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLCLOSINGMARUBOZU, &TA_CDLCLOSINGMARUBOZU_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLCONCEALBABYSWALL, &TA_CDLCONCEALBABYSWALL_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLCOUNTERATTACK, &TA_CDLCOUNTERATTACK_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLDOJI, &TA_CDLDOJI_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLDOJISTAR, &TA_CDLDOJISTAR_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLDRAGONFLYDOJI, &TA_CDLDRAGONFLYDOJI_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLENGULFING, &TA_CDLENGULFING_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLGAPSIDESIDEWHITE, &TA_CDLGAPSIDESIDEWHITE_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLGRAVESTONEDOJI, &TA_CDLGRAVESTONEDOJI_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLHAMMER, &TA_CDLHAMMER_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLHANGINGMAN, &TA_CDLHANGINGMAN_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLHARAMI, &TA_CDLHARAMI_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLHARAMICROSS, &TA_CDLHARAMICROSS_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLHIGHWAVE, &TA_CDLHIGHWAVE_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLHIKKAKE, &TA_CDLHIKKAKE_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLHIKKAKEMOD, &TA_CDLHIKKAKEMOD_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLHOMINGPIGEON, &TA_CDLHOMINGPIGEON_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLIDENTICAL3CROWS, &TA_CDLIDENTICAL3CROWS_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLINNECK, &TA_CDLINNECK_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLINVERTEDHAMMER, &TA_CDLINVERTEDHAMMER_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLKICKING, &TA_CDLKICKING_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLKICKINGBYLENGTH, &TA_CDLKICKINGBYLENGTH_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLLADDERBOTTOM, &TA_CDLLADDERBOTTOM_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLLONGLEGGEDDOJI, &TA_CDLLONGLEGGEDDOJI_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLLONGLINE, &TA_CDLLONGLINE_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLMARUBOZU, &TA_CDLMARUBOZU_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLMATCHINGLOW, &TA_CDLMATCHINGLOW_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLONNECK, &TA_CDLONNECK_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLPIERCING, &TA_CDLPIERCING_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLRICKSHAWMAN, &TA_CDLRICKSHAWMAN_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLRISEFALL3METHODS, &TA_CDLRISEFALL3METHODS_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLSEPARATINGLINES, &TA_CDLSEPARATINGLINES_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLSHOOTINGSTAR, &TA_CDLSHOOTINGSTAR_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLSHORTLINE, &TA_CDLSHORTLINE_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLSPINNINGTOP, &TA_CDLSPINNINGTOP_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLSTALLEDPATTERN, &TA_CDLSTALLEDPATTERN_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLSTICKSANDWICH, &TA_CDLSTICKSANDWICH_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLTAKURI, &TA_CDLTAKURI_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLTASUKIGAP, &TA_CDLTASUKIGAP_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLTHRUSTING, &TA_CDLTHRUSTING_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLTRISTAR, &TA_CDLTRISTAR_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLUNIQUE3RIVER, &TA_CDLUNIQUE3RIVER_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLUPSIDEGAP2CROWS, &TA_CDLUPSIDEGAP2CROWS_Lookback),
+	std::make_tuple<TA_CDL_Func, TA_CDL_Func_Lookback>(&TA_S_CDLXSIDEGAP3METHODS, &TA_CDLXSIDEGAP3METHODS_Lookback),
+};
+const std::vector<std::tuple<const TA_CDL_OptPen_Func, const TA_CDL_OptPen_Func_Lookback>> CANDLE_FUNCTIONS2 = {
+	std::make_tuple<TA_CDL_OptPen_Func, TA_CDL_OptPen_Func_Lookback>(&TA_S_CDLABANDONEDBABY, &TA_CDLABANDONEDBABY_Lookback),
+	std::make_tuple<TA_CDL_OptPen_Func, TA_CDL_OptPen_Func_Lookback>(&TA_S_CDLDARKCLOUDCOVER, &TA_CDLDARKCLOUDCOVER_Lookback),
+	std::make_tuple<TA_CDL_OptPen_Func, TA_CDL_OptPen_Func_Lookback>(&TA_S_CDLEVENINGDOJISTAR, &TA_CDLEVENINGDOJISTAR_Lookback),
+	std::make_tuple<TA_CDL_OptPen_Func, TA_CDL_OptPen_Func_Lookback>(&TA_S_CDLEVENINGSTAR, &TA_CDLEVENINGSTAR_Lookback),
+	std::make_tuple<TA_CDL_OptPen_Func, TA_CDL_OptPen_Func_Lookback>(&TA_S_CDLMATHOLD, &TA_CDLMATHOLD_Lookback),
+	std::make_tuple<TA_CDL_OptPen_Func, TA_CDL_OptPen_Func_Lookback>(&TA_S_CDLMORNINGDOJISTAR, &TA_CDLMORNINGDOJISTAR_Lookback),
+	std::make_tuple<TA_CDL_OptPen_Func, TA_CDL_OptPen_Func_Lookback>(&TA_S_CDLMORNINGSTAR, &TA_CDLMORNINGSTAR_Lookback),
+};
+#endif // AGPRED_DOUBLE_P
+
 //constexpr size_t num_patterns = std::tuple_size_v<T> + CANDLE_FUNCTIONS2.size();
 
 
-static inline void negate_row(xt::xarray<double>& row, ptrdiff_t idx)
+static inline void negate_row(xt::xarray<real_t>& row, ptrdiff_t idx)
 {
 	xt::row(row, idx) = -xt::row(row, idx);
 }
@@ -180,37 +248,37 @@ void _iter_ta_functions(const char* group)
 
 
 
-double mk_hlc3(double high, double low, double close)
+real_t mk_hlc3(real_t high, real_t low, real_t close)
 {
 	// dfin['hlc3'] = (dfin['high'] + dfin['low'] + dfin['close']) / 3.0
 	return (high + low + close) / 3.0;
 }
 
-double mk_range(double high, double low)
+real_t mk_range(real_t high, real_t low)
 {
 	// dfin['range'] = dfin['high'] - dfin['low']
 	return high - low;
 }
 
-double mk_diff(double close, double open)
+real_t mk_diff(real_t close, real_t open)
 {
 	// dfin['diff'] = dfin['close'] - dfin['open']
 	return close - open;
 }
 
-double mk_range_t(double open, double high, double close)
+real_t mk_range_t(real_t open, real_t high, real_t close)
 {
 	// dfin['range_t'] = dfin['high'] - dfin [["open", "close"]] .max(axis = 1)
 	return high - std::max(open, close);
 }
 
-double mk_range_b(double open, double low, double close)
+real_t mk_range_b(real_t open, real_t low, real_t close)
 {
 	// dfin['range_b'] = dfin [["open", "close"]] .min(axis = 1) - dfin['low']
 	return std::min(open, close) - low;
 }
 
-double mk_range_pos(double range_t, double range_b)
+real_t mk_range_pos(real_t range_t, real_t range_b)
 {
 	// dfin['range_pos'] = 0.5 - (dfin['range_t'] / (dfin['range_t'] + dfin['range_b'])).where(dfin['range_t'] + dfin['range_b'] > 0, 0.5)
 	if (range_t + range_b > 0)
@@ -220,13 +288,13 @@ double mk_range_pos(double range_t, double range_b)
 }
 
 
-double mk_norm_stddevs(double val, double stddev)
+real_t mk_norm_stddevs(real_t val, real_t stddev)
 {
 	return val / stddev;
 	//dfin[k] = dfin[k] / stddev
 }
 
-double mk_norm_n_stddevs(double val, double regr, double stddev)
+real_t mk_norm_n_stddevs(real_t val, real_t regr, real_t stddev)
 {
 	// calculate number of stddev[1]
 	return (val - regr) / stddev;
@@ -235,26 +303,26 @@ double mk_norm_n_stddevs(double val, double regr, double stddev)
 	//// dfin[k] = dfin[k] - regr
 }
 
-double mk_norm_scaled_stddevs1(double val, double stddev)
+real_t mk_norm_scaled_stddevs1(real_t val, real_t stddev)
 {
 	return pow((100.0 * val / stddev), 2) / 1000.0;
 	//dfin[k] = ((100.0 * dfin[k] / stddev) ** 2) / 1000.0
 }
 
-double mk_norm_scaled_stddevs2(double val, double stddev)
+real_t mk_norm_scaled_stddevs2(real_t val, real_t stddev)
 {
 	return pow((100.0 * val / stddev), 3) / 1000.0;
 	//dfin[k] = ((100.0 * dfin[k] / stddev) ** 3) / 1000.0
 }
 
-double mk_norm_scaled_stddevs3(double val, double stddev)
+real_t mk_norm_scaled_stddevs3(real_t val, real_t stddev)
 {
 	return pow((100.0 * val / stddev), 2) / 100.0;
 	//dfin[k] = ((100.0 * dfin[k] / stddev) ** 2) / 100.0
 }
 
 
-double mk_volume_buy(double high, double low, double close, double volume)
+real_t mk_volume_buy(real_t high, real_t low, real_t close, real_t volume)
 {
 	// Buy Volume = iff( (high==low), 0, volume*(close-low)/(high-low))
 	if (dbl_equal(high, low))  // TODO compare directly? o.0
@@ -264,7 +332,7 @@ double mk_volume_buy(double high, double low, double close, double volume)
 	//dfin['volume_buy'] = (dfin['volume'] * (dfin['close'] - dfin['low']) / (dfin['high'] - dfin['low'])).where(dfin['high'] != dfin['low'], 0.0)
 }
 
-double mk_volume_sell(double high, double low, double volume, double volume_buy)
+real_t mk_volume_sell(real_t high, real_t low, real_t volume, real_t volume_buy)
 {
 	// Sell Volume = iff( (high==low), 0, volume*(high-close)/(high-low))
 	if (dbl_equal(high, low))  // TODO compare directly? o.0
@@ -276,7 +344,7 @@ double mk_volume_sell(double high, double low, double volume, double volume_buy)
 	// //dfin['volume_sell'] = (dfin['volume'] * (dfin['high'] - dfin['close']) / (dfin['high'] - dfin['low'])).where(dfin['high'] != dfin['low'], 0.0)
 }
 
-double mk_volume_percent_buy(double volume_buy, double volume_sum)
+real_t mk_volume_percent_buy(real_t volume_buy, real_t volume_sum)
 {
 	// Buy Volume Percent = BV / (BV + SV)
 	if (volume_sum > 0)
@@ -286,7 +354,7 @@ double mk_volume_percent_buy(double volume_buy, double volume_sum)
 	//dfin['volume_percent_buy'] = (dfin['volume_buy'] / vol_sum).where(vol_sum > 0, 0.0)
 }
 
-double mk_volume_percent_sell(double volume_sell, double volume_sum)
+real_t mk_volume_percent_sell(real_t volume_sell, real_t volume_sum)
 {
 	// Sell Volume Percent = SV / (BV + SV)
 	if (volume_sum > 0)
@@ -296,7 +364,7 @@ double mk_volume_percent_sell(double volume_sell, double volume_sum)
 	//dfin['volume_percent_sell'] = (dfin['volume_sell'] / vol_sum).where(vol_sum > 0, 0.0)
 }
 
-double mk_rsi_indicator(double rsi)
+real_t mk_rsi_indicator(real_t rsi)
 {
 	return (((rsi < 30) * -(rsi - 50.0)) + ((rsi > 70) * -(rsi - 50.0))) / 100.0;
 	//rsi_oversold = rsi < 30
@@ -305,7 +373,7 @@ double mk_rsi_indicator(double rsi)
 	//dfin['rsi_indicator'] = ((rsi_oversold * rsi_shifted) + (rsi_overbought * rsi_shifted)) / 100.0
 }
 
-double mk_adx_indicator(double adx, double adx_pos, double adx_neg)
+real_t mk_adx_indicator(real_t adx, real_t adx_pos, real_t adx_neg)
 {
 	//// determine ADX trend singles
 	//adx_strong_trend = (adx > 20)
@@ -318,7 +386,7 @@ double mk_adx_indicator(double adx, double adx_pos, double adx_neg)
 	//dfin['adx_indicator'] = (adx_strong_trend * (indicator_adx.adx_pos() > indicator_adx.adx_neg()) * adx_strength) + (adx_strong_trend * (indicator_adx.adx_neg() > indicator_adx.adx_pos()) * -adx_strength)
 }
 
-double mk_adi_pre_cumsum(double high, double low, double close, double volume)
+real_t mk_adi_pre_cumsum(real_t high, real_t low, real_t close, real_t volume)
 {
 	if (dbl_equal(high, low))
 		return 0.0;
@@ -332,7 +400,7 @@ double mk_adi_pre_cumsum(double high, double low, double close, double volume)
 	//// self._adi = adi.cumsum()  // Note: performed after running this vectorized fn
 }
 
-/*double mk_adi_obv_ratio(double obv, double adi)
+/*real_t mk_adi_obv_ratio(real_t obv, real_t adi)
 {
 	if (dbl_equal(adi, 0.0))
 		return 0;
@@ -342,54 +410,54 @@ double mk_adi_pre_cumsum(double high, double low, double close, double volume)
 }*/
 
 
-/*double mk_xfrm_ln_div_10(double val)
+/*real_t mk_xfrm_ln_div_10(real_t val)
 {
 	return std::log(val + 1) / 10.0;
 	//dfin['close_ln'] = (close + 1).apply(np.log) / 10.0
 	////dfin['close_ln'] = close.apply(np.log) / 10.0
 }*/
 
-double mk_xfrm_ln(double val)
+real_t mk_xfrm_ln(real_t val)
 {
 	return std::log(val);
 	//dfin['close_ln'] = (close + 1).apply(np.log) / 10.0
 	////dfin['close_ln'] = close.apply(np.log) / 10.0
 }
 
-double mk_scale_div_100(double val)
+real_t mk_scale_div_100(real_t val)
 {
 	return val / 100.0;
 	//dfin[k] = dfin[k] / 100.0
 }
 
-double mk_scale_div_10(double val)
+real_t mk_scale_div_10(real_t val)
 {
 	return val / 10.0;
 	//dfin[k] = dfin[k] / 10.0
 }
 
-double mk_scale_rsi(double rsi)
+real_t mk_scale_rsi(real_t rsi)
 {
 	// scale rsi to - 1 - 1
 	return (rsi / 50.0) - 1.0;
 	//dfin[k] = (dfin[k] / 50.0) - 1.0
 }
 
-double mk_scale_vol(double hlc3_ln, double v, double adj_vol_divider)
+real_t mk_scale_vol(real_t hlc3_ln, real_t v, real_t adj_vol_divider)
 {
 	return pow(hlc3_ln * v / 100.0, 0.5) / adj_vol_divider;
 	//((dfin['volume'] * close_ln) ** (1/2)) / 1000.0
 	////dfin['volume'] = ((dfin['volume'] * close / 10000.0) ** 2) / 10.0
 }
 
-/*double mk_scale_obv(double obv)
+/*real_t mk_scale_obv(real_t obv)
 {
 	return obv / 1000000000.0;
 	//(dfin['obv'] / 1000000000.0)
 	////dfin['obv'] = (dfin['obv'] * close / 10000000.0)
 }*/
 
-double mk_scale_obv_trend(double obv_trend, double adj_vol_divider)
+real_t mk_scale_obv_trend(real_t obv_trend, real_t adj_vol_divider)
 {
 	return (obv_trend / 10000.0) / adj_vol_divider;
 	//(dfin['obv_trend20'] / 10000000.0)
@@ -397,62 +465,62 @@ double mk_scale_obv_trend(double obv_trend, double adj_vol_divider)
 }
 
 
-double mk_norm_10x_n_stddevs(double hlc3, double regr, double stddev)
+real_t mk_norm_10x_n_stddevs(real_t hlc3, real_t regr, real_t stddev)
 {
 	return 10.0 * (hlc3 - regr) / stddev;
 	//hlc3_norm = 10.0 * (dfin['hlc3'] - dfin['regr']) / dfin['stddev']
 }
 
 
-double mk_min5(double a, double b, double c, double d, double e)
+real_t mk_min5(real_t a, real_t b, real_t c, real_t d, real_t e)
 {
 	return std::min({ a, b, c, d, e });
 }
 
-double mk_max5(double a, double b, double c, double d, double e)
+real_t mk_max5(real_t a, real_t b, real_t c, real_t d, real_t e)
 {
 	return std::max({ a, b, c, d, e });
 }
 
-double mk_min7(double a, double b, double c, double d, double e, double f, double g)
+real_t mk_min7(real_t a, real_t b, real_t c, real_t d, real_t e, real_t f, real_t g)
 {
 	return std::min({ a, b, c, d, e, f, g });
 }
 
-double mk_max7(double a, double b, double c, double d, double e, double f, double g)
+real_t mk_max7(real_t a, real_t b, real_t c, real_t d, real_t e, real_t f, real_t g)
 {
 	return std::max({ a, b, c, d, e, f, g });
 }
 
-double mk_subtract(double b, double a)
+real_t mk_subtract(real_t b, real_t a)
 {
 	return b - a;
 }
 
-double mk_sum(double b, double a)
+real_t mk_sum(real_t b, real_t a)
 {
 	return b + a;
 }
 
-double mk_multiply(double b, double a)
+real_t mk_multiply(real_t b, real_t a)
 {
 	return b * a;
 }
 
-double mk_divide_by_160(double b)
+real_t mk_divide_by_160(real_t b)
 {
 	return b / 160.0;
 }
 
-double mk_vec_equals(double b, double a) {
-	return static_cast<double>(dbl_equal(b, a));
+real_t mk_vec_equals(real_t b, real_t a) {
+	return static_cast<real_t>(dbl_equal(b, a));
 }
 
-double mk_vec_greater_sum2(double a, double b, double c) {
+real_t mk_vec_greater_sum2(real_t a, real_t b, real_t c) {
 	return a > b + c;
 }
 
-double mk_vec_less_sub2(double a, double b, double c) {
+real_t mk_vec_less_sub2(real_t a, real_t b, real_t c) {
 	return a < b - c;
 }
 
@@ -504,57 +572,106 @@ const auto vec_less_sub2 = xt::vectorize(mk_vec_less_sub2);
 
 
 // removes NANs and sorts the input dataset
-xt::xarray<double> process_step1_single(const char* symbol, const xt::xarray<double>& a_orig, const bool training, const int timeframe, const int interval, const bool ext_hours)
+xt::xarray<real_t> process_step1_single(const char* symbol, const xt::xarray<real_t>& a_orig, const bool training, const int timeframe, const int interval, const bool ext_hours)
 {
 
 	const size_t df_len_orig = a_orig.shape().at(1);
 
-	//const auto a_orig_close = xt::xarray<double>(xt::row(a_orig, ColPos::In::close));
+	//const auto a_orig_close = xt::xarray<real_t>(xt::row(a_orig, ColPos::In::close));
 
 	// copy to new array with no nans
 	//cleanup_pre_step1()
-	xt::xarray<double> a_new = _xt_nonans(a_orig, ColPos::In::close);
+	xt::xarray<real_t> a_new = _xt_nonans(a_orig, ColPos::In::close);
 
 	// reverse order if needed (a_new must be ASC order)
-	const bool was_sorted = _xt_2d_sort(a_new, ColPos::In::timestamp);
+    const bool do_sort = _xt_check_2d_sort(a_new, ColPos::In::timestamp);
+    if (do_sort)
+        _xt_2d_sort(a_new, ColPos::In::timestamp);
+
 	//// TODO actually sort intervals dataset...
 	////dfinterval = dfs[interval].sort_index(ascending = True)
-	if (was_sorted && DEBUG_PRINT_DATA)
+	if (do_sort && DEBUG_PRINT_DATA)
 		std::cout << "process_step1_single() interval=" << interval << " sorted" << std::endl;
 
 	return a_new;
 }
 
+// removes NANs and sorts the input dataset
+void process_step1_single_2a(xt::xarray<timestamp_us_t>& ts_orig, xt::xarray<real_t>& a_orig, const char* symbol, const bool training, const int timeframe, const int interval, const bool ext_hours)
+{
 
-xt::xarray<double> process_step2_single(const char* symbol, const xt::xarray<double>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours)
+	const size_t df_len_orig = a_orig.shape().at(1);
+
+	//const auto a_orig_close = xt::xarray<real_t>(xt::row(a_orig, ColPos::In::close));
+
+	// copy to new array with no nans
+	//cleanup_pre_step1()
+	_xt_nonans_2a(ts_orig, a_orig, ColPos::In::close);
+
+	// reverse order if needed (a_new must be ASC order)
+	const bool do_sort = _xt_check_2d_sort_2a(ts_orig, ColPos::In::timestamp);
+	if (do_sort)
+		_xt_2d_sort_2a(ts_orig, a_orig, ColPos::In::timestamp);
+
+	//// TODO actually sort intervals dataset...
+	////dfinterval = dfs[interval].sort_index(ascending = True)
+	if (do_sort && DEBUG_PRINT_DATA)
+		std::cout << "process_step1_single_2a() interval=" << interval << " sorted" << std::endl;
+
+}
+
+void _process_step2_single(xt::xarray<real_t>& o_results, const char* symbol, const xt::xarray<real_t>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours)
+{
+
+    xt::row(o_results, ColPos::In::open) = xt::row(a_step1, ColPos::In::open);
+    xt::row(o_results, ColPos::In::high) = xt::row(a_step1, ColPos::In::high);
+    xt::row(o_results, ColPos::In::low) = xt::row(a_step1, ColPos::In::low);
+    xt::row(o_results, ColPos::In::close) = xt::row(a_step1, ColPos::In::close);
+    xt::row(o_results, ColPos::In::volume) = xt::row(a_step1, ColPos::In::volume);
+    // TODO bid/ask/etc.?
+
+    // Track step1 run time for each interval
+    //now = time.time()
+
+    apply_candles(symbol, o_results, a_step1);  // +61 cols
+
+    apply_step2(symbol, o_results, timeframe, interval, training, ext_hours);
+
+}
+
+xt::xarray<real_t> process_step2_single(const char* symbol, const xt::xarray<real_t>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours)
 {
 
 	// allocate the results array
-	xt::xarray<double> o_results = xt::zeros<double>({ 101, static_cast<int>(a_step1.shape().at(1)) });
+	xt::xarray<real_t> o_results = xt::zeros<real_t>({ 101, static_cast<int>(a_step1.shape().at(1)) });
 
 	// copy input rows to o_results
 	xt::row(o_results, ColPos::In::timestamp) = xt::row(a_step1, ColPos::In::timestamp);
-	xt::row(o_results, ColPos::In::open) = xt::row(a_step1, ColPos::In::open);
-	xt::row(o_results, ColPos::In::high) = xt::row(a_step1, ColPos::In::high);
-	xt::row(o_results, ColPos::In::low) = xt::row(a_step1, ColPos::In::low);
-	xt::row(o_results, ColPos::In::close) = xt::row(a_step1, ColPos::In::close);
-	xt::row(o_results, ColPos::In::volume) = xt::row(a_step1, ColPos::In::volume);
-	// TODO bid/ask/etc.?
-	
-	// Track step1 run time for each interval
-	//now = time.time()
 
-	apply_candles(symbol, o_results, a_step1);  // +61 cols
-
-	apply_step2(symbol, o_results, timeframe, interval, training, ext_hours);
+    _process_step2_single(o_results, symbol, a_step1, training, timeframe, interval, ext_hours);
 
 	return o_results;
 }
 
-void process_step3_single(xt::xarray<double>& o_results, xt::xarray<double>& o_outputs, const char* symbol, const xt::xarray<double>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours)
+xt::xarray<real_t> process_step2_single_2a(const char* symbol, const xt::xarray<timestamp_us_t>& ts_step1, const xt::xarray<real_t>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours)
 {
 
-	if (training) {
+	// allocate the results array
+	xt::xarray<real_t> o_results = xt::zeros<real_t>({ 101, static_cast<int>(a_step1.shape().at(1)) });
+
+	// copy input rows to o_results
+	xt::row(o_results, ColPos::In::timestamp) = xt::row(ts_step1, ColPos::In::timestamp);  // TODO subtract 37 years?
+
+	_process_step2_single(o_results, symbol, a_step1, training, timeframe, interval, ext_hours);
+
+	return o_results;
+}
+
+
+void process_step3_single(xt::xarray<real_t>& o_results, xt::xarray<real_t>& o_outputs, const char* symbol, const xt::xarray<real_t>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours, const bool was_sorted)
+{
+
+	if (training && a_step1.shape().at(0) > static_cast<int>(ColPos::In::volume) + 1) {
 		// TODO fe. null|
 		// TODO verify o_outputs size? or not empty?
 		if (!o_outputs.size())
@@ -579,6 +696,38 @@ void process_step3_single(xt::xarray<double>& o_results, xt::xarray<double>& o_o
 	}*/
 
 }
+void process_step3_single_2a(xt::xarray<real_t>& o_results, xt::xarray<real_t>& o_outputs, xt::xarray<timestamp_us_t>& ts_step1, const char* symbol, const xt::xarray<real_t>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours, const bool was_sorted)
+{
+
+	// TODO o_outputs double to preserve ts
+
+	if (training && a_step1.shape().at(0) > static_cast<int>(ColPos::In::volume) + 1) {
+		// TODO fe. null|
+		// TODO verify o_outputs size? or not empty?
+		if (!o_outputs.size())
+			throw std::logic_error("o_outputs must be initialized.");
+		do_outputs(o_outputs, symbol, o_results, a_step1, timeframe, interval);
+		xt::row(o_outputs, ColPos::Output::ts) = xt::row(ts_step1, ColPos::In::timestamp);  // copy the accurate TS  TODO / 1e6
+	}
+
+	// create a copy, removing initial nan values
+	do_cleanup_initial_2a(ts_step1, o_results, interval);
+
+	if (training) {
+		// copy outputs with same rows removed...
+		o_outputs = do_cleanup_initial(o_outputs, interval);
+	}
+
+	/*
+	// TODO restore original order?
+	if (was_sorted)
+	{
+		// restore order
+		_xt_2d_sort(o_results, 0, true);
+	}*/
+
+}
+
 
 void process_step1to3(const char* symbol, dfs_map_t& dfs, const int timeframe, const bool ext_hours, const interval_map_t& interval_map)
 {
@@ -598,7 +747,7 @@ void process_step1to3(const char* symbol, dfs_map_t& dfs, const int timeframe, c
 
 		// TODO outputs ...
 		// TODO skip creating outputs if !trainig?
-		xt::xarray<double> o_outputs = xt::zeros<double>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(a_step1.shape().at(1))});  // TODO timestamp and/or close in outputs?
+		xt::xarray<real_t> o_outputs = xt::zeros<real_t>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(a_step1.shape().at(1))});  // TODO timestamp and/or close in outputs?
 
 		process_step3_single(o_results, o_outputs, symbol, a_step1, training, timeframe, interval, ext_hours);
 
@@ -610,43 +759,97 @@ void process_step1to3(const char* symbol, dfs_map_t& dfs, const int timeframe, c
 
 }
 
-void write_dataset(const char* symbol, xt::xarray<double>& o_results)
+void process_step1to3_2a(const char* symbol, dfs_ts_map_t& dfs_ts, dfs_map_t& dfs, const int timeframe, const bool ext_hours, const interval_map_t& interval_map)
 {
-	const auto& colsMap = COLS_FORMAT1;  // COLS_FORMAT_YAR;  //  COLS_FORMAT1;
+	// loop interval_map
+	for (const auto& i : interval_map)
+	{
+		const char* interval_str = i.first;
+		const int &interval = i.second;
+
+		auto& a_raw = dfs.at(interval);
+		auto& ts_raw = dfs_ts.at(interval);
+
+		// TODO training
+		const bool training = timeframe == interval;
+
+		process_step1_single_2a(ts_raw, a_raw, symbol, training, timeframe, interval, ext_hours);
+		auto o_results = process_step2_single_2a(symbol, ts_raw, a_raw, training, timeframe, interval, ext_hours);
+
+		// TODO outputs ...
+		// TODO skip creating outputs if !trainig?
+		xt::xarray<real_t> o_outputs = xt::zeros<real_t>({ static_cast<int>(ColPos::_OUTPUT_NUM_COLS), static_cast<int>(a_raw.shape().at(1))});  // TODO timestamp and/or close in outputs?
+
+		process_step3_single_2a(o_results, o_outputs, ts_raw, symbol, a_raw, training, timeframe, interval, ext_hours);
+
+		dfs[interval] = o_results;
+		dfs_ts[interval] = ts_raw;
+
+		write_dataset_2a(symbol, o_results, ts_raw);
+		// TODO print run-time time and size...
+	}
+
+}
+
+
+void write_dataset(const char* symbol, const xt::xarray<real_t>& o_results)
+{
+    const auto& colsMap = COLS_FORMAT1;  // COLS_FORMAT_YAR;  //  COLS_FORMAT1;
+
+    const size_t n_len = o_results.shape().at(1);
+    xt::xarray<real_t> allCols = xt::zeros<real_t>({ static_cast<int>(colsMap.size()), static_cast<int>(o_results.shape().at(1)) });
+    int pos = 0;
+
+    for (std::tuple<ColPosType, ptrdiff_t> tpl : colsMap)
+        xt::row(allCols, pos++) = xt::row(o_results, std::get<1>(tpl));
+
+    std::string npy_file = "pyfiles/_tmp.AAPL.s0." + std::to_string(TIMEFRAME) + ".npy";
+    xt::dump_npy(npy_file, allCols);
+}
+
+void write_dataset_2a(const char* symbol, const xt::xarray<real_t>& o_results, const xt::xarray<timestamp_us_t>& ts_raw)
+{
+	constexpr auto& colsMap = COLS_FORMAT1;  // COLS_FORMAT_YAR;  //  COLS_FORMAT1;
 
 	const size_t n_len = o_results.shape().at(1);
 	xt::xarray<double> allCols = xt::zeros<double>({ static_cast<int>(colsMap.size()), static_cast<int>(o_results.shape().at(1)) });
 	int pos = 0;
 
-	for (std::tuple<ColPosType, ptrdiff_t> tpl : colsMap)
-		xt::row(allCols, pos++) = xt::row(o_results, std::get<1>(tpl));
+	for (std::tuple<ColPosType, ptrdiff_t> tpl : colsMap) {
+		if (std::get<1>(tpl) == ColPos::In::timestamp)
+			xt::row(allCols, pos++) = xt::row(ts_raw, std::get<1>(tpl));
+		else
+			xt::row(allCols, pos++) = xt::row(o_results, std::get<1>(tpl));
+	}
 
 	std::string npy_file = "pyfiles/_tmp.AAPL.s0." + std::to_string(TIMEFRAME) + ".npy";
 	xt::dump_npy(npy_file, allCols);
 }
 
-void apply_candles(const char* symbol, xt::xarray<double>& o_results, const xt::xarray<double>& a_in)
+
+void apply_candles(const char* symbol, xt::xarray<real_t>& o_results, const xt::xarray<real_t>& a_in)
 {
 	//_iter_ta_functions("Pattern Recognition");
 
 	const size_t n_len = o_results.shape().at(1);
 	
 	// Note: apparently need to copy from views, in order for TA_ functions to work properly
-	const auto r_open = xt::xarray<double>(xt::row(a_in, ColPos::In::open));
-	const auto r_high = xt::xarray<double>(xt::row(a_in, ColPos::In::high));
-	const auto r_low = xt::xarray<double>(xt::row(a_in, ColPos::In::low));
-	const auto r_close = xt::xarray<double>(xt::row(a_in, ColPos::In::close));
+	const auto r_open = xt::xarray<real_t>(xt::row(a_in, ColPos::In::open));
+	const auto r_high = xt::xarray<real_t>(xt::row(a_in, ColPos::In::high));
+	const auto r_low = xt::xarray<real_t>(xt::row(a_in, ColPos::In::low));
+	const auto r_close = xt::xarray<real_t>(xt::row(a_in, ColPos::In::close));
 	const auto& rows_open = r_open.data();
 	const auto& rows_high = r_high.data();
 	const auto& rows_low = r_low.data();
 	const auto& rows_close = r_close.data();
+	const auto& o_shape = r_close.shape();
 
 	TA_RetCode retCode;
 	int outBegIdx = 0;
 	int outNBElement = 0;
 
-	// TODO double[] or std::vector ???
-	//double col_data[n_len + 1];
+	// TODO real_t[] or std::vector ???
+	//real_t col_data[n_len + 1];
 	std::vector<int> candle_data(n_len + 1);
 	int pos = static_cast<int>(ColPos::Candle::_2CROWS);
 	for (auto &func : CANDLE_FUNCTIONS1)
@@ -654,10 +857,10 @@ void apply_candles(const char* symbol, xt::xarray<double>& o_results, const xt::
 		/* For example:
 		 * TA_RetCode TA_CDL2CROWS(int    startIdx,
 							 int    endIdx,
-							 const double inOpen[],
-							 const double inHigh[],
-							 const double inLow[],
-							 const double inClose[],
+							 const real_t inOpen[],
+							 const real_t inHigh[],
+							 const real_t inLow[],
+							 const real_t inClose[],
 							 int          *outBegIdx,
 							 int          *outNBElement,
 							 int           outInteger[] );
@@ -688,10 +891,10 @@ void apply_candles(const char* symbol, xt::xarray<double>& o_results, const xt::
 		/* For example:
 		 * TA_RetCode TA_CDLMORNINGDOJISTAR(int    startIdx,
 							 int    endIdx,
-							 const double inOpen[],
-							 const double inHigh[],
-							 const double inLow[],
-							 const double inClose[],
+							 const real_t inOpen[],
+							 const real_t inHigh[],
+							 const real_t inLow[],
+							 const real_t inClose[],
                              double        optInPenetration, // From 0 to TA_REAL_MAX
 							 int          *outBegIdx,
 							 int          *outNBElement,
@@ -720,7 +923,7 @@ void apply_candles(const char* symbol, xt::xarray<double>& o_results, const xt::
 	}
 }
 
-void apply_step2(const char* symbol, xt::xarray<double>& o_results, const unsigned int timeframe, const unsigned int interval, const bool training, const bool ext_hours)
+void apply_step2(const char* symbol, xt::xarray<real_t>& o_results, const unsigned int timeframe, const unsigned int interval, const bool training, const bool ext_hours)
 {
 	//if (training && interval <= 30) {  // TODO !0
 	//	a_in = do_fill(a_in, ext_hours);
@@ -752,17 +955,17 @@ void apply_step2(const char* symbol, xt::xarray<double>& o_results, const unsign
 	//a_results = do_cleanup_final(a_results);
 }
 
-xt::xarray<double> do_fill(const xt::xarray<double>& a_in, const bool ext_hours)
+xt::xarray<real_t> do_fill(const xt::xarray<real_t>& a_in, const bool ext_hours)
 {
 	const int n_cols = a_in.shape().at(0);
-	xt::xarray<double> results = xt::zeros<double>({ n_cols, static_cast<int>(a_in.shape().at(1)) });
+	xt::xarray<real_t> results = xt::zeros<real_t>({ n_cols, static_cast<int>(a_in.shape().at(1)) });
 	return results;
 }
 
-xt::xarray<double> do_filter_pre(const xt::xarray<double>& a_in)
+xt::xarray<real_t> do_filter_pre(const xt::xarray<real_t>& a_in)
 {
 	const int n_cols = a_in.shape().at(0);
-	xt::xarray<double> results = xt::zeros<double>({ n_cols, static_cast<int>(a_in.shape().at(1)) });
+	xt::xarray<real_t> results = xt::zeros<real_t>({ n_cols, static_cast<int>(a_in.shape().at(1)) });
 	/*
 	expr_suffix = '[0-9]0' if interval == 0 else '00'
 	if ext_hours:
@@ -785,10 +988,10 @@ xt::xarray<double> do_filter_pre(const xt::xarray<double>& a_in)
 	return results;
 }
 
-xt::xarray<double> do_filter_post(const xt::xarray<double>& a_in, const bool training, const bool ext_hours)
+xt::xarray<real_t> do_filter_post(const xt::xarray<real_t>& a_in, const bool training, const bool ext_hours)
 {
 	const int n_cols = a_in.shape().at(0);
-	xt::xarray<double> results = xt::zeros<double>({ n_cols, static_cast<int>(a_in.shape().at(1)) });
+	xt::xarray<real_t> results = xt::zeros<real_t>({ n_cols, static_cast<int>(a_in.shape().at(1)) });
 	/*
 	if (training && interval == 1) {
 		if (ext_hours) {
@@ -806,14 +1009,14 @@ xt::xarray<double> do_filter_post(const xt::xarray<double>& a_in, const bool tra
 	return results;
 }
 
-TA_RetCode do_dep_columns(xt::xarray<double>& o_results, const bool training)
+TA_RetCode do_dep_columns(xt::xarray<real_t>& o_results, const bool training)
 {
 	const size_t n_len = o_results.shape().at(1);
 
 	// Note: apparently need to copy from views, in order for TA_ functions to work properly
-	const auto r_high = xt::xarray<double>(xt::row(o_results, ColPos::In::high));
-	const auto r_low = xt::xarray<double>(xt::row(o_results, ColPos::In::low));
-	const auto r_close = xt::xarray<double>(xt::row(o_results, ColPos::In::close));
+	const auto r_high = xt::xarray<real_t>(xt::row(o_results, ColPos::In::high));
+	const auto r_low = xt::xarray<real_t>(xt::row(o_results, ColPos::In::low));
+	const auto r_close = xt::xarray<real_t>(xt::row(o_results, ColPos::In::close));
 
 	// add hlc3 / related dependent columns now
 	xt::row(o_results, ColPos::Dep::hlc3) = vec_hlc3(r_high, r_low, r_close);  //:hlc3
@@ -827,7 +1030,11 @@ TA_RetCode do_dep_columns(xt::xarray<double>& o_results, const bool training)
 		int outBegIdx = 0;
 		int outNBElement = 0;
 		std::fill(atr.begin(), atr.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		TA_RetCode retCode = TA_ATR(0, n_len, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, atr.data() + TA_ATR_Lookback(14));
+#else
+		TA_RetCode retCode = TA_S_ATR(0, n_len, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, atr.data() + TA_ATR_Lookback(14));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "ATR error: " << retCode << std::endl;
@@ -839,48 +1046,52 @@ TA_RetCode do_dep_columns(xt::xarray<double>& o_results, const bool training)
 	// past_range
 	{
 		assert(CHECK_PAST_CNT == 5);
-		xt::xarray<double> windowCols = xt::zeros<double>({ CHECK_PAST_CNT, static_cast<int>(n_len) });
-		for (int i = 0; i < CHECK_PAST_CNT; i++)
+		xt::xarray<real_t> windowCols = xt::zeros<real_t>({ CHECK_PAST_CNT, static_cast<int>(n_len) });
+		for (ptrdiff_t i = 0; i < CHECK_PAST_CNT; i++)
 		{
 			if (i)
 				xt::row(windowCols, i) = xt::roll(r_low, i);
 			else
 				xt::row(windowCols, i) = r_low;
 		}
-		xt::xarray<double> rolling5_low = vec_min5(xt::row(windowCols, 0), xt::row(windowCols, 1), xt::row(windowCols, 2), xt::row(windowCols, 3), xt::row(windowCols, 4));
+		xt::xarray<real_t> rolling5_low = vec_min5(xt::row(windowCols, 0), xt::row(windowCols, 1), xt::row(windowCols, 2), xt::row(windowCols, 3), xt::row(windowCols, 4));
 
-		for (int i = 0; i < CHECK_PAST_CNT; i++)
+		for (ptrdiff_t i = 0; i < CHECK_PAST_CNT; i++)
 		{
 			if (i)
 				xt::row(windowCols, i) = xt::roll(r_high, i);
 			else
 				xt::row(windowCols, i) = r_high;
 		}
-		xt::xarray<double> rolling5_high = vec_max5(xt::row(windowCols, 0), xt::row(windowCols, 1), xt::row(windowCols, 2), xt::row(windowCols, 3), xt::row(windowCols, 4));
+		xt::xarray<real_t> rolling5_high = vec_max5(xt::row(windowCols, 0), xt::row(windowCols, 1), xt::row(windowCols, 2), xt::row(windowCols, 3), xt::row(windowCols, 4));
 
 		xt::row(o_results, ColPos::Dep::past_range) = vec_subtract(rolling5_high, rolling5_low);  //:past_range
 	}
 	return TA_SUCCESS;
 }
 
-TA_RetCode add_regr(xt::xarray<double>& o_results, const unsigned int interval)
+TA_RetCode add_regr(xt::xarray<real_t>& o_results, const unsigned int interval)
 {
 	const int n_rows = static_cast<int>(o_results.shape().at(1));
 
 	// copy rows for TALib
-	const auto r_close = xt::xarray<double>(xt::row(o_results, ColPos::In::close));
+	const auto r_close = xt::xarray<real_t>(xt::row(o_results, ColPos::In::close));
 
 	const int regrPeriod = INTERVAL_REGR_WINDOW;  // INTERVAL_REGR_WINDOWS.at(static_cast<const int>(interval));
 
 	int outBegIdx = 0;
 	int outNBElement = 0;
 	TA_RetCode retCode;
-	std::vector<double> taResult(static_cast<std::vector<double>::size_type>(n_rows) + 1);
+	std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + 1);
 
 	// Linear regression
 	{
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_LINEARREG(0, n_rows, r_close.data(), regrPeriod, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_Lookback(regrPeriod));
+#else
+		retCode = TA_S_LINEARREG(0, n_rows, r_close.data(), regrPeriod, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_Lookback(regrPeriod));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "LINEARREG error: " << retCode << std::endl;
@@ -891,9 +1102,13 @@ TA_RetCode add_regr(xt::xarray<double>& o_results, const unsigned int interval)
 
 	// Standard Deviation
 	{
-		const double numDeviations = 1;
+		const real_t numDeviations = 1;
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_STDDEV(0, n_rows, r_close.data(), regrPeriod, numDeviations, &outBegIdx, &outNBElement, taResult.data() + TA_STDDEV_Lookback(regrPeriod, numDeviations));
+#else
+		retCode = TA_S_STDDEV(0, n_rows, r_close.data(), regrPeriod, numDeviations, &outBegIdx, &outNBElement, taResult.data() + TA_STDDEV_Lookback(regrPeriod, numDeviations));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "STDDEV error: " << retCode << std::endl;
@@ -904,7 +1119,7 @@ TA_RetCode add_regr(xt::xarray<double>& o_results, const unsigned int interval)
 	return TA_SUCCESS;
 }
 
-TA_RetCode do_ta(xt::xarray<double>& o_results)
+TA_RetCode do_ta(xt::xarray<real_t>& o_results)
 {
 	/*
 	 * trend5, trend9, trend20, trend50, volume_percent_buy, volume_percent_sell
@@ -915,10 +1130,10 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 	const int n_rows = static_cast<int>(o_results.shape().at(1));
 
 	// copy rows for TALib
-	const auto r_high = xt::xarray<double>(xt::row(o_results, ColPos::In::high));
-	const auto r_low = xt::xarray<double>(xt::row(o_results, ColPos::In::low));
-	const auto r_close = xt::xarray<double>(xt::row(o_results, ColPos::In::close));
-	const auto r_volume = xt::xarray<double>(xt::row(o_results, ColPos::In::volume));
+	const auto r_high = xt::xarray<real_t>(xt::row(o_results, ColPos::In::high));
+	const auto r_low = xt::xarray<real_t>(xt::row(o_results, ColPos::In::low));
+	const auto r_close = xt::xarray<real_t>(xt::row(o_results, ColPos::In::close));
+	const auto r_volume = xt::xarray<real_t>(xt::row(o_results, ColPos::In::volume));
 	// const auto& r_hlc3 = xt::row(o_results, ColPos::Dep::hlc3);
 	//const auto& r_regr = xt::row(o_results, ColPos::Regr::regr);
 	//const auto& r_stddev = xt::row(o_results, ColPos::Regr::stddev);
@@ -926,9 +1141,9 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 	int outBegIdx = 0;
 	int outNBElement = 0;
 	TA_RetCode retCode;
-	std::vector<double> taResult(static_cast<std::vector<double>::size_type>(n_rows) + 1);
-	xt::xarray<double> taTmp1 = xt::zeros<double>(r_high.shape());
-	xt::xarray<double> taTmp2 = xt::zeros<double>(r_high.shape());
+	std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + 1);
+	xt::xarray<real_t> taTmp1 = xt::zeros<real_t>(r_high.shape());
+	xt::xarray<real_t> taTmp2 = xt::zeros<real_t>(r_high.shape());
 
 	// Simple trends: trend5, trend9, trend20, trend50 // TODO slope of # of std. devs ??
 	{
@@ -937,7 +1152,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 		taTmp1 = r_close;
 		
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 5, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(5));
+#else
+		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 5, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(5));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
@@ -946,7 +1165,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::trend5).begin());  //:trend5
 
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 9, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(9));
+#else
+		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 9, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(9));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
@@ -955,7 +1178,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::trend9).begin());  //:trend9
 
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
+#else
+		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
@@ -964,7 +1191,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::trend20).begin());  //:trend20
 
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(50));
+#else
+		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(50));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
@@ -991,7 +1222,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 	// On Balance Volume Indicator (OBV) trends
 	{
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_OBV(0, n_rows, r_close.data(), r_volume.data(), &outBegIdx, &outNBElement, taResult.data() + TA_OBV_Lookback());
+#else
+		retCode = TA_S_OBV(0, n_rows, r_close.data(), r_volume.data(), &outBegIdx, &outNBElement, taResult.data() + TA_OBV_Lookback());
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "OBV error: " << retCode << std::endl;
@@ -1002,7 +1237,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 		// OBV trend (20 and 50 period)
 		
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
+#else
+		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
@@ -1011,7 +1250,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::obv_trend20).begin());  //:obv_trend20
 
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(50));
+#else
+		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(50));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
@@ -1029,7 +1272,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 		// ADI trend (20 and 50 period)
 
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp2.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
+#else
+		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp2.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
@@ -1038,7 +1285,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::adi_trend20).begin());  //:adi_trend20
 
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp2.data(), 50, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(50));
+#else
+		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp2.data(), 50, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(50));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
@@ -1052,7 +1303,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 	// Relative Strength Index (RSI)
 	{
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_RSI(0, n_rows, r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + TA_RSI_Lookback(14));
+#else
+		retCode = TA_S_RSI(0, n_rows, r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + TA_RSI_Lookback(14));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "RSI error: " << retCode << std::endl;
@@ -1065,7 +1320,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 		// RSI trend (20 and 50 period)
 
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
+#else
+		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
@@ -1074,7 +1333,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::rsi_trend20).begin());  //:rsi_trend20
 
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(50));
+#else
+		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(50));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
@@ -1087,7 +1350,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 	// Percentage Price Oscillator (PPO)
 	{
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_PPO(0, n_rows, r_close.data(), 12, 26, TA_MAType_EMA, &outBegIdx, &outNBElement, taResult.data() + TA_PPO_Lookback(12, 26, TA_MAType_EMA));
+#else
+		retCode = TA_S_PPO(0, n_rows, r_close.data(), 12, 26, TA_MAType_EMA, &outBegIdx, &outNBElement, taResult.data() + TA_PPO_Lookback(12, 26, TA_MAType_EMA));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "PPO error: " << retCode << std::endl;
@@ -1099,10 +1366,14 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 		// PPO SIGNAL = _ema(self._ppo, self._window_sign, self._fillna)
 		// PPO HIST = self._ppo - self._ppo_signal
 		// copy PPO for EMA
-		auto r_tmp = xt::xarray<double>(xt::nan_to_num(xt::row(o_results, ColPos::TA::ppo)));
+		auto r_tmp = xt::xarray<real_t>(xt::nan_to_num(xt::row(o_results, ColPos::TA::ppo)));
 		auto windowSign = 9;
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_EMA(0, n_rows, r_tmp.data(), windowSign, &outBegIdx, &outNBElement, taResult.data() + TA_EMA_Lookback(windowSign));
+#else
+		retCode = TA_S_EMA(0, n_rows, r_tmp.data(), windowSign, &outBegIdx, &outNBElement, taResult.data() + TA_EMA_Lookback(windowSign));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "EMA error: " << retCode << std::endl;
@@ -1116,7 +1387,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 	// Average Directional Movement Index (ADX)
 	{
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_ADX(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + TA_ADX_Lookback(14));
+#else
+		retCode = TA_S_ADX(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + TA_ADX_Lookback(14));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "ADX error: " << retCode << std::endl;
@@ -1128,7 +1403,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 		
 		// adx_pos
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_PLUS_DI(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + TA_PLUS_DI_Lookback(14));
+#else
+		retCode = TA_S_PLUS_DI(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + TA_PLUS_DI_Lookback(14));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "PLUS_DI error: " << retCode << std::endl;
@@ -1138,7 +1417,11 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 
 		// adx_neg
 		std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 		retCode = TA_MINUS_DI(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + TA_MINUS_DI_Lookback(14));
+#else
+		retCode = TA_S_MINUS_DI(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + TA_MINUS_DI_Lookback(14));
+#endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "MINUS_DI error: " << retCode << std::endl;
@@ -1151,7 +1434,7 @@ TA_RetCode do_ta(xt::xarray<double>& o_results)
 	return TA_SUCCESS;
 }
 
-void do_diffs(xt::xarray<double>& o_results)
+void do_diffs(xt::xarray<real_t>& o_results)
 {
 	const auto& r_open = xt::row(o_results, ColPos::In::open);
 	const auto& r_high = xt::row(o_results, ColPos::In::high);
@@ -1173,7 +1456,7 @@ constexpr std::array<ColPos::Dep, 1> COLS_REGR_DEP_N_STDDEVS = { ColPos::Dep::hl
 constexpr std::array<ColPos::Dep, 3> COLS_REGR_DEP_NORM_STDDEV = { ColPos::Dep::past_range, ColPos::Dep::range, ColPos::Dep::atr };
 constexpr std::array<ColPos::Diff, 3> COLS_REGR_DIFF_NORM_STDDEV = { ColPos::Diff::diff, ColPos::Diff::range_t, ColPos::Diff::range_b };
 
-void apply_regr(xt::xarray<double>& o_results, const unsigned int interval)
+void apply_regr(xt::xarray<real_t>& o_results, const unsigned int interval)
 {
 	//;open, ;high, ;low, ;close
 	{
@@ -1202,11 +1485,11 @@ void apply_regr(xt::xarray<double>& o_results, const unsigned int interval)
 		constexpr int regrPeriod = INTERVAL_REGR_WINDOW;  // INTERVAL_REGR_WINDOWS.at(interval);
 
 		// copy rows for TALib
-		const auto r_hlc3 = xt::xarray<double>(xt::row(o_results, ColPos::Dep::hlc3));
+		const auto r_hlc3 = xt::xarray<real_t>(xt::row(o_results, ColPos::Dep::hlc3));
 
 		// first calculate hlc3regr and hlc3stddev:
-		xt::xarray<double> hlc3regr = xt::zeros<double>(r_hlc3.shape());
-		xt::xarray<double> hlc3stddev = xt::zeros<double>(r_hlc3.shape());
+		xt::xarray<real_t> hlc3regr = xt::zeros<real_t>(r_hlc3.shape());
+		xt::xarray<real_t> hlc3stddev = xt::zeros<real_t>(r_hlc3.shape());
 		
 		int outBegIdx = 0;
 		int outNBElement = 0;
@@ -1217,7 +1500,11 @@ void apply_regr(xt::xarray<double>& o_results, const unsigned int interval)
 		// Linear regression (hlc3)
 		{
 			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 			retCode = TA_LINEARREG(0, n_rows, r_hlc3.data(), regrPeriod, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_Lookback(regrPeriod));
+#else
+			retCode = TA_S_LINEARREG(0, n_rows, r_hlc3.data(), regrPeriod, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_Lookback(regrPeriod));
+#endif
 			if (retCode != TA_SUCCESS)
 			{
 				hlc3ok = false;
@@ -1231,9 +1518,13 @@ void apply_regr(xt::xarray<double>& o_results, const unsigned int interval)
 
 		// Standard Deviation (hlc3)
 		{
-			const double numDeviations = 1;
+			const real_t numDeviations = 1;
 			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
 			retCode = TA_STDDEV(0, n_rows, r_hlc3.data(), regrPeriod, numDeviations, &outBegIdx, &outNBElement, taResult.data() + TA_STDDEV_Lookback(regrPeriod, numDeviations));
+#else
+			retCode = TA_S_STDDEV(0, n_rows, r_hlc3.data(), regrPeriod, numDeviations, &outBegIdx, &outNBElement, taResult.data() + TA_STDDEV_Lookback(regrPeriod, numDeviations));
+#endif
 			if (retCode != TA_SUCCESS)
 			{
 				hlc3ok = false;
@@ -1272,10 +1563,10 @@ constexpr std::array<ColPos::TA, 1> COLS_NORM_TA_SCALE_DIV_100 = { ColPos::TA::a
 constexpr std::array<ColPos::TA, 2> COLS_NORM_TA_SCALE_DIV_10 = { ColPos::TA::ppo, ColPos::TA::ppo_diff };
 constexpr std::array<ColPos::TA, 4> COLS_NORM_TA_SCALE_AS_VOL = { ColPos::TA::obv_trend20, ColPos::TA::obv_trend50, ColPos::TA::adi_trend20, ColPos::TA::adi_trend50 };
 
-void do_norm(xt::xarray<double>& o_results, const unsigned int interval)
+void do_norm(xt::xarray<real_t>& o_results, const unsigned int interval)
 {
 	// Normalize volume related fields across timeperiods  // TODO don't do this???
-	double adj_vol_divider = 
+	real_t adj_vol_divider =
 		interval < 1440 ? interval
 		: interval == 1440 ? 390
 		: 1950;
@@ -1331,24 +1622,43 @@ void do_norm(xt::xarray<double>& o_results, const unsigned int interval)
 	////cols2 = []
 }
 
-xt::xarray<double> do_cleanup_initial(const xt::xarray<double>& a_in, const unsigned int interval)
+xt::xarray<real_t> do_cleanup_initial(const xt::xarray<real_t>& a_in, const unsigned int interval)
 {
 	const int n_cols = a_in.shape().at(0);
 	const int window = INTERVAL_REGR_WINDOW;  // INTERVAL_REGR_WINDOWS.at(static_cast<const int>(interval));
 	const auto trim_first = window + 50;
 	auto a_view = xt::view(a_in, xt::all(), xt::range(trim_first, a_in.shape().at(1)));
-	return xt::xarray<double>(a_view);
+	return xt::xarray<real_t>(a_view);
 	/*
     // before applying market inputs, trim oldest incomplete nan/data
     window = mk_window(interval)
     dfin = dfin.iloc[max(window, 50):]  // trim oldest 'window' rows (contains incomplete averages)
 	*/
 }
-
-xt::xarray<double> do_cleanup_final(xt::xarray<double>& a_in)
+void do_cleanup_initial_2a(xt::xarray<timestamp_us_t>& ts_in, xt::xarray<real_t>& a_in, const unsigned int interval)
 {
 	const int n_cols = a_in.shape().at(0);
-	xt::xarray<double> results = xt::zeros<double>({ n_cols, static_cast<int>(a_in.shape().at(1)) });
+	const int window = INTERVAL_REGR_WINDOW;  // INTERVAL_REGR_WINDOWS.at(static_cast<const int>(interval));
+	const auto trim_first = window + 50;
+	{
+		auto ts_view = xt::view(ts_in, xt::all(), xt::range(trim_first, ts_in.shape().at(1)));
+		ts_in = xt::xarray<timestamp_us_t>(ts_view);
+	}
+	{
+		auto a_view = xt::view(a_in, xt::all(), xt::range(trim_first, a_in.shape().at(1)));
+		a_in = xt::xarray<real_t>(a_view);
+	}
+	/*
+	// before applying market inputs, trim oldest incomplete nan/data
+	window = mk_window(interval)
+	dfin = dfin.iloc[max(window, 50):]  // trim oldest 'window' rows (contains incomplete averages)
+	*/
+}
+
+xt::xarray<real_t> do_cleanup_final(xt::xarray<real_t>& a_in)
+{
+	const int n_cols = a_in.shape().at(0);
+	xt::xarray<real_t> results = xt::zeros<real_t>({ n_cols, static_cast<int>(a_in.shape().at(1)) });
 	/*
 	// remove nan / null values(since may exist after resorting index)
 	dfin = dfin[dfin.open.notnull()]
@@ -1363,13 +1673,13 @@ xt::xarray<double> do_cleanup_final(xt::xarray<double>& a_in)
 	return results;
 }
 
-xt::xarray<double> do_market_inputs(const xt::xarray<double>& a_in)
+xt::xarray<real_t> do_market_inputs(const xt::xarray<real_t>& a_in)
 {
-	xt::xarray<double> results = xt::zeros<double>({ 11, static_cast<int>(a_in.shape().at(1)) });
+	xt::xarray<real_t> results = xt::zeros<real_t>({ 11, static_cast<int>(a_in.shape().at(1)) });
 	return results;
 }
 
-void do_outputs(xt::xarray<double>& o_outputs, const char* symbol, const xt::xarray<double>& o_results, const xt::xarray<double>& a_step1, const unsigned int timeframe, const unsigned int interval)
+void do_outputs(xt::xarray<real_t>& o_outputs, const char* symbol, const xt::xarray<real_t>& o_results, const xt::xarray<real_t>& a_step1, const unsigned int timeframe, const unsigned int interval)
 {
 	assert(CHECK_FUTURE_CNT == 7);
 
@@ -1382,54 +1692,54 @@ void do_outputs(xt::xarray<double>& o_outputs, const char* symbol, const xt::xar
 	const auto r_low = xt::row(a_step1, ColPos::In::low);
 	const auto r_high = xt::row(a_step1, ColPos::In::high);
 
-	xt::xarray<double> windowCols = xt::zeros<double>({ CHECK_FUTURE_CNT, static_cast<int>(n_len) });
+	xt::xarray<real_t> windowCols = xt::zeros<real_t>({ CHECK_FUTURE_CNT, static_cast<int>(n_len) });
 
 	// calculate max(future_bid_high) [with current row]
-	for (int i = 0; i < CHECK_FUTURE_CNT; i++)
+	for (ptrdiff_t i = 0; i < CHECK_FUTURE_CNT; i++)
 	{
 		if (i)
 			xt::row(windowCols, i) = xt::roll(r_bid_high, -i);
 		else
 			xt::row(windowCols, i) = r_bid_high;
 	}
-	xt::xarray<double> rolling7_bid_high = vec_max7(xt::row(windowCols, 0), xt::row(windowCols, 1), xt::row(windowCols, 2), xt::row(windowCols, 3), xt::row(windowCols, 4), xt::row(windowCols, 5), xt::row(windowCols, 6));
+	xt::xarray<real_t> rolling7_bid_high = vec_max7(xt::row(windowCols, 0), xt::row(windowCols, 1), xt::row(windowCols, 2), xt::row(windowCols, 3), xt::row(windowCols, 4), xt::row(windowCols, 5), xt::row(windowCols, 6));
 
 	// calculate min(future_ask_low) [with current row]
-	windowCols = xt::zeros<double>({ CHECK_FUTURE_CNT, static_cast<int>(n_len) });  // TODO zero this?
-	for (int i = 0; i < CHECK_FUTURE_CNT; i++)
+	windowCols = xt::zeros<real_t>({ CHECK_FUTURE_CNT, static_cast<int>(n_len) });  // TODO zero this?
+	for (ptrdiff_t i = 0; i < CHECK_FUTURE_CNT; i++)
 	{
 		if (i)
 			xt::row(windowCols, i) = xt::roll(r_ask_low, -i);
 		else
 			xt::row(windowCols, i) = r_ask_low;
 	}
-	xt::xarray<double> rolling7_ask_low = vec_min7(xt::row(windowCols, 0), xt::row(windowCols, 1), xt::row(windowCols, 2), xt::row(windowCols, 3), xt::row(windowCols, 4), xt::row(windowCols, 5), xt::row(windowCols, 6));
+	xt::xarray<real_t> rolling7_ask_low = vec_min7(xt::row(windowCols, 0), xt::row(windowCols, 1), xt::row(windowCols, 2), xt::row(windowCols, 3), xt::row(windowCols, 4), xt::row(windowCols, 5), xt::row(windowCols, 6));
 
 	// calculate future_low [excluding current row]
-	windowCols = xt::zeros<double>({ CHECK_FUTURE_CNT, static_cast<int>(n_len) });  // TODO zero this?
-	for (int i = 0; i < CHECK_FUTURE_CNT; i++)
+	windowCols = xt::zeros<real_t>({ CHECK_FUTURE_CNT, static_cast<int>(n_len) });  // TODO zero this?
+	for (ptrdiff_t i = 0; i < CHECK_FUTURE_CNT; i++)
 	{
 		xt::row(windowCols, i) = xt::roll(r_low, static_cast<ptrdiff_t>(-(i + 1)));
 	}
-	xt::xarray<double> future_low = vec_min7(xt::row(windowCols, 0), xt::row(windowCols, 1), xt::row(windowCols, 2), xt::row(windowCols, 3), xt::row(windowCols, 4), xt::row(windowCols, 5), xt::row(windowCols, 6));
+	xt::xarray<real_t> future_low = vec_min7(xt::row(windowCols, 0), xt::row(windowCols, 1), xt::row(windowCols, 2), xt::row(windowCols, 3), xt::row(windowCols, 4), xt::row(windowCols, 5), xt::row(windowCols, 6));
 	
 	// calculate future_high [excluding current row]
-	windowCols = xt::zeros<double>({ CHECK_FUTURE_CNT, static_cast<int>(n_len) });  // TODO zero this?
-	for (int i = 0; i < CHECK_FUTURE_CNT; i++)
+	windowCols = xt::zeros<real_t>({ CHECK_FUTURE_CNT, static_cast<int>(n_len) });  // TODO zero this?
+	for (ptrdiff_t i = 0; i < CHECK_FUTURE_CNT; i++)
 	{
 		xt::row(windowCols, i) = xt::roll(r_high, static_cast<ptrdiff_t>(-(i + 1)));
 	}
-	xt::xarray<double> future_high = vec_max7(xt::row(windowCols, 0), xt::row(windowCols, 1), xt::row(windowCols, 2), xt::row(windowCols, 3), xt::row(windowCols, 4), xt::row(windowCols, 5), xt::row(windowCols, 6));
+	xt::xarray<real_t> future_high = vec_max7(xt::row(windowCols, 0), xt::row(windowCols, 1), xt::row(windowCols, 2), xt::row(windowCols, 3), xt::row(windowCols, 4), xt::row(windowCols, 5), xt::row(windowCols, 6));
 
 
 	//x_std_dev = current_row['atr'] * 1.777
-	xt::xarray<double> x_std_dev = vec_multiply(xt::row(o_results, ColPos::Dep::atr), 1.777);
+	xt::xarray<real_t> x_std_dev = vec_multiply(xt::row(o_results, ColPos::Dep::atr), 1.777);
 
 	//h_std_dev = current_row['atr'] * 1.577
-	xt::xarray<double> h_std_dev = vec_multiply(xt::row(o_results, ColPos::Dep::atr), 1.577);
+	xt::xarray<real_t> h_std_dev = vec_multiply(xt::row(o_results, ColPos::Dep::atr), 1.577);
 
 	//o_std_dev = current_row['atr'] * 1.337
-	xt::xarray<double> o_std_dev = vec_multiply(xt::row(o_results, ColPos::Dep::atr), 1.337);
+	xt::xarray<real_t> o_std_dev = vec_multiply(xt::row(o_results, ColPos::Dep::atr), 1.337);
 
 	
 	// calculate the outputs

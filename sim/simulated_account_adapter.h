@@ -22,7 +22,7 @@ namespace agpred {
 		~SimulatedAccountAdapter() override = default;
 
 		virtual void onOrder(const id_t& order_id, const Symbol& symbol, const OrderType& order_type, const size_t& size) = 0;
-		virtual void onOrder(const id_t& order_id, const Symbol& symbol, const OrderType& order_type, const size_t& size, const double& limit_price) = 0;
+		virtual void onOrder(const id_t& order_id, const Symbol& symbol, const OrderType& order_type, const size_t& size, const real_t& limit_price) = 0;
 		virtual void cancelOrder(const id_t& order_id) override = 0;
 
 		void newOrder(const id_t& order_id, const Symbol& symbol, const OrderType& order_type, const size_t& size) override
@@ -34,7 +34,7 @@ namespace agpred {
 			//simulator_.onOrder(symbol, order_type, size);
 		}
 
-		void newOrder(const id_t& order_id, const Symbol& symbol, const OrderType& order_type, const size_t& size, const double& limit_price) override
+		void newOrder(const id_t& order_id, const Symbol& symbol, const OrderType& order_type, const size_t& size, const real_t& limit_price) override
 		{
 			// LIMIT order
 			onOrder(order_id, symbol, order_type, size, limit_price);

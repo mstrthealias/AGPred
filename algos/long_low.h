@@ -58,7 +58,7 @@ namespace agpred {
 			//std::cout << "LongLowEntry: EntryData CALL()" << std::endl;
 
 			// TODO an actual entry ?
-			return EntryData{ PositionType::LONG, 100, snapshot.last1min.close, snapshot.last1min.close - 0.71 };  //symbol, 
+			return EntryData{ PositionType::LONG, 100, snapshot.last1min.close, snapshot.last1min.close - static_cast<real_t>(0.71) };  //symbol,
 		}
 	};
 

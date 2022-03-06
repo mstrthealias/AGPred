@@ -150,10 +150,10 @@ enum class SIPMapping : char
 };
 
 
-xt::xarray<double> bars_to_xt(const std::vector<Bar>& bars);
+xt::xarray<real_t> bars_to_xt(const std::vector<Bar>& bars);
 
 
-xt::xarray<double> process_trades_json(const char* json_str, const int interval, const double& start_ts);
+xt::xarray<real_t> process_trades_json(const char* json_str, const int interval, const timestamp_us_t& start_ts);
 
 
 #endif // CONSOLIDATE_H

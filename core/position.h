@@ -34,7 +34,7 @@ namespace agpred {
 
 		size_t num_shares_;
 		size_t num_shares_filled_;
-		double avg_price_;
+		real_t avg_price_;
 		bool exiting_;
 
 	public:
@@ -78,7 +78,7 @@ namespace agpred {
 			return num_shares_;
 		}
 
-		const double& avg_price() const
+		const real_t& avg_price() const
 		{
 			return avg_price_;
 		}
@@ -108,7 +108,7 @@ namespace agpred {
 		 * TODO price is average of all fills for order_id
 		 * Note: handling as size = total # of filled shares, and price is average of all filled shares...
 		 */
-		void onFill(const size_t size, const double price)
+		void onFill(const size_t size, const real_t price)
 		{
 			if (!size)
 				throw std::logic_error("onFill() invalid size");
@@ -130,7 +130,7 @@ namespace agpred {
 		 * TODO price is average of all fills for order_id
 		 * Note: handling as size = total # of filled shares, and price is average of all filled shares...
 		 */
-		void onExitFill(const size_t size, const double price)
+		void onExitFill(const size_t size, const real_t price)
 		{
 			if (!size)
 				throw std::logic_error("onExitFill() invalid size");
@@ -161,12 +161,12 @@ namespace agpred {
 			return state_ == PositionState::CLOSED;
 		}
 
-		double getClosedPL(double closed_avg) const
+		real_t getClosedPL(real_t closed_avg) const
 		{
 			if (!isClosed())
 				throw std::logic_error("position not closed");
 
-			return static_cast<double>(num_shares_filled_) * (closed_avg - avg_price_);
+			return static_cast<real_t>(num_shares_filled_) * (closed_avg - avg_price_);
 		}
 	};
 

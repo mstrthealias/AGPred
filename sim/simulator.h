@@ -14,9 +14,9 @@ namespace agpred {
 
 	struct SymbolSimMarket
 	{
-		double price;
-		double bid;
-		double ask;
+		real_t price;
+		real_t bid;
+		real_t ask;
 		size_t bid_size;
 		size_t ask_size;
 	};
@@ -28,10 +28,10 @@ namespace agpred {
 		//std::string symbol;
 		OrderType order_type;
 		size_t size;
-		double limit_price;
+		real_t limit_price;
 
 		size_t filled_size;
-		double filled_avg;
+		real_t filled_avg;
 		size_t remaining_size;
 	};
 
@@ -139,7 +139,7 @@ namespace agpred {
 			});
 		}
 
-		void onOrder(const id_t& order_id, const Symbol& symbol, const OrderType& order_type, const size_t& size, const double& limit_price) override
+		void onOrder(const id_t& order_id, const Symbol& symbol, const OrderType& order_type, const size_t& size, const real_t& limit_price) override
 		{
 			if (DEBUG_ORDERS)
 			{
@@ -208,7 +208,7 @@ namespace agpred {
 
 			// TODO handle order
 			size_t size;
-			double avg;
+			real_t avg;
 			if (is_market)
 			{
 				if (order.order_type == OrderType::BUY)
@@ -249,7 +249,7 @@ namespace agpred {
 			}
 
 			// calculate average fill price/remaining size
-			order.filled_avg = ((static_cast<double>(order.filled_size) * order.filled_avg) + (static_cast<double>(size) * avg)) / static_cast<double>(order.filled_size + size);
+			order.filled_avg = ((static_cast<real_t>(order.filled_size) * order.filled_avg) + (static_cast<real_t>(size) * avg)) / static_cast<real_t>(order.filled_size + size);
 			order.filled_size += size;
 			assert(order.size >= order.filled_size);
 			order.remaining_size = order.size - order.filled_size;
