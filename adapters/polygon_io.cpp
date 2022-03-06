@@ -7,7 +7,6 @@
 
 #include <xtensor/xview.hpp>
 #include <xtensor/xdynamic_view.hpp>
-#include <xtensor/xindex_view.hpp>
 #include <xtensor/xio.hpp>
 
 #include "../src/consolidate.h"

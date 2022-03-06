@@ -10,7 +10,6 @@
 #include <xtensor/xfixed.hpp>
 #include <xtensor/xnpy.hpp>
 #include <xtensor/xview.hpp>
-#include <xtensor/xdynamic_view.hpp>
 #include <xtensor/xio.hpp>
 
 #include "../src/consolidate.h"
@@ -1388,23 +1387,22 @@ void DataController::initSymbol(const Symbol& symbol, std::chrono::seconds ts)
 		if (PolygonIoAdapter::mergeQuotesAggregates(data_ts, data, symbol.symbol, req_end_ts))
 		{
 			// TODO improve this o.0
-			//std::cout << "1min row shape: " << xt::dynamic_view(data, { Timeframes::_1min, xt::all(), xt::all() }).shape() << std::endl;
 			// copy results back...
-			(*symbols_ts_1min_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_1min, xt::all(), xt::all() });
-			(*symbols_ts_5min_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_5min, xt::all(), xt::all() });
-			(*symbols_ts_15min_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_15min, xt::all(), xt::all() });
-			(*symbols_ts_1hr_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_1hr, xt::all(), xt::all() });
-			(*symbols_ts_4hr_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_4hr, xt::all(), xt::all() });
-			(*symbols_ts_1d_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_1day, xt::all(), xt::all() });
-			(*symbols_ts_1w_)[pos] = xt::dynamic_view(data_ts, { Timeframes::_1wk, xt::all(), xt::all() });
+			(*symbols_ts_1min_)[pos] = xt::view(data_ts, Timeframes::_1min, xt::all(), xt::all());
+			(*symbols_ts_5min_)[pos] = xt::view(data_ts, Timeframes::_5min, xt::all(), xt::all());
+			(*symbols_ts_15min_)[pos] = xt::view(data_ts, Timeframes::_15min, xt::all(), xt::all());
+			(*symbols_ts_1hr_)[pos] = xt::view(data_ts, Timeframes::_1hr, xt::all(), xt::all());
+			(*symbols_ts_4hr_)[pos] = xt::view(data_ts, Timeframes::_4hr, xt::all(), xt::all());
+			(*symbols_ts_1d_)[pos] = xt::view(data_ts, Timeframes::_1day, xt::all(), xt::all());
+			(*symbols_ts_1w_)[pos] = xt::view(data_ts, Timeframes::_1wk, xt::all(), xt::all());
 
-			(*symbols_1min_)[pos] = xt::dynamic_view(data, { Timeframes::_1min, xt::all(), xt::all() });
-			(*symbols_5min_)[pos] = xt::dynamic_view(data, { Timeframes::_5min, xt::all(), xt::all() });
-			(*symbols_15min_)[pos] = xt::dynamic_view(data, { Timeframes::_15min, xt::all(), xt::all() });
-			(*symbols_1hr_)[pos] = xt::dynamic_view(data, { Timeframes::_1hr, xt::all(), xt::all() });
-			(*symbols_4hr_)[pos] = xt::dynamic_view(data, { Timeframes::_4hr, xt::all(), xt::all() });
-			(*symbols_1d_)[pos] = xt::dynamic_view(data, { Timeframes::_1day, xt::all(), xt::all() });
-			(*symbols_1w_)[pos] = xt::dynamic_view(data, { Timeframes::_1wk, xt::all(), xt::all() });
+			(*symbols_1min_)[pos] = xt::view(data, Timeframes::_1min, xt::all(), xt::all());
+			(*symbols_5min_)[pos] = xt::view(data, Timeframes::_5min, xt::all(), xt::all());
+			(*symbols_15min_)[pos] = xt::view(data, Timeframes::_15min, xt::all(), xt::all());
+			(*symbols_1hr_)[pos] = xt::view(data, Timeframes::_1hr, xt::all(), xt::all());
+			(*symbols_4hr_)[pos] = xt::view(data, Timeframes::_4hr, xt::all(), xt::all());
+			(*symbols_1d_)[pos] = xt::view(data, Timeframes::_1day, xt::all(), xt::all());
+			(*symbols_1w_)[pos] = xt::view(data, Timeframes::_1wk, xt::all(), xt::all());
 		}
     }
 

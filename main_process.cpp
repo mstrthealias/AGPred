@@ -6,7 +6,6 @@
 #include <xtensor/xview.hpp>
 #include <xtensor/xadapt.hpp>
 #include <xtensor/xview.hpp>
-#include <xtensor/xindex_view.hpp>
 #include <xtensor/xset_operation.hpp>
 #include <xtensor/xmanipulation.hpp>
 

@@ -3,7 +3,6 @@
 #include <tuple>
 
 #include <xtensor/xview.hpp>
-#include <xtensor/xindex_view.hpp>
 #include <xtensor/xio.hpp>
 #include <xtensor/xset_operation.hpp>
 #include <xtensor/xvectorize.hpp>
