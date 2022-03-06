@@ -424,9 +424,9 @@ enum class ColPosType
 class ColPos
 {
 public:
-	static constexpr ptrdiff_t NUM_COLS = 101;
+	static constexpr ptrdiff_t NUM_COLS = 106;
 
-	static constexpr ptrdiff_t _IN_NUM_COLS = 6;
+	static constexpr ptrdiff_t _IN_NUM_COLS = 12;
 	enum In : ptrdiff_t
 	{
 		timestamp = 0,
@@ -436,17 +436,16 @@ public:
 		close = 4,
 		volume = 5,
 
-		// TODO here?
-		// TODO this order?
-		ask_size = 6,
-		bid_size = 7,
-		ask = 8,
-		ask_high = 9,
-		ask_low = 10,
-		bid = 11,
-		bid_high = 12,
-		bid_low = 13,
-		// TODO fe. Dep starts at 14?
+		// these bid/ask columns are included in processed (1min only), thus _IN_NUM_COLS includes them
+		ask = 6,
+		bid = 7,
+		ask_high = 8,
+		ask_low = 9,
+		bid_high = 10,
+		bid_low = 11,
+		// these are not included in processed
+		ask_size = 12,
+		bid_size = 13,
 	};
 
 	static constexpr ptrdiff_t _DEP_NUM_COLS = 4;

@@ -156,7 +156,7 @@ void agpred::Downloader::do_flush(const Symbol& symbol)
 	auto staged_size = std::min(cur_pos_, STAGED_SIZE);
 	auto last_stage = staged_size - STAGED_DELAY_OFFSET;
 	{
-		std::string file = "E:/Users/jd/Documents/projects/_data/_v3/" + file_prefix_ + "." + std::to_string(cur_stage_) + ".exports" + (STAGED_INCLUDE_TIMESTAMPS ? ".ts" : "") + ".npy";
+		std::string file = "E:/_data/_v3/" + file_prefix_ + "." + std::to_string(cur_stage_) + ".exports" + (STAGED_INCLUDE_TIMESTAMPS ? ".ts" : "") + ".npy";
 
 		std::ofstream fout(file, std::ios::binary);
 		if (!fout.is_open())

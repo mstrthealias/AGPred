@@ -140,13 +140,13 @@ int main(int argc, char* argv[])
     //// print numbers with 9 digit precision
     //std::cout.precision(9);
     
-    std::ifstream ifs("pyfiles/train_symbol_dates_big.json");
+    std::ifstream ifs("pyfiles/train_symbol_dates_main.json");
     json jf = json::parse(ifs);
     for (json obj : jf) {
         auto symbol = obj["symbol"].get<std::string>();
         auto date = obj["date"].get<std::string>();
 
-        if (std::strcmp(symbol.c_str(), "SPY") == 0)
+        /*if (std::strcmp(symbol.c_str(), "SPY") == 0)
             continue;  // skip SPY for now
         else if (std::strcmp(symbol.c_str(), "QQQ") == 0)
             continue;  // skip QQQ for now
@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
         else if (std::strcmp(symbol.c_str(), "AAPL") == 0)
             continue;
         else if (std::strcmp(symbol.c_str(), "MSFT") == 0)
-            continue;
+            continue;*/
 
         auto yr = std::stoi(date.substr(0, 4));
         auto mon = std::stoi(date.substr(5, 2));
@@ -166,7 +166,7 @@ int main(int argc, char* argv[])
 
         namespace fs = std::filesystem;
 
-        std::string file = "E:/Users/jd/Documents/projects/_data/_v3/" + symbol + "." + std::to_string(yr) + "-" + std::to_string(mon) + "-" + std::to_string(day) + ".0.exports.npy";
+        std::string file = "E:/_data/_v3/" + symbol + "." + std::to_string(yr) + "-" + std::to_string(mon) + "-" + std::to_string(day) + ".0.exports.npy";
         if (fs::exists(file))
             continue;
 

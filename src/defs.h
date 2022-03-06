@@ -8,7 +8,7 @@
 
 
 // TODO move into core.h?
-constexpr int NUM_COLUMNS = 101;  // TODO 94, 94+1?
+constexpr int NUM_COLUMNS = 106;  // TODO 94, 94+1?
 constexpr int NUM_TIMESTEMPS = 17;  // 73;  //33  //27  // LEN_DEPTH
 constexpr int NUM_INTERVALS = 7;
 

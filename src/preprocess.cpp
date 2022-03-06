@@ -627,14 +627,28 @@ void _process_step2_single(xt::xarray<real_t>& o_results, const char* symbol, co
     xt::row(o_results, ColPos::In::low) = xt::row(a_step1, ColPos::In::low);
     xt::row(o_results, ColPos::In::close) = xt::row(a_step1, ColPos::In::close);
     xt::row(o_results, ColPos::In::volume) = xt::row(a_step1, ColPos::In::volume);
-    // TODO bid/ask/etc.?
+
+    // bid/ask if input has these columns
+	const bool has_bid_ask = a_step1.shape().at(0) > static_cast<int>(ColPos::In::volume) + 1;
+	if (has_bid_ask)
+	{
+		xt::row(o_results, ColPos::In::ask) = xt::row(a_step1, ColPos::In::ask);
+		xt::row(o_results, ColPos::In::bid) = xt::row(a_step1, ColPos::In::bid);
+		xt::row(o_results, ColPos::In::ask_high) = xt::row(a_step1, ColPos::In::ask_high);
+		xt::row(o_results, ColPos::In::ask_low) = xt::row(a_step1, ColPos::In::ask_low);
+		xt::row(o_results, ColPos::In::bid_high) = xt::row(a_step1, ColPos::In::bid_high);
+		xt::row(o_results, ColPos::In::bid_low) = xt::row(a_step1, ColPos::In::bid_low);
+	}
+	//else {
+	//	// otherwise set zero? assume zero...
+	//}
 
     // Track step1 run time for each interval
     //now = time.time()
 
     apply_candles(symbol, o_results, a_step1);  // +61 cols
 
-    apply_step2(symbol, o_results, timeframe, interval, training, ext_hours);
+    apply_step2(symbol, o_results, timeframe, interval, training, ext_hours, has_bid_ask);
 
 }
 
@@ -923,7 +937,7 @@ void apply_candles(const char* symbol, xt::xarray<real_t>& o_results, const xt::
 	}
 }
 
-void apply_step2(const char* symbol, xt::xarray<real_t>& o_results, const unsigned int timeframe, const unsigned int interval, const bool training, const bool ext_hours)
+void apply_step2(const char* symbol, xt::xarray<real_t>& o_results, const unsigned int timeframe, const unsigned int interval, const bool training, const bool ext_hours, const bool has_bid_ask)
 {
 	//if (training && interval <= 30) {  // TODO !0
 	//	a_in = do_fill(a_in, ext_hours);
@@ -933,11 +947,9 @@ void apply_step2(const char* symbol, xt::xarray<real_t>& o_results, const unsign
 	do_dep_columns(o_results, training);  // +4 cols
 	add_regr(o_results, interval);  // +2 cols
 	
-	// Note: at this time, cleanup_inline() was called to remove vwap, bid, ask
-
 	do_ta(o_results);  // +22 cols
 	do_diffs(o_results);  // +4 cols
-	do_norm(o_results, interval);  // +2 cols, updates 21
+	do_norm(o_results, interval, has_bid_ask);  // +2 cols, updates 21
 
 	if (strcmp(symbol, "QQQ") != 0 && strcmp(symbol, "SPY") != 0) {  // not in{ 'QQQ', 'SPY' }
 		// TODO
@@ -1563,7 +1575,7 @@ constexpr std::array<ColPos::TA, 1> COLS_NORM_TA_SCALE_DIV_100 = { ColPos::TA::a
 constexpr std::array<ColPos::TA, 2> COLS_NORM_TA_SCALE_DIV_10 = { ColPos::TA::ppo, ColPos::TA::ppo_diff };
 constexpr std::array<ColPos::TA, 4> COLS_NORM_TA_SCALE_AS_VOL = { ColPos::TA::obv_trend20, ColPos::TA::obv_trend50, ColPos::TA::adi_trend20, ColPos::TA::adi_trend50 };
 
-void do_norm(xt::xarray<real_t>& o_results, const unsigned int interval)
+void do_norm(xt::xarray<real_t>& o_results, const unsigned int interval, const bool has_bid_ask)
 {
 	// Normalize volume related fields across timeperiods  // TODO don't do this???
 	real_t adj_vol_divider =
@@ -1578,6 +1590,15 @@ void do_norm(xt::xarray<real_t>& o_results, const unsigned int interval)
 
 	// keep close, with ln applied, allows model to handle price differences
 	xt::row(o_results, ColPos::Norm::close_ln) = vec_xfrm_ln(r_close);  //:close_ln
+	if (has_bid_ask)
+	{
+		xt::row(o_results, ColPos::In::ask) = xt::nan_to_num(vec_xfrm_ln(xt::row(o_results, ColPos::In::ask)));  //:ask
+		xt::row(o_results, ColPos::In::bid) = xt::nan_to_num(vec_xfrm_ln(xt::row(o_results, ColPos::In::bid)));  //:bid
+		xt::row(o_results, ColPos::In::ask_high) = xt::nan_to_num(vec_xfrm_ln(xt::row(o_results, ColPos::In::ask_high)));  //:ask_high
+		xt::row(o_results, ColPos::In::ask_low) = xt::nan_to_num(vec_xfrm_ln(xt::row(o_results, ColPos::In::ask_low)));  //:ask_low
+		xt::row(o_results, ColPos::In::bid_high) = xt::nan_to_num(vec_xfrm_ln(xt::row(o_results, ColPos::In::bid_high)));  //:bid_high
+		xt::row(o_results, ColPos::In::bid_low) = xt::nan_to_num(vec_xfrm_ln(xt::row(o_results, ColPos::In::bid_low)));  //:bid_low
+	}
 
 	// calculate hlc3_ln, for volume normalization
 	const auto hlc3_ln = vec_xfrm_ln(r_hlc3);

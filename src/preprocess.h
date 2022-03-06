@@ -22,7 +22,7 @@ void process_step1to3_2a(const char* symbol, dfs_ts_map_t& dfs_ts, dfs_map_t& df
 
 void apply_candles(const char* symbol, xt::xarray<real_t>& o_results, const xt::xarray<real_t>& a_in);
 
-void apply_step2(const char* symbol, xt::xarray<real_t>& o_results, const unsigned int timeframe, const unsigned int interval, const bool training, const bool ext_hours);
+void apply_step2(const char* symbol, xt::xarray<real_t>& o_results, const unsigned int timeframe, const unsigned int interval, const bool training, const bool ext_hours, const bool has_bid_ask = false);
 
 void write_dataset(const char* symbol, const xt::xarray<real_t>& o_results);
 void write_dataset_2a(const char* symbol, const xt::xarray<real_t>& o_results, const xt::xarray<timestamp_us_t>& ts_raw);
@@ -43,7 +43,7 @@ void do_diffs(xt::xarray<real_t>& o_results);
 
 void apply_regr(xt::xarray<real_t>& o_results, const unsigned int interval);
 
-void do_norm(xt::xarray<real_t>& o_results, const unsigned int interval);
+void do_norm(xt::xarray<real_t>& o_results, const unsigned int interval, const bool has_bid_ask = false);
 
 xt::xarray<real_t> do_cleanup_initial(const xt::xarray<real_t>& a_in, const unsigned int interval);
 void do_cleanup_initial_2a(xt::xarray<timestamp_us_t>& ts_in, xt::xarray<real_t>& a_in, const unsigned int interval);
