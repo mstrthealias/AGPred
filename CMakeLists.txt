@@ -89,21 +89,45 @@ set(cpr_INCLUDE_DIRS ${cpr_SOURCE_DIR}/include ${cpr_SOURCE_DIR}/../curl-src/inc
 # TODO could use FetchContent for xtensor, dlfcn-win32, nlohmann_json, pybind11, etc.
 
 
+###############################################################################
+# Misc. Variables
+###############################################################################
+
+set(TENSORFLOW_LIBS "C:/src/tensorflow/bazel-bin/tensorflow/tensorflow.dll.if.lib")  # "TensorflowCC::TensorflowCC" "libtensorflow_cc.so.2.5.2.if.lib"
+set(TALIB_LIBS "C:/ta-lib/c/lib/ta_libc_cdr.lib" "C:/ta-lib/c/lib/ta_func_cdr.lib" "C:/ta-lib/c/lib/ta_common_cdr.lib" "C:/ta-lib/c/lib/ta_abstract_cdr.lib")
+set(OPENSSL_LIBS "C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libssl64MD.lib" "C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libcrypto64MD.lib")
+set(XTENSOR_LIBS "xtensor" "dlfcn-win32::dl")
+set(CPR_LIBS "cpr::cpr")
+set(CUDA_LIBS "CUDA::cuda_driver" "CUDA::cublas" "CUDA::curand")  # "CUDA::cudart"
+
+
+###############################################################################
+# Project Includes
+###############################################################################
+
+
+include_directories(${xtensor_INCLUDE_DIRS})
+include_directories(C:/ta-lib/c/include)
+include_directories(C:/share/OpenSSL-Win64-1.1.1l/include)
+include_directories(${cpr_INCLUDE_DIRS})
+include_directories(C:/src/tensorflow/bazel-bin/tensorflow/include)
+
+
+
+###############################################################################
+# Targets
+###############################################################################
+
 ### agpred_process executable ###
 
 add_executable(agpred_process "main_process.cpp" "src/common.cpp" "src/preprocess.cpp" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp" "src/util.cpp"
 	"core/core.cpp" "core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp" "adapters/polygon_io.cpp"
 	)
 
-target_include_directories(agpred_process PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/share/OpenSSL-Win64-1.1.1l/include ${cpr_INCLUDE_DIRS})
-# C:/src/tensorflow/bazel-bin/tensorflow/include
-
-# TensorflowCC::TensorflowCC
-target_link_libraries(agpred_process PRIVATE cpr::cpr C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libssl64MD.lib C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libcrypto64MD.lib PUBLIC xtensor dlfcn-win32::dl C:/src/tensorflow/bazel-bin/tensorflow/libtensorflow_cc.so.2.5.2.if.lib C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib)
+target_link_libraries(agpred_process PRIVATE ${CPR_LIBS} ${OPENSSL_LIBS} PUBLIC ${XTENSOR_LIBS} ${TENSORFLOW_LIBS} ${TALIB_LIBS})
 #  OpenSSL::applink OpenSSL::Crypto OpenSSL::SSL  CURL::libcurl    OpenSSL::applink
 #  C:/share/cpr/lib/cpr.lib   date::date-tz 
-# TensorflowCC::TensorflowCC
-# target_link_libraries(agpred_process PUBLIC xtensor dlfcn-win32::dl C:/src/tensorflow/bazel-bin/tensorflow/libtensorflow_cc.so.2.5.2.if.lib OpenSSL::applink OpenSSL::Crypto OpenSSL::SSL C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib)
+# target_link_libraries(agpred_process PUBLIC ${XTENSOR_LIBS} ${TENSORFLOW_LIBS} OpenSSL::applink OpenSSL::Crypto OpenSSL::SSL ${TALIB_LIBS})
 
 
 
@@ -112,10 +136,6 @@ add_custom_command(TARGET agpred_process POST_BUILD        # Adds a post-build e
     COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
         "${cpr_BINARY_DIR}/cpr/cpr.dll"
         $<TARGET_FILE_DIR:agpred_process>)
-#add_custom_command(TARGET agpred_process POST_BUILD        # Adds a post-build event to agpred_process
-#    COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
-#        "${cpr_BINARY_DIR}/cpr/cpr.lib"
-#        $<TARGET_FILE_DIR:agpred_process>)
 add_custom_command(TARGET agpred_process POST_BUILD        # Adds a post-build event to agpred_process
     COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
         "${CURL_BINARY_DIR}/lib/libcurl.dll"
@@ -124,12 +144,7 @@ add_custom_command(TARGET agpred_process POST_BUILD        # Adds a post-build e
     COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
         "${zlib_BINARY_DIR}/zlib.dll"
         $<TARGET_FILE_DIR:agpred_process>)
-#add_custom_command(TARGET agpred_process POST_BUILD        # Adds a post-build event to agpred_process
-#    COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
-#        "${zlib_BINARY_DIR}/zlib.lib"
-#        $<TARGET_FILE_DIR:agpred_process>)
 # TODO libcrypto-1_1-x64.dll libssl-1_1-x64.dll cacert.pem
-# TODO dl.lib ?
 
 
 
@@ -139,14 +154,11 @@ add_executable(agpred_pred "main_pred.cpp" "src/common.cpp" "src/preprocess.cpp"
 	"core/core.cpp" "core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp" "adapters/polygon_io.cpp"
 	)
 
-target_include_directories(agpred_pred PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/share/OpenSSL-Win64-1.1.1l/include ${cpr_INCLUDE_DIRS} C:/src/tensorflow/bazel-bin/tensorflow/include)
-
-# TensorflowCC::TensorflowCC
 target_link_libraries(agpred_pred
-									PRIVATE cpr::cpr C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libssl64MD.lib C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libcrypto64MD.lib
-									PUBLIC xtensor dlfcn-win32::dl 
-											C:/src/tensorflow/bazel-bin/tensorflow/libtensorflow_cc.so.2.5.2.if.lib 
-											C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib
+									PRIVATE ${CPR_LIBS} ${OPENSSL_LIBS}
+									PUBLIC ${XTENSOR_LIBS} 
+											${TENSORFLOW_LIBS} 
+											${TALIB_LIBS}
 					)
 
 
@@ -157,10 +169,7 @@ add_executable(agpred_sys main_sys.cpp "src/common.cpp" "src/preprocess.cpp" "sr
 	"core/core.cpp" "core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp" "adapters/polygon_io.cpp"
 	)
 
-target_include_directories(agpred_sys PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/share/OpenSSL-Win64-1.1.1l/include ${cpr_INCLUDE_DIRS})
-
-# TensorflowCC::TensorflowCC
-target_link_libraries(agpred_sys PRIVATE cpr::cpr C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libssl64MD.lib C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libcrypto64MD.lib PUBLIC xtensor dlfcn-win32::dl C:/src/tensorflow/bazel-bin/tensorflow/libtensorflow_cc.so.2.5.2.if.lib C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib)
+target_link_libraries(agpred_sys PRIVATE ${CPR_LIBS} ${OPENSSL_LIBS} PUBLIC ${XTENSOR_LIBS} ${TENSORFLOW_LIBS} ${TALIB_LIBS})
 
 
 
@@ -172,10 +181,7 @@ add_executable(agpred_wss main_wss.cpp
 	"adapters/polygon_io.cpp" "algos/ma3_ema9.cpp"
 	)
 
-target_include_directories(agpred_wss PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/share/OpenSSL-Win64-1.1.1l/include ${cpr_INCLUDE_DIRS})
-
-# TensorflowCC::TensorflowCC
-target_link_libraries(agpred_wss PRIVATE cpr::cpr C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libssl64MD.lib C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libcrypto64MD.lib PUBLIC xtensor dlfcn-win32::dl C:/src/tensorflow/bazel-bin/tensorflow/libtensorflow_cc.so.2.5.2.if.lib C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib)
+target_link_libraries(agpred_wss PRIVATE ${CPR_LIBS} ${OPENSSL_LIBS} PUBLIC ${XTENSOR_LIBS} ${TENSORFLOW_LIBS} ${TALIB_LIBS})
 
 
 
@@ -186,10 +192,8 @@ add_executable(agpred_dl main_dl.cpp "src/common.cpp" "src/preprocess.cpp" "src/
 	"adapters/polygon_io.cpp" "algos/ma3_ema9.cpp" "sim/downloader.cpp"
 	)
 
-target_include_directories(agpred_dl PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/share/OpenSSL-Win64-1.1.1l/include ${cpr_INCLUDE_DIRS})
+target_link_libraries(agpred_dl PRIVATE ${CPR_LIBS} ${OPENSSL_LIBS} PUBLIC ${XTENSOR_LIBS} ${TENSORFLOW_LIBS} ${TALIB_LIBS})
 
-# TensorflowCC::TensorflowCC
-target_link_libraries(agpred_dl PRIVATE cpr::cpr C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libssl64MD.lib C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libcrypto64MD.lib PUBLIC xtensor dlfcn-win32::dl C:/src/tensorflow/bazel-bin/tensorflow/libtensorflow_cc.so.2.5.2.if.lib C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib)
 
 
 ### agpred_backtest executable ###
@@ -200,10 +204,7 @@ add_executable(agpred_backtest main_backtest.cpp "src/common.cpp" "src/preproces
 	"algos/ma3_ema9.cpp" "algos/long_low.cpp"
 	)
 
-target_include_directories(agpred_backtest PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/share/OpenSSL-Win64-1.1.1l/include ${cpr_INCLUDE_DIRS}  C:/src/tensorflow/bazel-bin/tensorflow/include)
-
-# TensorflowCC::TensorflowCC
-target_link_libraries(agpred_backtest PRIVATE cpr::cpr C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libssl64MD.lib C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libcrypto64MD.lib PUBLIC xtensor dlfcn-win32::dl C:/src/tensorflow/bazel-bin/tensorflow/libtensorflow_cc.so.2.5.2.if.lib C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib)
+target_link_libraries(agpred_backtest PRIVATE ${CPR_LIBS} ${OPENSSL_LIBS} PUBLIC ${XTENSOR_LIBS} ${TENSORFLOW_LIBS} ${TALIB_LIBS})
 
 
 
@@ -211,29 +212,27 @@ target_link_libraries(agpred_backtest PRIVATE cpr::cpr C:/share/OpenSSL-Win64-1.
 
 add_executable(test_kml "test_kml.cu"
 	"src/data_generator.cpp" 
-	"src/common.cpp" "src/preprocess.cpp" "src/consolidate.cpp" "src/wsclient.cpp" "src/wsclient_ssl.cpp" "src/util.cpp"
-	"core/core.cpp" "core/account.cpp" "core/account_controller.cpp" "core/data_controller.cpp" "core/position.cpp" "core/strategy.cpp"
-	"adapters/polygon_io.cpp"
+	"src/common.cpp" "src/preprocess.cpp" "src/consolidate.cpp" "src/util.cpp"
 	"deps/glob/glob_win32.cpp"
 	)
 
-target_include_directories(test_kml PUBLIC ${xtensor_INCLUDE_DIRS} ${CUDAToolkit_INCLUDE_DIRS} C:/ta-lib/c/include C:/share/OpenSSL-Win64-1.1.1l/include ${cpr_INCLUDE_DIRS} C:/src/tiny-cuda-nn/include C:/src/tiny-cuda-nn/dependencies)
+target_include_directories(test_kml PUBLIC C:/src/tiny-cuda-nn/include C:/src/tiny-cuda-nn/dependencies)
 
-# TensorflowCC::TensorflowCC
-target_link_libraries(test_kml PRIVATE xtensor cpr::cpr C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libssl64MD.lib C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libcrypto64MD.lib PUBLIC CUDA::cuda_driver CUDA::cudart CUDA::cublas CUDA::curand dlfcn-win32::dl C:/src/tensorflow/bazel-bin/tensorflow/libtensorflow_cc.so.2.5.2.if.lib C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib C:/src/tiny-cuda-nn/build/src/Release/tiny-cuda-nn.lib)
+target_link_libraries(test_kml PUBLIC ${XTENSOR_LIBS} ${CUDA_LIBS} ${TALIB_LIBS} C:/src/tiny-cuda-nn/build/src/Release/tiny-cuda-nn.lib)
 
 target_compile_options(test_kml PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${CUDA_NVCC_FLAGS}>)
 # target_compile_options(test_kml PRIVATE "/O3")
 #message(STATUS "updating options for target: " test_kml)
 
 
+
 ### pybind11 module ###
 
 pybind11_add_module(agen_xt_api "src/agen_xt_api.cpp" "src/common.cpp" "src/consolidate.cpp" "src/preprocess.cpp" "src/util.cpp")
 
-target_include_directories(agen_xt_api PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/share/Python39/Lib/site-packages/numpy/core/include C:/src/pybind11/include C:/share/Python39/include C:/share/Python39/Lib/site-packages/numpy/core/include)
+target_include_directories(agen_xt_api PUBLIC C:/share/Python39/Lib/site-packages/numpy/core/include C:/src/pybind11/include C:/share/Python39/include C:/share/Python39/Lib/site-packages/numpy/core/include)
 
-target_link_libraries(agen_xt_api PUBLIC xtensor C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib)
+target_link_libraries(agen_xt_api PUBLIC ${XTENSOR_LIBS} ${TALIB_LIBS})
 
 
 
@@ -250,8 +249,6 @@ set_property(TARGET agpred_library PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded"
 #set_property(TARGET agpred_library PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
 #set_property(TARGET agpred_library PROPERTY MSVC_RUNTIME_LIBRARY "")
 
-target_include_directories(agpred_library PUBLIC ${xtensor_INCLUDE_DIRS} C:/ta-lib/c/include C:/share/OpenSSL-Win64-1.1.1l/include ${cpr_INCLUDE_DIRS} C:/src/tensorflow/bazel-bin/tensorflow/include)
+#target_link_libraries(agpred_library PRIVATE ${CPR_LIBS} ${OPENSSL_LIBS} ${XTENSOR_LIBS} ${TENSORFLOW_LIBS} ${TALIB_LIBS})
 
-# TensorflowCC::TensorflowCC
-#target_link_libraries(agpred_library PRIVATE cpr::cpr C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libssl64MD.lib C:/share/OpenSSL-Win64-1.1.1l/lib/VC/libcrypto64MD.lib xtensor dlfcn-win32::dl C:/src/tensorflow/bazel-bin/tensorflow/libtensorflow_cc.so.2.5.2.if.lib C:/ta-lib/c/lib/ta_libc_cdr.lib C:/ta-lib/c/lib/ta_func_cdr.lib C:/ta-lib/c/lib/ta_common_cdr.lib C:/ta-lib/c/lib/ta_abstract_cdr.lib)
 
