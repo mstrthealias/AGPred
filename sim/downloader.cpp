@@ -43,6 +43,16 @@ void agpred::Downloader::onSimComplete(const Symbol& symbol)
 	{
 		do_flush(symbol);
 	}
+	else {
+		{
+			std::string file = "E:/_data/_v3.e/" + file_prefix_ + "." + std::to_string(cur_stage_) + ".exports" + (STAGED_INCLUDE_TIMESTAMPS ? ".ts" : "") + ".npy";
+
+			std::ofstream fout(file, std::ios::binary);
+			if (!fout.is_open())
+				throw std::runtime_error("Unable to open file " + file);
+			fout.write(std::string("[]").c_str(), 2);
+		}
+	}
 }
 
 void agpred::Downloader::onUpdate(const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades, const xtensor_outputs_interval& outputs)
