@@ -11,7 +11,6 @@
 #include "core/account_controller.h"
 
 #include "algos/ma3_ema9.h"
-#include "sim/simulated_account_adapter.h"
 #include "sim/simulator.h"  // TODO not directly include this?
 
 
@@ -117,7 +116,6 @@ int main(int argc, char* argv[])
 
     // TODO use lambda and call simulator and account in onSnapshot
     Simulator simulator;
-    //SimulatedAccountAdapter account_adapter(simulator);
 
     const AGMode mode = AGMode::LIVE_TEST;
 

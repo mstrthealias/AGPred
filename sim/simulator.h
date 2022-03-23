@@ -5,7 +5,6 @@
 #include <map>
 #include <algorithm>
 
-#include "simulated_account_adapter.h"
 #include "../src/common.h"
 #include "../core/core.h"
 
@@ -36,7 +35,7 @@ namespace agpred {
 	};
 
 
-	class Simulator final : public SimulatedAccountAdapter {
+	class Simulator final : public AccountAdapter {
 	public:
 		Simulator()
 		{
@@ -117,13 +116,13 @@ namespace agpred {
 			}
 		}
 
-		void onOrder(const id_t& order_id, const Symbol& symbol, const OrderType& order_type, const size_t& size) override
+		void newOrder(const id_t& order_id, const Symbol& symbol, const OrderType& order_type, const size_t& size) override
 		{
 			if (DEBUG_ORDERS)
 			{
 				const SymbolSimMarket& market = symbols_market_[symbol.symbol];
 				// TODO order_type/BUY/SELL
-				std::cout << "onOrder(" << symbol.symbol << ") MARKET, close=" << market.price << ", ask=" << market.ask << ", bid=" << market.bid << std::endl;
+				std::cout << "newOrder(" << symbol.symbol << ") MARKET, close=" << market.price << ", ask=" << market.ask << ", bid=" << market.bid << std::endl;
 			}
 
 			// MARKET order
@@ -139,13 +138,13 @@ namespace agpred {
 			});
 		}
 
-		void onOrder(const id_t& order_id, const Symbol& symbol, const OrderType& order_type, const size_t& size, const real_t& limit_price) override
+		void newOrder(const id_t& order_id, const Symbol& symbol, const OrderType& order_type, const size_t& size, const real_t& limit_price) override
 		{
 			if (DEBUG_ORDERS)
 			{
 				const SymbolSimMarket& market = symbols_market_[symbol.symbol];
 				// TODO order_type/BUY/SELL
-				std::cout << "onOrder(" << symbol.symbol << ") LIMIT limit_price=" << limit_price << ", close=" << market.price << ", ask=" << market.ask << ", bid=" << market.bid << std::endl;
+				std::cout << "newOrder(" << symbol.symbol << ") LIMIT limit_price=" << limit_price << ", close=" << market.price << ", ask=" << market.ask << ", bid=" << market.bid << std::endl;
 			}
 
 			// LIMIT order

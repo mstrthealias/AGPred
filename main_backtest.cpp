@@ -67,7 +67,6 @@ int main(int argc, char* argv[])
     //std::cout.precision(9);
 
     Simulator simulator;
-    //SimulatedAccountAdapter account_adapter(simulator);
 
     const AGMode mode = AGMode::BACK_TEST;
 
