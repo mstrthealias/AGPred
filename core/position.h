@@ -165,8 +165,10 @@ namespace agpred {
 		{
 			if (!isClosed())
 				throw std::logic_error("position not closed");
-
-			return static_cast<real_t>(num_shares_filled_) * (closed_avg - avg_price_);
+			if (type_ == PositionType::LONG)
+				return static_cast<real_t>(num_shares_filled_) * (closed_avg - avg_price_);
+			else
+				return static_cast<real_t>(num_shares_filled_) * (avg_price_ - closed_avg);
 		}
 	};
 
