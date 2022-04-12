@@ -4,7 +4,8 @@
 using namespace agpred;
 
 
-id_t PendingOrder::next_order_id = 1;
+id_t AccountStatusRequest::next_request_id = 1;  // TODO name as PendingAccountStatus?
+id_t PendingOrder::next_order_id = 1;  // TODO rename to OrderRequest?
 std::map<std::string, Symbol> Symbol::symbol_cache = {};
 
 

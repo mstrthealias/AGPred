@@ -19,6 +19,10 @@ using json = nlohmann::json;
 
 namespace agpred {
 	
+
+	using fn_symbol_positions_closed = std::function<void(const Symbol& symbol)>;
+
+
 	void onUpdateLog(const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed);
 
 
@@ -60,6 +64,8 @@ namespace agpred {
 		const std::array<EntryBase* const, Entries> entries_;
 		const std::array<ExitBase* const, Exits> exits_;
 
+		std::optional<AccountStatusRequest> pending_status_;
+
 		_SystemStopLossExit internal_stoploss_exit_;
 		
 		std::map<id_t, Position> positions_;
@@ -71,6 +77,8 @@ namespace agpred {
 		real_t total_pl = 0.0;
 		size_t total_trades = 0;
 
+		fn_symbol_positions_closed on_positions_closed_;
+
 	public:
 		AccountController(AccountAdapter& adapter, const AGMode mode, const std::array<AlgoBase* const, Algos>& algos, const std::array<EntryBase* const, Entries>& entries, const std::array<ExitBase* const, Exits>& exits)
 			: adapter_(adapter), mode_(mode), algos_(algos), entries_(entries), exits_(exits), internal_stoploss_exit_("_internal_stoploss_ exit")
@@ -79,9 +87,71 @@ namespace agpred {
 				[AccountPtr = this](id_t order_id, const Symbol& symbol, OrderStatus status, size_t filled, size_t remaining, real_t avg_price)
 				{
 					AccountPtr->onOrderStatus(order_id, symbol, status, filled, remaining, avg_price);
+				},
+				[AccountPtr = this](id_t request_id, const AccountStatus& status)
+				{
+					AccountPtr->onAccountStatus(request_id, status);
 				}
 			);
+
+			initAdapter();
 		}
+
+		size_t closePositions(const Symbol& symbol, const std::optional<PositionType>& type = std::nullopt, fn_symbol_positions_closed on_positions_closed = {})
+		{
+			std::cout << "closePositions(" << symbol.symbol << ")" << std::endl;
+
+			size_t req_close_cnt = 0;
+
+			on_positions_closed_ = on_positions_closed;
+
+			// exit any pending entries
+			if (symbol_pending_entries_.contains(symbol))
+			{
+				for (auto& p : symbol_pending_entries_.at(symbol))
+				{
+					if (!type.has_value() || type.value() == p.second.entry_data.type) {
+						cancelPendingPosition(symbol, p.first);
+						//++req_close_cnt;  // TODO onOrderCanceled callback?
+					}
+				}
+			}
+
+			// exit any filled/partially-filled positions
+			for (auto& p : positions_)
+			{
+				Position& position = p.second;
+				if (position.exiting() || position.symbol() != symbol)
+					continue;
+				else if (type.has_value() && type.value() != position.type())
+					continue;
+				// exit position...
+				exitPosition(position, {
+					position.type(),
+					0.0  // MARKET order
+				});
+				++req_close_cnt;
+			}
+
+			if (!req_close_cnt && on_positions_closed)
+			{
+				on_positions_closed_ = {};  // always clear this callback
+				on_positions_closed(symbol);
+			}
+
+			return req_close_cnt;
+		}
+
+		/*size_t closePositions()
+		{
+			std::cout << "closePositions()" << std::endl;
+
+			// called when day finishes, closes any open positions...
+
+			// TODO track symbols, loop and call closePositions()
+
+			return 0;
+		}*/
 
 		void onSnapshot(const Symbol& symbol, const Snapshot& snapshot)
 		{
@@ -160,13 +230,18 @@ namespace agpred {
 					const AlgoExitBase* algo_exit = dynamic_cast<const AlgoExitBase*>(exit);
 					if (algo_exit != nullptr && algo_result_map[algo_exit->algo_.id_])
 					{
+						// exit algo evaluated true: exit 
+						
 						// loop all entries for this symbol that do not have a position/have not been filled
 						if (symbol_pending_entries_.contains(symbol))
 						{
 							for (auto& p : symbol_pending_entries_.at(symbol))
 							{
-								if (!positions_.count(p.first))
-									cancelPendingPosition(symbol, p.first);
+								// TODO always cancel all pending entries?
+								// TODO track position type on ExitBase/algo, instead of in exit_data?
+								cancelPendingPosition(symbol, p.first);
+								//if (!positions_.contains(p.first))
+								//	cancelPendingPosition(symbol, p.first);
 							}
 						}
 
@@ -216,6 +291,33 @@ namespace agpred {
 			}
 
 		}
+
+
+		/**
+		 * @param order_id A unique order ID, set by client when creating the order (fe. next_order_id)
+		 */
+		void onAccountStatus(id_t request_id, const AccountStatus& status)
+		{
+			if (pending_status_.has_value()) {
+				if (pending_status_->request_id == request_id) {
+					pending_status_.reset();
+				}
+				else {
+					std::cout << "onAccountStatus() received invalid status update/incorrect request_id" << std::endl;
+					return;
+				}
+			}
+			else {
+				std::cout << "onAccountStatus() unexpected status update received" << std::endl;
+				return;
+			}
+
+			std::cout << "onAccountStatus() " << request_id << ", balance $" << status.account_balance << std::endl;
+
+			// TODO
+
+		}
+
 
 		/**
 		 * @param order_id A unique order ID, set by client when creating the order (fe. next_order_id)
@@ -275,14 +377,45 @@ namespace agpred {
 		{
 			return positions_.at(position_id);
 		}
-		
+
 		bool hasPosition(const id_t& position_id) const
 		{
 			return positions_.contains(position_id);
 		}
 
+		size_t getSymbolPositionCnt(const Symbol& symbol) const
+		{
+			size_t cnt = 0;
+			for (const auto& p : positions_)
+			{
+				const Position& position = p.second;
+				if (position.symbol() == symbol)
+					++cnt;
+			}
+			return cnt;
+		}
+
 
 	private:
+
+
+		void initAdapter()
+		{
+			adapter_.initialize();
+			// TODO onReadyCallback?
+
+			if (mode_ != AGMode::DOWNLOAD_ONLY) {
+				// request account status/balance
+				pending_status_.emplace(AccountStatusRequest::nextRequest());
+				adapter_.accountStatus(pending_status_->request_id);
+			}
+		}
+
+		void entryBlocked(const Symbol& symbol, const EntryData& entry_data)
+		{
+			const bool is_long = entry_data.type == PositionType::LONG;  // position is long, not the exit...
+			std::cout << "entryBlocked(" << symbol.symbol << ", " << (is_long ? "LONG" : "SHORT") << ") BLOCKED " << entry_data.size << std::endl;
+		}
 
 		void enterPosition(const Symbol& symbol, const EntryData& entry_data)
 		{
@@ -293,6 +426,11 @@ namespace agpred {
 			const OrderType order_type = is_long ? OrderType::BUY : OrderType::SELL;
 			const PendingEntry entry = PendingEntry::fromEntryData(entry_data);
 
+			if (!adapter_.allowEntry(symbol, entry_data, positions_))
+			{
+				entryBlocked(symbol, entry_data);
+				return;
+			}
 			std::cout << "enterPosition(" << symbol.symbol << ", " << (is_long ? "LONG" : "SHORT") << ", " << entry.order_id << ") " << (is_long ? "BUY " : "SELL ") << entry_data.size << " @ $" << entry_data.limit_price << std::endl;
 
 			pending_entries_.emplace(std::pair<id_t, PendingEntry>(entry.order_id, entry));
@@ -401,7 +539,19 @@ namespace agpred {
 				const real_t pl = position.getClosedPL(price);
 				total_pl += pl;
 				total_trades++;
-				std::cout << "  onExitFill(" << symbol.symbol << ") closed PL $" << pl << std::endl;
+				if (pl < 0)
+					std::cout << "  onExitFill(" << symbol.symbol << ") closed PL $" << "\x1B[31m" << pl << "\033[0m" << std::endl;
+				else
+					std::cout << "  onExitFill(" << symbol.symbol << ") closed PL $" << "\x1B[32m" << pl << "\033[0m" << std::endl;
+
+
+				if (on_positions_closed_ && (positions_.empty() || !getSymbolPositionCnt(symbol)))
+				{
+					// fire on_positions_closed_ callback if set, 
+					auto fn_on_closed = on_positions_closed_;
+					on_positions_closed_ = {};  // always clear this callback
+					fn_on_closed(symbol);
+				}
 			}
 		}
 

@@ -37,12 +37,43 @@ namespace agpred {
 
 	class Simulator final : public AccountAdapter {
 	public:
-		Simulator()
+		Simulator(const AccountStatus& account_info)
+			: account_info_(account_info), account_balance_(account_info.account_balance)
 		{
+		}
+
+		void initialize()
+		{
+			std::cout << "Simulator.initialize()" << std::endl;
+
+		}
+
+		void accountStatus(const id_t& request_id)
+		{
+			// account status update request...
+			// TODO
+			AccountStatus status = {
+				.account_balance = account_balance_,
+				.max_trade_loss = account_info_.max_trade_loss,
+				.max_daily_loss = account_info_.max_daily_loss,
+			};
+
+			// this would normally fire async...
+			// TODO schedule a job in a nextTick, to simulate async?
+			on_account_status_(request_id, status);
+		}
+
+		bool allowEntry(const Symbol& symbol, const EntryData& entry_data, const std::map<id_t, Position>& positions)
+		{
+			// TODO
+			return positions.size() < 1;
+			//return true; // positions.size() <= 2;
 		}
 
 		void initSymbol(const Symbol& symbol)
 		{
+			std::cout << "Simulator.initSymbol()" << std::endl;
+
 			symbols_market_.emplace(std::pair<std::string, SymbolSimMarket>(symbol.symbol, { 0.0, 0.0, 0.0, 0, 0 }));
 		}
 
@@ -261,6 +292,10 @@ namespace agpred {
 		}
 
 	private:
+		const AccountStatus account_info_;
+
+		real_t account_balance_;
+
 		//std::map<Symbol, SymbolSimMarket, _compare_symbol> symbols_market_;  // TODO index by char*?
 		std::map<std::string, SymbolSimMarket> symbols_market_;  // TODO index by char*?
 

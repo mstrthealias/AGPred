@@ -86,6 +86,36 @@ namespace agpred {
 	};
 
 
+	struct AccountStatus {
+		const real_t account_balance;
+		const real_t max_trade_loss;
+		const real_t max_daily_loss;
+	};
+
+
+	struct AccountStatusRequest {
+		const id_t request_id = 0;
+		json data;
+
+		static AccountStatusRequest nextRequest()
+		{
+			return {
+					next_request_id++,
+					{}
+			};
+		}
+
+	private:
+		AccountStatusRequest(const id_t request_id, const json& data) 
+			: request_id(request_id), data(data)
+		{
+		}
+
+		/*inline*/ static id_t next_request_id/* = 1*/;
+
+	};
+
+
 	struct Symbol {
 		const std::string symbol;
 		const Market market = Market::NASDAQ;  // TODO

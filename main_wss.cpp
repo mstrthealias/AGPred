@@ -17,6 +17,12 @@
 using namespace agpred;
 
 
+// TODO
+const real_t INITIAL_BALANCE = 100000.0;
+const real_t MAX_LOSS_PER_TRADE = 175.0;
+const real_t MAX_LOSS_DAILY = 350;
+
+
 // TODO abstract this...
 MA3EMA9Algo algo_ma_above("ma3_ema9", false);
 MA3EMA9Algo algo_ma_below("ma3_ema9", true);
@@ -115,7 +121,11 @@ int main(int argc, char* argv[])
     std::string uri = "wss://socket.polygon.io/stocks";
 
     // TODO use lambda and call simulator and account in onSnapshot
-    Simulator simulator;
+    Simulator simulator({
+        .account_balance = INITIAL_BALANCE,
+        .max_trade_loss = MAX_LOSS_PER_TRADE,
+        .max_daily_loss = MAX_LOSS_DAILY
+    });
 
     const AGMode mode = AGMode::LIVE_TEST;
 
