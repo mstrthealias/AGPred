@@ -9,7 +9,8 @@
 #include <xtensor/xvectorize.hpp>
 #include <xtensor/xview.hpp>
 
-#include "../src/common.h" 
+#include "../src/common.h"
+#include "../src/util.h"
 #include "core.h"
 
 
@@ -87,11 +88,14 @@ public:
 				std::cout << "push() full start->end " << prev_start << "->" << prev_end << " TO " << start_ << "->" << end_ << std::endl;
         }
 
+        const auto bid = static_cast<_Treal>((_Val.quote.bid <= 0 ? 0.0f : std::log(_Val.quote.bid)));
+        const auto ask = static_cast<_Treal>((_Val.quote.ask <= 0 ? 0.0f : std::log(_Val.quote.ask)));
+
         timestamp_[end_] = static_cast<_Ttime>(static_cast<real_t>(_Val.quote.timestamp) / 1000.0);
-        bid_[end_] = static_cast<_Treal>(_Val.quote.bid);
-        ask_[end_] = static_cast<_Treal>(_Val.quote.ask);
-        bid_size_[end_] = static_cast<_Tsize>(_Val.quote.bid_size);
-        ask_size_[end_] = static_cast<_Tsize>(_Val.quote.ask_size);
+        bid_[end_] = bid;
+        ask_[end_] = ask;
+        bid_size_[end_] = static_cast<_Tsize>(std::cbrt(_Val.quote.bid_size * bid));
+        ask_size_[end_] = static_cast<_Tsize>(std::cbrt(_Val.quote.ask_size * ask));
         cond1_[end_] = static_cast<_Tcond>(static_cast<int32_t>(_Val.cond[0]));
         cond2_[end_] = static_cast<_Tcond>(static_cast<int32_t>(_Val.cond[1]));
         cond3_[end_] = static_cast<_Tcond>(static_cast<int32_t>(_Val.cond[2]));
@@ -341,9 +345,10 @@ public:
                 std::cout << "push() full start->end " << prev_start << "->" << prev_end << " TO " << start_ << "->" << end_ << std::endl;
         }
 
+        const auto price = static_cast<_Treal>((_Val.trade.price <= 0 ? 0.0f : std::log(_Val.trade.price)));
         timestamp_[end_] = static_cast<_Ttime>(static_cast<real_t>(_Val.trade.timestamp) / 1000.0);
-        price_[end_] = static_cast<_Treal>(_Val.trade.price);
-        size_[end_] = static_cast<_Tsize>(_Val.trade.size);
+        price_[end_] = price;
+        size_[end_] = static_cast<_Tsize>(std::cbrt(_Val.trade.size * price));
         cond1_[end_] = static_cast<_Tcond>(static_cast<uint32_t>(_Val.cond[0]));
         cond2_[end_] = static_cast<_Tcond>(static_cast<uint32_t>(_Val.cond[1]));
         cond3_[end_] = static_cast<_Tcond>(static_cast<uint32_t>(_Val.cond[2]));
