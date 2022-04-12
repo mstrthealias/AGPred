@@ -81,7 +81,7 @@ static const std::array<std::tuple<unsigned int, timestamp_s_t, unsigned int, Ti
 	std::make_tuple<unsigned int, timestamp_s_t, unsigned int, Timeframes::Pos>(1, 345600, 350, Timeframes::Pos::_1min),  // 1min, 86400*4 345600, limit=350;  Note: 345600 incase last day is monday and friday is holiday
 	std::make_tuple<unsigned int, timestamp_s_t, unsigned int, Timeframes::Pos>(5, 432000, 1750, Timeframes::Pos::_5min),  // 5min, 86400*5 432000, limit=1750
 	std::make_tuple<unsigned int, timestamp_s_t, unsigned int, Timeframes::Pos>(15, 950400, 5000, Timeframes::Pos::_15min),  // 15min, 86400*11 950400, limit=5000
-	std::make_tuple<unsigned int, timestamp_s_t, unsigned int, Timeframes::Pos>(60, 2851200, 50000, Timeframes::Pos::_1hr),  // 1hr, 86400*33 2851200, limit=50000
+	std::make_tuple<unsigned int, timestamp_s_t, unsigned int, Timeframes::Pos>(60, 2851200, 20000, Timeframes::Pos::_1hr),  // 1hr, 86400*33 2851200, limit=20000
 	std::make_tuple<unsigned int, timestamp_s_t, unsigned int, Timeframes::Pos>(240, 9072000, 50000, Timeframes::Pos::_4hr),  // 4hr, 86400*105 9072000, limit=50000
 	std::make_tuple<unsigned int, timestamp_s_t, unsigned int, Timeframes::Pos>(1440, 21600000, 250, Timeframes::Pos::_1day),  // 1day, 86400*250 21600000, limit=250
 	std::make_tuple<unsigned int, timestamp_s_t, unsigned int, Timeframes::Pos>(10080, 151200000, 900, Timeframes::Pos::_1wk),  // 1wk, 86400*1750 151200000, limit=900

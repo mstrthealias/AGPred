@@ -1482,7 +1482,7 @@ void DataController::initSymbol(const Symbol& symbol, std::chrono::seconds ts)
 		{
 		case 1:
 			{
-				req_start_ts_1min = req_end_ts - std::get<1>(tpl) * SEC_TO_US;
+				req_start_ts_1min = req_end_ts - std::get<1>(tpl) * MIN_TO_US;
 				xtensor_ts_interval& dest_ts = (*symbols_ts_1min_)[pos];
 				xtensor_raw_interval& dest = (*symbols_1min_)[pos];
 				PolygonIoAdapter::getAggregateHistory(dest_ts, dest, symbol.symbol, std::get<0>(tpl), req_start_ts_1min, req_end_ts, true, std::get<2>(tpl));
@@ -1491,7 +1491,7 @@ void DataController::initSymbol(const Symbol& symbol, std::chrono::seconds ts)
 		case 5:
 			{
 				const timestamp_us_t end_ts = static_cast<timestamp_us_t>(req_end_ts / (300 * SEC_TO_US)) * 300 * SEC_TO_US;
-				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * SEC_TO_US;
+				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * MIN_TO_US;
 				xtensor_ts_interval& dest_ts = (*symbols_ts_5min_)[pos];
 				xtensor_raw_interval& dest = (*symbols_5min_)[pos];
 				PolygonIoAdapter::getAggregateHistory(dest_ts, dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
@@ -1500,7 +1500,7 @@ void DataController::initSymbol(const Symbol& symbol, std::chrono::seconds ts)
 		case 15:
 			{
 				const timestamp_us_t end_ts = static_cast<timestamp_us_t>(req_end_ts / (900 * SEC_TO_US)) * 900 * SEC_TO_US;
-				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * SEC_TO_US;
+				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * MIN_TO_US;
 				xtensor_ts_interval& dest_ts = (*symbols_ts_15min_)[pos];
 				xtensor_raw_interval& dest = (*symbols_15min_)[pos];
 				PolygonIoAdapter::getAggregateHistory(dest_ts, dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
@@ -1509,7 +1509,7 @@ void DataController::initSymbol(const Symbol& symbol, std::chrono::seconds ts)
 		case 60:
 			{
 				const timestamp_us_t end_ts = static_cast<timestamp_us_t>(req_end_ts / (3600 * SEC_TO_US)) * 3600 * SEC_TO_US;
-				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * SEC_TO_US;
+				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * MIN_TO_US;
 				xtensor_ts_interval& dest_ts = (*symbols_ts_1hr_)[pos];
 				xtensor_raw_interval& dest = (*symbols_1hr_)[pos];
 				PolygonIoAdapter::getAggregateHistory(dest_ts, dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
@@ -1518,7 +1518,7 @@ void DataController::initSymbol(const Symbol& symbol, std::chrono::seconds ts)
 		case 240:
 			{
 				const timestamp_us_t end_ts = static_cast<timestamp_us_t>(req_end_ts / (3600 * SEC_TO_US)) * 3600 * SEC_TO_US;
-				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * SEC_TO_US;
+				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * MIN_TO_US;
 				xtensor_ts_interval& dest_ts = (*symbols_ts_4hr_)[pos];
 				xtensor_raw_interval& dest = (*symbols_4hr_)[pos];
 				PolygonIoAdapter::getAggregateHistory(dest_ts, dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
@@ -1527,7 +1527,7 @@ void DataController::initSymbol(const Symbol& symbol, std::chrono::seconds ts)
 		case 1440:
 			{
 				const timestamp_us_t end_ts = static_cast<timestamp_us_t>(req_end_ts / (3600 * SEC_TO_US)) * 3600 * SEC_TO_US;
-				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * SEC_TO_US;
+				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * MIN_TO_US;
 				xtensor_ts_interval& dest_ts = (*symbols_ts_1d_)[pos];
 				xtensor_raw_interval& dest = (*symbols_1d_)[pos];
 				PolygonIoAdapter::getAggregateHistory(dest_ts, dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
@@ -1536,7 +1536,7 @@ void DataController::initSymbol(const Symbol& symbol, std::chrono::seconds ts)
 		case 10080:
 			{
 				const timestamp_us_t end_ts = static_cast<timestamp_us_t>(req_end_ts / (3600 * SEC_TO_US)) * 3600 * SEC_TO_US;
-				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * SEC_TO_US;
+				const timestamp_us_t start_ts = end_ts - std::get<1>(tpl) * MIN_TO_US;
 				xtensor_ts_interval& dest_ts = (*symbols_ts_1w_)[pos];
 				xtensor_raw_interval& dest = (*symbols_1w_)[pos];
 				PolygonIoAdapter::getAggregateHistory(dest_ts, dest, symbol.symbol, std::get<0>(tpl), start_ts, end_ts, true, std::get<2>(tpl));
