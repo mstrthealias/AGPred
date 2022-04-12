@@ -3,34 +3,13 @@
 
 
 #include "../core/strategy.h"
+#include "algo_common.h"
 
 
 namespace agpred {
 
 
 	int calc_raw_signal(const xtensor_raw& raw);
-
-
-	class TakeProfitExit final : public SnapshotExitBase {
-	public:
-		explicit TakeProfitExit(const std::string& name) : SnapshotExitBase(name)
-		{
-		}
-		~TakeProfitExit() = default;
-
-		bool call(const Position& position, const Snapshot& snapshot) const override
-		{
-			// TODO
-			return snapshot.nbbo.bid >= position.avg_price() + 1.337;
-			//return snapshot.nbbo.bid >= position.avg_price() + 0.77;
-		}
-
-		ExitData operator() (const Position& position, const Symbol& symbol, const Snapshot& snapshot) const override
-		{
-			std::cout << "TakeProfitExit: ExitData CALL()" << std::endl;
-			return ExitData{ position.type(), 0.0};
-		}
-	};
 
 
 

@@ -59,7 +59,7 @@ void agpred::Downloader::onUpdate(const Symbol& symbol, const Snapshot& snapshot
 {
 	//(NUM_INTERVALS, NUM_TIMESTEMPS, NUM_COLUMNS)
 
-	auto nan_sum = xt::sum(xt::isnan(data))(0) + xt::sum(xt::isnan(data_processed))(0) + xt::sum(xt::isnan(outputs))(0);
+	auto nan_sum = xt::sum(!xt::isfinite(data))(0) + xt::sum(!xt::isfinite(data_processed))(0) + xt::sum(!xt::isfinite(outputs))(0);
 	if (nan_sum > 0) {
 		std::cout << "SKIP onUpdate() " << nan_sum << " nan value(s) found" << std::endl;
 		return;

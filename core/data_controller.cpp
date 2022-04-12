@@ -1047,6 +1047,12 @@ void DataController::process_quote_finish(const size_t& pos, const timestamp_us_
 	}
 }
 
+const Snapshot& DataController::getSnapshot(const Symbol& symbol) const
+{
+	const auto& pos = symbols_pos_.at(symbol);
+	return snapshots_[pos];
+}
+
 void DataController::onPayloads(const json& payloads)
 {
 	if (!payloads.is_array() || payloads.empty())
@@ -1450,14 +1456,16 @@ void DataController::initSymbol(const Symbol& symbol, std::chrono::seconds ts)
 			trades2.push(trades.front());
 			trades.pop();
 		}
+		auto& latest_quotes = (*latest_quotes_)[pos];
+		auto& latest_trades = (*latest_trades_)[pos];
 		while (!quotes2.empty())
 		{
-			(*latest_quotes_)[pos].push(quotes2.front());
+			latest_quotes.push(quotes2.front());
 			quotes2.pop();
 		}
 		while (!trades2.empty())
 		{
-			(*latest_trades_)[pos].push(trades2.front());
+			latest_trades.push(trades2.front());
 			trades2.pop();
 		}
     }

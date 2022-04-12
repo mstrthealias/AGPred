@@ -18,7 +18,7 @@ namespace agpred {
 
 	static const std::string POLYGON_BASE_URI = "https://api.polygon.io/";
 
-	constexpr unsigned int MAX_HISTORY_QUOTE_REQUESTS = 25;  // TODO remove
+	constexpr unsigned int MAX_HISTORY_QUOTE_REQUESTS = 45;  // TODO remove
 
 	constexpr unsigned int MAX_LIMIT = 50000;
 

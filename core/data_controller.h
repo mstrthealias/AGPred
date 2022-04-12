@@ -64,6 +64,8 @@ namespace agpred {
 		void initSymbol(const Symbol& symbol, std::chrono::seconds ts);
 		void destroySymbol(const Symbol& symbol);
 
+		const Snapshot& getSnapshot(const Symbol& symbol) const;
+
 		void onPayloads(const json& payloads);
 
 	private:

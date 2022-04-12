@@ -7,6 +7,7 @@
 
 #include <xtensor/xio.hpp>
 #include <xtensor/xvectorize.hpp>
+#include <xtensor/xview.hpp>
 
 #include "../src/common.h" 
 #include "core.h"

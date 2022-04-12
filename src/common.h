@@ -346,12 +346,12 @@ struct bar_ref_t
 	using real_type = Real;
 	using volume_type = Volume;
 
-	Time& timestamp = 0;
-	Real& open = 0.0;
-	Real& high = 0.0;
-	Real& low = 0.0;
-	Real& close = 0.0;
-	Volume& volume = 0;
+	Time& timestamp;
+	Real& open;
+	Real& high;
+	Real& low;
+	Real& close;
+	Volume& volume;
 };
 
 template <typename Real, typename Volume, typename Time, typename Size>
@@ -359,16 +359,16 @@ struct bar_full_ref_t : bar_ref_t<Real, Volume, Time>
 {
 	using size_type = Size;
 
-	Real& bid = 0.0;
-	Real& bid_high = 0.0;
-	Real& bid_low = 0.0;
+	Real& bid;
+	Real& bid_high;
+	Real& bid_low;
 
-	Real& ask = 0.0;
-	Real& ask_high = 0.0;
-	Real& ask_low = 0.0;
+	Real& ask;
+	Real& ask_high;
+	Real& ask_low;
 
-	Size& bid_size = 0;
-	Size& ask_size = 0;
+	Size& bid_size;
+	Size& ask_size;
 };
 
 

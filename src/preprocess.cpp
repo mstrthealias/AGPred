@@ -283,7 +283,7 @@ real_t mk_range_pos(real_t range_t, real_t range_b)
 	if (range_t + range_b > 0)
 		return 0.5 - (range_t / (range_t + range_b));
 	else
-		return 0;
+		return 0.0f;
 }
 
 
@@ -296,7 +296,10 @@ real_t mk_norm_stddevs(real_t val, real_t stddev)
 real_t mk_norm_n_stddevs(real_t val, real_t regr, real_t stddev)
 {
 	// calculate number of stddev[1]
-	return (val - regr) / stddev;
+	if (stddev == 0)
+		return 0.0f;
+	else
+		return (val - regr) / stddev;
 	//dfin[k] = (dfin[k] - regr) / stddev
 	//// normalize to price from linear regression
 	//// dfin[k] = dfin[k] - regr
@@ -402,7 +405,7 @@ real_t mk_adi_pre_cumsum(real_t high, real_t low, real_t close, real_t volume)
 /*real_t mk_adi_obv_ratio(real_t obv, real_t adi)
 {
 	if (dbl_equal(adi, 0.0))
-		return 0;
+		return 0.0f;
 	else
 		return obv / (adi * 10.0);
 	//dfin['adi_obv_ratio'] = dfin['obv'] / (adi * 10.0)
@@ -418,7 +421,10 @@ real_t mk_adi_pre_cumsum(real_t high, real_t low, real_t close, real_t volume)
 
 real_t mk_xfrm_ln(real_t val)
 {
-	return std::log(val);
+	if (val <= 0)
+		return 0.0f;
+	else
+		return std::log(val);
 	//dfin['close_ln'] = (close + 1).apply(np.log) / 10.0
 	////dfin['close_ln'] = close.apply(np.log) / 10.0
 }
@@ -621,7 +627,6 @@ void process_step1_single_2a(xt::xarray<timestamp_us_t>& ts_orig, xt::xarray<rea
 
 void _process_step2_single(xt::xarray<real_t>& o_results, const char* symbol, const xt::xarray<real_t>& a_step1, const bool training, const int timeframe, const int interval, const bool ext_hours)
 {
-
     xt::row(o_results, ColPos::In::open) = xt::row(a_step1, ColPos::In::open);
     xt::row(o_results, ColPos::In::high) = xt::row(a_step1, ColPos::In::high);
     xt::row(o_results, ColPos::In::low) = xt::row(a_step1, ColPos::In::low);
@@ -639,9 +644,16 @@ void _process_step2_single(xt::xarray<real_t>& o_results, const char* symbol, co
 		xt::row(o_results, ColPos::In::bid_high) = xt::row(a_step1, ColPos::In::bid_high);
 		xt::row(o_results, ColPos::In::bid_low) = xt::row(a_step1, ColPos::In::bid_low);
 	}
-	//else {
-	//	// otherwise set zero? assume zero...
-	//}
+	else {
+		// otherwise set zero
+		const auto zeros = xt::zeros<real_t>(xt::row(a_step1, ColPos::In::open).shape());
+		xt::row(o_results, ColPos::In::ask) = zeros;
+		xt::row(o_results, ColPos::In::bid) = zeros;
+		xt::row(o_results, ColPos::In::ask_high) = zeros;
+		xt::row(o_results, ColPos::In::ask_low) = zeros;
+		xt::row(o_results, ColPos::In::bid_high) = zeros;
+		xt::row(o_results, ColPos::In::bid_low) = zeros;
+	}
 
     // Track step1 run time for each interval
     //now = time.time()
@@ -1592,12 +1604,12 @@ void do_norm(xt::xarray<real_t>& o_results, const unsigned int interval, const b
 	xt::row(o_results, ColPos::Norm::close_ln) = vec_xfrm_ln(r_close);  //:close_ln
 	if (has_bid_ask)
 	{
-		xt::row(o_results, ColPos::In::ask) = xt::nan_to_num(vec_xfrm_ln(xt::row(o_results, ColPos::In::ask)));  //:ask
-		xt::row(o_results, ColPos::In::bid) = xt::nan_to_num(vec_xfrm_ln(xt::row(o_results, ColPos::In::bid)));  //:bid
-		xt::row(o_results, ColPos::In::ask_high) = xt::nan_to_num(vec_xfrm_ln(xt::row(o_results, ColPos::In::ask_high)));  //:ask_high
-		xt::row(o_results, ColPos::In::ask_low) = xt::nan_to_num(vec_xfrm_ln(xt::row(o_results, ColPos::In::ask_low)));  //:ask_low
-		xt::row(o_results, ColPos::In::bid_high) = xt::nan_to_num(vec_xfrm_ln(xt::row(o_results, ColPos::In::bid_high)));  //:bid_high
-		xt::row(o_results, ColPos::In::bid_low) = xt::nan_to_num(vec_xfrm_ln(xt::row(o_results, ColPos::In::bid_low)));  //:bid_low
+		xt::row(o_results, ColPos::In::ask) = vec_xfrm_ln(xt::row(o_results, ColPos::In::ask));  //:ask
+		xt::row(o_results, ColPos::In::bid) = vec_xfrm_ln(xt::row(o_results, ColPos::In::bid));  //:bid
+		xt::row(o_results, ColPos::In::ask_high) = vec_xfrm_ln(xt::row(o_results, ColPos::In::ask_high));  //:ask_high
+		xt::row(o_results, ColPos::In::ask_low) = vec_xfrm_ln(xt::row(o_results, ColPos::In::ask_low));  //:ask_low
+		xt::row(o_results, ColPos::In::bid_high) = vec_xfrm_ln(xt::row(o_results, ColPos::In::bid_high));  //:bid_high
+		xt::row(o_results, ColPos::In::bid_low) = vec_xfrm_ln(xt::row(o_results, ColPos::In::bid_low));  //:bid_low
 	}
 
 	// calculate hlc3_ln, for volume normalization

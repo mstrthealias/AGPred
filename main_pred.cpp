@@ -59,11 +59,11 @@ int load_npy_img(const std::string& filename, tensorflow::Tensor& t_features, te
         auto x_features = xt::load_npy<float>(file_stream);  //(1024, 7, 17, 100)
         std::cout << "x_features.shape: " << x_features.shape() << std::endl;
 
-        auto x_numeric = xt::view(x_features, xt::all(), xt::all(), xt::all(), xt::range(0, 39));
+        auto x_numeric = xt::view(x_features, xt::all(), xt::all(), xt::all(), xt::range(0, 44));
         std::cout << "x_numeric.shape: " << x_numeric.shape() << std::endl;
         std::copy(x_numeric.cbegin(), x_numeric.cend(), t_features.flat<float>().data());
 
-        auto x_candles = xt::view(x_features, xt::all(), xt::all(), xt::all(), xt::range(39, 100));
+        auto x_candles = xt::view(x_features, xt::all(), xt::all(), xt::all(), xt::range(44, 44 + 61));
         std::cout << "x_candles.shape: " << x_candles.shape() << std::endl;
         std::copy(x_candles.cbegin(), x_candles.cend(), t_candles.flat<float>().data());
 
@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
     // Fills in this from a session run call
     std::vector<tensorflow::Tensor> out;
 
-    tensorflow::string dir = "pyfiles/model";
+    tensorflow::string dir = "pyfiles/model_long.bc";
     std::string npy_file = "pyfiles/EVAL.0.pkl";
     std::string prediction_npy_file = "pyfiles/predictions.npy";
 
@@ -202,10 +202,10 @@ int main(int argc, char* argv[])
     //auto outputs2 = model_def.outputs().at(_output_name2);
     //auto output_name2 = outputs2.name();
 
-    tensorflow::Tensor t_features(tensorflow::DT_FLOAT, tensorflow::TensorShape({ 1024, 7, 17, 39 }));
-    tensorflow::Tensor t_candles(tensorflow::DT_FLOAT, tensorflow::TensorShape({ 1024, 7, 17, 61 }));
-    tensorflow::Tensor t_trades(tensorflow::DT_FLOAT, tensorflow::TensorShape({ 1024, 15000, 5 }));
-    tensorflow::Tensor t_quotes(tensorflow::DT_FLOAT, tensorflow::TensorShape({ 1024, 15000, 7 }));
+    tensorflow::Tensor t_features(tensorflow::DT_FLOAT, tensorflow::TensorShape({ 256, 7, 17, 44 }));
+    tensorflow::Tensor t_candles(tensorflow::DT_FLOAT, tensorflow::TensorShape({ 256, 7, 17, 61 }));
+    tensorflow::Tensor t_trades(tensorflow::DT_FLOAT, tensorflow::TensorShape({ 256, 15000, 5 }));
+    tensorflow::Tensor t_quotes(tensorflow::DT_FLOAT, tensorflow::TensorShape({ 256, 15000, 7 }));
 
     int result = load_npy_img(npy_file, t_features, t_candles, t_trades, t_quotes);
     
@@ -248,9 +248,9 @@ int main(int argc, char* argv[])
     }
 
     // perform sigmoid and convert probability to 0/1
-    predictions = vec_sigmoid(predictions);
+    //predictions = vec_sigmoid(predictions);
     predictions = vec_prediction(predictions, 0.51);
-    //std::cout << "predictions: " << predictions << std::endl;
+    std::cout << "predictions: " << predictions << std::endl;
 
     xt::dump_npy(prediction_npy_file, predictions);
 

@@ -5,7 +5,6 @@
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
 
-#include <xtensor/xview.hpp>
 #include <xtensor/xdynamic_view.hpp>
 #include <xtensor/xio.hpp>
 
@@ -381,7 +380,7 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 				if (ts_steps[i_loc] == 0)
 				{
 					// find the first non-zero timestamp
-					const auto i_timestamps = xt::view(i_dest_ts, xt::all(), ColPos::In::timestamp);  // shape: (timesteps,)
+					const auto i_timestamps = xt::dynamic_view(i_dest_ts, { xt::all(), ColPos::In::timestamp });  // shape: (timesteps,)
 					auto i_where = xt::where(i_timestamps >= first_timestamp);
 					if (i_where.empty())
 					{
@@ -421,6 +420,8 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 				//ctime_s(tmp_str, sizeof tmp_str, &tmp_time);
 				//std::cout << "mergeQuotesAggregates() [" << interval << "] in  dest_ts: " << tmp_str;  // << std::endl
 
+				size_t last_row = SIZE_MAX;
+
 				for (const json& quote : res["results"])
 				{
 					// seek dest_row to the position of the row in dest to update
@@ -430,12 +431,27 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 					const real_t bidPrice = quote["p"].get<double>();
 					const auto& bidSize = quote["s"].get<uint32_t>();
 					bool reset_bar = false;
-					
+
 					// seek to correct position
 					while (cur_ts >= dest_ts)
 					{
 						if (dest_row < 1)
 							break;
+
+						if (last_row != SIZE_MAX && last_row != dest_row) {
+							// skipped a row, bring over values from the last row...
+							i_dest(dest_row, ColPos::In::ask) = i_dest(dest_row + 1, ColPos::In::ask);
+							i_dest(dest_row, ColPos::In::ask_high) = i_dest(dest_row + 1, ColPos::In::ask);
+							i_dest(dest_row, ColPos::In::ask_low) = i_dest(dest_row + 1, ColPos::In::ask);
+							i_dest(dest_row, ColPos::In::bid) = i_dest(dest_row + 1, ColPos::In::bid);
+							i_dest(dest_row, ColPos::In::bid_high) = i_dest(dest_row + 1, ColPos::In::bid);
+							i_dest(dest_row, ColPos::In::bid_low) = i_dest(dest_row + 1, ColPos::In::bid);
+							i_dest(dest_row, ColPos::In::open) = i_dest(dest_row + 1, ColPos::In::close);
+							i_dest(dest_row, ColPos::In::high) = i_dest(dest_row + 1, ColPos::In::close);
+							i_dest(dest_row, ColPos::In::low) = i_dest(dest_row + 1, ColPos::In::close);
+							i_dest(dest_row, ColPos::In::close) = i_dest(dest_row + 1, ColPos::In::close);
+						}
+
 						dest_row--;
 						dest_ts = static_cast<timestamp_us_t>(i_dest_ts(dest_row, ColPos::In::timestamp));  // TODO subtract instead?
 					}
@@ -455,6 +471,22 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 							break;
 						}
 						dest_ts = next_ts;
+
+						// TODO is this needed?
+						if (last_row != SIZE_MAX && last_row != dest_row) {
+							// skipped a row, bring over values from the last row...
+							i_dest(dest_row, ColPos::In::ask) = i_dest(dest_row + 1, ColPos::In::ask);
+							i_dest(dest_row, ColPos::In::ask_high) = i_dest(dest_row + 1, ColPos::In::ask);
+							i_dest(dest_row, ColPos::In::ask_low) = i_dest(dest_row + 1, ColPos::In::ask);
+							i_dest(dest_row, ColPos::In::bid) = i_dest(dest_row + 1, ColPos::In::bid);
+							i_dest(dest_row, ColPos::In::bid_high) = i_dest(dest_row + 1, ColPos::In::bid);
+							i_dest(dest_row, ColPos::In::bid_low) = i_dest(dest_row + 1, ColPos::In::bid);
+							i_dest(dest_row, ColPos::In::open) = i_dest(dest_row + 1, ColPos::In::close);
+							i_dest(dest_row, ColPos::In::high) = i_dest(dest_row + 1, ColPos::In::close);
+							i_dest(dest_row, ColPos::In::low) = i_dest(dest_row + 1, ColPos::In::close);
+							i_dest(dest_row, ColPos::In::close) = i_dest(dest_row + 1, ColPos::In::close);
+						}
+
 						dest_row--;
 
 						reset_bar = true;
@@ -493,6 +525,8 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 						ask_size = askSize;
 						bid_size = bidSize;
 					}
+
+					last_row = dest_row;
 				}
 
 				//tmp_time = static_cast<time_t>(dest_ts / SEC_TO_US);
