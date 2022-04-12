@@ -69,6 +69,19 @@ bool is_trading_day(std::chrono::system_clock::time_point tp)
 	return is_trading_day(local_tm.tm_mday, local_tm.tm_mon + 1, local_tm.tm_year + 1900);
 }
 
+constexpr float F_MAX = std::numeric_limits<float>::max();
+constexpr float F_MIN = std::numeric_limits<float>::min();
+
+real_t cleanup_float_errs(real_t val)
+{
+	if (val < -1e13 || val > 1e13)
+		return 0.0f;
+	//if (val >= F_MAX || val <= F_MIN)  // Note: this does not function correctly (fe. removes -1.51231)
+	//	return 0.0f;
+	else
+		return val;
+}
+
 
 std::chrono::system_clock::time_point to_time_point(int year, int mon, int day, int hour, int min, int is_dst)
 {

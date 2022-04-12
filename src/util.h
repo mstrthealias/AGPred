@@ -28,5 +28,11 @@ xt::xarray<real_t> _xt_nonans(const xt::xarray<real_t>& a_in, const ptrdiff_t& i
 void _xt_nonans_2a(xt::xarray<timestamp_us_t>& ts_in, xt::xarray<real_t>& a_in, const ptrdiff_t& index);
 
 
+real_t cleanup_float_errs(real_t val);
+
+const inline auto vec_cleanup_float_errs = xt::vectorize(cleanup_float_errs);
+
+
+
 #endif // UTIL_H
 

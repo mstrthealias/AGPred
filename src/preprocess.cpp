@@ -1385,6 +1385,7 @@ TA_RetCode do_ta(xt::xarray<real_t>& o_results)
 			return retCode;
 		}
 		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::ppo).begin());  //:ppo
+		xt::row(o_results, ColPos::TA::ppo) = vec_cleanup_float_errs(xt::nan_to_num(xt::row(o_results, ColPos::TA::ppo)));
 		
 		// 'ppo_diff'
 		// PPO SIGNAL = _ema(self._ppo, self._window_sign, self._fillna)
