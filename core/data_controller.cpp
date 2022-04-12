@@ -280,13 +280,31 @@ DataController::DataController(const AGMode mode, const fn_snapshot on_snapshot,
 			(*symbols_1min_)[2](ROW_POS, ColPos::In::ask), (*symbols_1min_)[2](ROW_POS, ColPos::In::ask_high), (*symbols_1min_)[2](ROW_POS, ColPos::In::ask_low),
 			(*symbols_1min_)[2](ROW_POS, ColPos::In::bid_size), (*symbols_1min_)[2](ROW_POS, ColPos::In::ask_size) } }),
 	latest_5min_({
-		BarRef{ (*symbols_ts_5min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[0](ROW_POS, ColPos::In::open), (*symbols_5min_)[0](ROW_POS, ColPos::In::high), (*symbols_5min_)[0](ROW_POS, ColPos::In::low), (*symbols_5min_)[0](ROW_POS, ColPos::In::close), (*symbols_5min_)[0](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_ts_5min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[1](ROW_POS, ColPos::In::open), (*symbols_5min_)[1](ROW_POS, ColPos::In::high), (*symbols_5min_)[1](ROW_POS, ColPos::In::low), (*symbols_5min_)[1](ROW_POS, ColPos::In::close), (*symbols_5min_)[1](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_ts_5min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[2](ROW_POS, ColPos::In::open), (*symbols_5min_)[2](ROW_POS, ColPos::In::high), (*symbols_5min_)[2](ROW_POS, ColPos::In::low), (*symbols_5min_)[2](ROW_POS, ColPos::In::close), (*symbols_5min_)[2](ROW_POS, ColPos::In::volume) } }),
+		BarFullRef{ { (*symbols_ts_5min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[0](ROW_POS, ColPos::In::open), (*symbols_5min_)[0](ROW_POS, ColPos::In::high), (*symbols_5min_)[0](ROW_POS, ColPos::In::low), (*symbols_5min_)[0](ROW_POS, ColPos::In::close), (*symbols_5min_)[0](ROW_POS, ColPos::In::volume), (*symbols_5min_)[0](ROW_POS, ColPos::In::alt1), (*symbols_5min_)[0](ROW_POS, ColPos::In::alt2), (*symbols_5min_)[0](ROW_POS, ColPos::In::alt3) },
+			(*symbols_5min_)[2](ROW_POS, ColPos::In::bid), (*symbols_5min_)[2](ROW_POS, ColPos::In::bid_high), (*symbols_5min_)[2](ROW_POS, ColPos::In::bid_low),
+			(*symbols_5min_)[2](ROW_POS, ColPos::In::ask), (*symbols_5min_)[2](ROW_POS, ColPos::In::ask_high), (*symbols_5min_)[2](ROW_POS, ColPos::In::ask_low),
+			(*symbols_5min_)[2](ROW_POS, ColPos::In::bid_size), (*symbols_5min_)[2](ROW_POS, ColPos::In::ask_size) },
+		BarFullRef{ { (*symbols_ts_5min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[1](ROW_POS, ColPos::In::open), (*symbols_5min_)[1](ROW_POS, ColPos::In::high), (*symbols_5min_)[1](ROW_POS, ColPos::In::low), (*symbols_5min_)[1](ROW_POS, ColPos::In::close), (*symbols_5min_)[1](ROW_POS, ColPos::In::volume), (*symbols_5min_)[1](ROW_POS, ColPos::In::alt1), (*symbols_5min_)[1](ROW_POS, ColPos::In::alt2), (*symbols_5min_)[1](ROW_POS, ColPos::In::alt3) },
+			(*symbols_5min_)[2](ROW_POS, ColPos::In::bid), (*symbols_5min_)[2](ROW_POS, ColPos::In::bid_high), (*symbols_5min_)[2](ROW_POS, ColPos::In::bid_low),
+			(*symbols_5min_)[2](ROW_POS, ColPos::In::ask), (*symbols_5min_)[2](ROW_POS, ColPos::In::ask_high), (*symbols_5min_)[2](ROW_POS, ColPos::In::ask_low),
+			(*symbols_5min_)[2](ROW_POS, ColPos::In::bid_size), (*symbols_5min_)[2](ROW_POS, ColPos::In::ask_size) },
+		BarFullRef{ { (*symbols_ts_5min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_5min_)[2](ROW_POS, ColPos::In::open), (*symbols_5min_)[2](ROW_POS, ColPos::In::high), (*symbols_5min_)[2](ROW_POS, ColPos::In::low), (*symbols_5min_)[2](ROW_POS, ColPos::In::close), (*symbols_5min_)[2](ROW_POS, ColPos::In::volume), (*symbols_5min_)[2](ROW_POS, ColPos::In::alt1), (*symbols_5min_)[2](ROW_POS, ColPos::In::alt2), (*symbols_5min_)[2](ROW_POS, ColPos::In::alt3) },
+			(*symbols_5min_)[2](ROW_POS, ColPos::In::bid), (*symbols_5min_)[2](ROW_POS, ColPos::In::bid_high), (*symbols_5min_)[2](ROW_POS, ColPos::In::bid_low),
+			(*symbols_5min_)[2](ROW_POS, ColPos::In::ask), (*symbols_5min_)[2](ROW_POS, ColPos::In::ask_high), (*symbols_5min_)[2](ROW_POS, ColPos::In::ask_low),
+			(*symbols_5min_)[2](ROW_POS, ColPos::In::bid_size), (*symbols_5min_)[2](ROW_POS, ColPos::In::ask_size) } }),
 	latest_15min_({
-		BarRef{ (*symbols_ts_15min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[0](ROW_POS, ColPos::In::open), (*symbols_15min_)[0](ROW_POS, ColPos::In::high), (*symbols_15min_)[0](ROW_POS, ColPos::In::low), (*symbols_15min_)[0](ROW_POS, ColPos::In::close), (*symbols_15min_)[0](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_ts_15min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[1](ROW_POS, ColPos::In::open), (*symbols_15min_)[1](ROW_POS, ColPos::In::high), (*symbols_15min_)[1](ROW_POS, ColPos::In::low), (*symbols_15min_)[1](ROW_POS, ColPos::In::close), (*symbols_15min_)[1](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_ts_15min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[2](ROW_POS, ColPos::In::open), (*symbols_15min_)[2](ROW_POS, ColPos::In::high), (*symbols_15min_)[2](ROW_POS, ColPos::In::low), (*symbols_15min_)[2](ROW_POS, ColPos::In::close), (*symbols_15min_)[2](ROW_POS, ColPos::In::volume) } }),
+		BarFullRef{ { (*symbols_ts_15min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[0](ROW_POS, ColPos::In::open), (*symbols_15min_)[0](ROW_POS, ColPos::In::high), (*symbols_15min_)[0](ROW_POS, ColPos::In::low), (*symbols_15min_)[0](ROW_POS, ColPos::In::close), (*symbols_15min_)[0](ROW_POS, ColPos::In::volume), (*symbols_15min_)[0](ROW_POS, ColPos::In::alt1), (*symbols_15min_)[0](ROW_POS, ColPos::In::alt2), (*symbols_15min_)[0](ROW_POS, ColPos::In::alt3) },
+			(*symbols_15min_)[2](ROW_POS, ColPos::In::bid), (*symbols_15min_)[2](ROW_POS, ColPos::In::bid_high), (*symbols_15min_)[2](ROW_POS, ColPos::In::bid_low),
+			(*symbols_15min_)[2](ROW_POS, ColPos::In::ask), (*symbols_15min_)[2](ROW_POS, ColPos::In::ask_high), (*symbols_15min_)[2](ROW_POS, ColPos::In::ask_low),
+			(*symbols_15min_)[2](ROW_POS, ColPos::In::bid_size), (*symbols_15min_)[2](ROW_POS, ColPos::In::ask_size) },
+		BarFullRef{ { (*symbols_ts_15min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[1](ROW_POS, ColPos::In::open), (*symbols_15min_)[1](ROW_POS, ColPos::In::high), (*symbols_15min_)[1](ROW_POS, ColPos::In::low), (*symbols_15min_)[1](ROW_POS, ColPos::In::close), (*symbols_15min_)[1](ROW_POS, ColPos::In::volume), (*symbols_15min_)[1](ROW_POS, ColPos::In::alt1), (*symbols_15min_)[1](ROW_POS, ColPos::In::alt2), (*symbols_15min_)[1](ROW_POS, ColPos::In::alt3) },
+			(*symbols_15min_)[2](ROW_POS, ColPos::In::bid), (*symbols_15min_)[2](ROW_POS, ColPos::In::bid_high), (*symbols_15min_)[2](ROW_POS, ColPos::In::bid_low),
+			(*symbols_15min_)[2](ROW_POS, ColPos::In::ask), (*symbols_15min_)[2](ROW_POS, ColPos::In::ask_high), (*symbols_15min_)[2](ROW_POS, ColPos::In::ask_low),
+			(*symbols_15min_)[2](ROW_POS, ColPos::In::bid_size), (*symbols_15min_)[2](ROW_POS, ColPos::In::ask_size) },
+		BarFullRef{ { (*symbols_ts_15min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[2](ROW_POS, ColPos::In::open), (*symbols_15min_)[2](ROW_POS, ColPos::In::high), (*symbols_15min_)[2](ROW_POS, ColPos::In::low), (*symbols_15min_)[2](ROW_POS, ColPos::In::close), (*symbols_15min_)[2](ROW_POS, ColPos::In::volume), (*symbols_15min_)[2](ROW_POS, ColPos::In::alt1), (*symbols_15min_)[2](ROW_POS, ColPos::In::alt2), (*symbols_15min_)[2](ROW_POS, ColPos::In::alt3) },
+			(*symbols_15min_)[2](ROW_POS, ColPos::In::bid), (*symbols_15min_)[2](ROW_POS, ColPos::In::bid_high), (*symbols_15min_)[2](ROW_POS, ColPos::In::bid_low),
+			(*symbols_15min_)[2](ROW_POS, ColPos::In::ask), (*symbols_15min_)[2](ROW_POS, ColPos::In::ask_high), (*symbols_15min_)[2](ROW_POS, ColPos::In::ask_low),
+			(*symbols_15min_)[2](ROW_POS, ColPos::In::bid_size), (*symbols_15min_)[2](ROW_POS, ColPos::In::ask_size) } }),
 	latest_1hr_({
 		BarRef{ (*symbols_ts_1hr_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[0](ROW_POS, ColPos::In::open), (*symbols_1hr_)[0](ROW_POS, ColPos::In::high), (*symbols_1hr_)[0](ROW_POS, ColPos::In::low), (*symbols_1hr_)[0](ROW_POS, ColPos::In::close), (*symbols_1hr_)[0](ROW_POS, ColPos::In::volume), (*symbols_1hr_)[0](ROW_POS, ColPos::In::alt1), (*symbols_1hr_)[0](ROW_POS, ColPos::In::alt2), (*symbols_1hr_)[0](ROW_POS, ColPos::In::alt3) },
 		BarRef{ (*symbols_ts_1hr_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[1](ROW_POS, ColPos::In::open), (*symbols_1hr_)[1](ROW_POS, ColPos::In::high), (*symbols_1hr_)[1](ROW_POS, ColPos::In::low), (*symbols_1hr_)[1](ROW_POS, ColPos::In::close), (*symbols_1hr_)[1](ROW_POS, ColPos::In::volume), (*symbols_1hr_)[1](ROW_POS, ColPos::In::alt1), (*symbols_1hr_)[1](ROW_POS, ColPos::In::alt2), (*symbols_1hr_)[1](ROW_POS, ColPos::In::alt3) },
@@ -766,6 +784,7 @@ inline void update_open_close(BarRef& bar, const real_t& price)
 	}
 }
 
+inline void populate_full_bar(BarFullRef& bar, const int interval_seconds, const timestamp_us_t& next_ts, const timestamp_us_t& ts, const real_t& price, const uint32_t vol, const real_t& prev_bid, const real_t& prev_ask, const uint32_t prev_bid_size, const uint32_t prev_ask_size/*, const std::array<real_t, 3> prev_alts*/)
 {
 	const timestamp_us_t interval_us = static_cast<timestamp_us_t>(interval_seconds) * SEC_TO_US;
 	// reset this bar
@@ -849,8 +868,8 @@ void DataController::process_trade_finish(const size_t& pos, const json& conds, 
 		return;  // no more processing to do (for aggregate generation)
 
 	BarFullRef& bar_1min = latest_1min_[pos];
-	BarRef& bar_5min = latest_5min_[pos];
-	BarRef& bar_15min = latest_15min_[pos];
+	BarFullRef& bar_5min = latest_5min_[pos];
+	BarFullRef& bar_15min = latest_15min_[pos];
 	BarRef& bar_1hr = latest_1hr_[pos];
 	BarRef& bar_4hr = latest_4hr_[pos];
 	BarRef& bar_1d = latest_1d_[pos];
@@ -859,10 +878,18 @@ void DataController::process_trade_finish(const size_t& pos, const json& conds, 
 	const timestamp_us_t next_ts = ts_step + interval_us;
 	if (ts >= next_ts)
 	{
-		const real_t prev_bid = bar_1min.bid;
-		const real_t prev_ask = bar_1min.ask;
-		const real_t prev_bid_size = bar_1min.bid_size;
-		const real_t prev_ask_size = bar_1min.ask_size;
+		const real_t prev_bid_1min = bar_1min.bid;
+		const real_t prev_ask_1min = bar_1min.ask;
+		const real_t prev_bid_size_1min = bar_1min.bid_size;
+		const real_t prev_ask_size_1min = bar_1min.ask_size;
+		const real_t prev_bid_5min = bar_5min.bid;
+		const real_t prev_ask_5min = bar_5min.ask;
+		const real_t prev_bid_size_5min = bar_5min.bid_size;
+		const real_t prev_ask_size_5min = bar_5min.ask_size;
+		const real_t prev_bid_15min = bar_15min.bid;
+		const real_t prev_ask_15min = bar_15min.ask;
+		const real_t prev_bid_size_15min = bar_15min.bid_size;
+		const real_t prev_ask_size_15min = bar_15min.ask_size;
 		//const std::array<real_t, 3> prev_alts = { 0, 0, 0 };  // { bar_1min.alt1, bar_1min.alt2, bar_1min.alt3 };
 
 		// shift bars
@@ -880,15 +907,15 @@ void DataController::process_trade_finish(const size_t& pos, const json& conds, 
 
 		if (triggers.flush1min)
 		{
-			populate_full_bar(bar_1min, interval_seconds, next_ts, ts, price, vol, prev_bid, prev_ask, prev_bid_size, prev_ask_size);
+			populate_full_bar(bar_1min, interval_seconds, next_ts, ts, price, vol, prev_bid_1min, prev_ask_1min, prev_bid_size_1min, prev_ask_size_1min/*, prev_alts*/);
 		}
 		if (triggers.flush5min)
 		{
-			populate_bar(bar_5min, interval_seconds * 5, next_ts, ts, price, vol);
+			populate_full_bar(bar_5min, interval_seconds * 5, next_ts, ts, price, vol, prev_bid_5min, prev_ask_5min, prev_bid_size_5min, prev_ask_size_5min);
 		}
 		if (triggers.flush15min)
 		{
-			populate_bar(bar_15min, interval_seconds * 15, next_ts, ts, price, vol);
+			populate_full_bar(bar_15min, interval_seconds * 15, next_ts, ts, price, vol, prev_bid_15min, prev_ask_15min, prev_bid_size_15min, prev_ask_size_15min);
 		}
 		if (triggers.flush1hr)
 		{
@@ -1116,8 +1143,8 @@ void DataController::process_quote_finish(const size_t& pos, const timestamp_us_
 		on_snapshot_(symbols_pos_rev_[pos], snapshots_[pos]);
 
 	BarFullRef& bar_1min = latest_1min_[pos];
-	BarRef& bar_5min = latest_5min_[pos];
-	BarRef& bar_15min = latest_15min_[pos];
+	BarFullRef& bar_5min = latest_5min_[pos];
+	BarFullRef& bar_15min = latest_15min_[pos];
 	BarRef& bar_1hr = latest_1hr_[pos];
 	BarRef& bar_4hr = latest_4hr_[pos];
 	//BarRef& bar_1d = latest_1d_[pos];
@@ -1127,7 +1154,9 @@ void DataController::process_quote_finish(const size_t& pos, const timestamp_us_
 	if (ts >= next_ts)
 	{
 		// copy last close price into new bars
-		const real_t price = bar_1min.close;
+		const real_t price_1min = bar_1min.close;
+		const real_t price_5min = bar_5min.close;
+		const real_t price_15min = bar_15min.close;
 		//const std::array<real_t, 3> prev_alts = {0, 0, 0};  // { bar_1min.alt1, bar_1min.alt2, bar_1min.alt3 };
 
 		const ShiftTriggers triggers(next_ts);
@@ -1144,23 +1173,23 @@ void DataController::process_quote_finish(const size_t& pos, const timestamp_us_
 
 		if (triggers.flush1min)
 		{
-			populate_next_full_bar(bar_1min, interval_us, next_ts, ts, price, bidPrice, askPrice, bidSize, askSize);
+			populate_next_full_bar(bar_1min, interval_us, next_ts, ts, price_1min, bidPrice, askPrice, bidSize, askSize/*, prev_alts*/);
 		}
 		if (triggers.flush5min)
 		{
-			populate_next_bar(bar_5min, interval_us * 5, next_ts, ts, price);
+			populate_next_full_bar(bar_5min, interval_us * 5, next_ts, ts, price_5min, bidPrice, askPrice, bidSize, askSize);
 		}
 		if (triggers.flush15min)
 		{
-			populate_next_bar(bar_15min, interval_us * 15, next_ts, ts, price);
+			populate_next_full_bar(bar_15min, interval_us * 15, next_ts, ts, price_15min, bidPrice, askPrice, bidSize, askSize);
 		}
 		if (triggers.flush1hr)
 		{
-			populate_next_bar(bar_1hr, interval_us * 60, next_ts, ts, price);
+			populate_next_bar(bar_1hr, interval_us * 60, next_ts, ts, price_1min);
 		}
 		if (triggers.flush4hr)
 		{
-			populate_next_bar(bar_4hr, interval_us * 240, next_ts, ts, price);
+			populate_next_bar(bar_4hr, interval_us * 240, next_ts, ts, price_1min);
 		}
 		// Note: never flush 1d/1w (TODO flush 1d if after hours starts? or 1w if after hours starts on friday?)
 		/*if (triggers.flush1d)
@@ -1180,6 +1209,8 @@ void DataController::process_quote_finish(const size_t& pos, const timestamp_us_
 	{
 		// append to existing bar!
 		update_bid_ask(bar_1min, bidPrice, askPrice, bidSize, askSize);
+		update_bid_ask(bar_5min, bidPrice, askPrice, bidSize, askSize);
+		update_bid_ask(bar_15min, bidPrice, askPrice, bidSize, askSize);
 	}
 }
 

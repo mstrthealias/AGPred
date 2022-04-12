@@ -371,6 +371,8 @@ size_t PolygonIoAdapter::mergeQuotesAggregates(xtensor_raw_255& dest, const std:
 			for (const auto& tpl : INTERVAL_INITIAL_DOWNLOADS)
 			{
 				const unsigned int& interval = std::get<0>(tpl);
+				if (interval > 15)
+					continue;  // only merge quotes into 1-15 minute timeframes
 				const int i_loc = static_cast<int>(std::get<3>(tpl));
 				//const timestamp_s_t interval_seconds = static_cast<size_t>(interval) * 60;
 				const timestamp_us_t interval_us = static_cast<timestamp_us_t>(interval) * MIN_TO_US;

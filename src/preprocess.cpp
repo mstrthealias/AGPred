@@ -634,7 +634,7 @@ void _process_step2_single(xt::xarray<real_t>& o_results, const char* symbol, co
     xt::row(o_results, ColPos::In::volume) = xt::row(a_step1, ColPos::In::volume);
 
     // bid/ask if input has these columns
-	const bool has_bid_ask = a_step1.shape().at(0) > static_cast<int>(ColPos::In::volume) + 1;
+	const bool has_bid_ask = interval <= 15 && a_step1.shape().at(0) > static_cast<int>(ColPos::In::volume) + 1;
 	if (has_bid_ask)
 	{
 		xt::row(o_results, ColPos::In::ask) = xt::row(a_step1, ColPos::In::ask);

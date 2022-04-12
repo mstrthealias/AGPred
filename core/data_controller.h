@@ -120,8 +120,8 @@ namespace agpred {
 
 		// for each symbol, track bars that reference to values of the latest timestamp
 		std::array<BarFullRef, MAX_ACTIVE_SYMBOLS> latest_1min_;
-		std::array<BarRef, MAX_ACTIVE_SYMBOLS> latest_5min_;
-		std::array<BarRef, MAX_ACTIVE_SYMBOLS> latest_15min_;
+		std::array<BarFullRef, MAX_ACTIVE_SYMBOLS> latest_5min_;
+		std::array<BarFullRef, MAX_ACTIVE_SYMBOLS> latest_15min_;
 		std::array<BarRef, MAX_ACTIVE_SYMBOLS> latest_1hr_;
 		std::array<BarRef, MAX_ACTIVE_SYMBOLS> latest_4hr_;
 		std::array<BarRef, MAX_ACTIVE_SYMBOLS> latest_1d_;

@@ -225,8 +225,8 @@ namespace agpred {
 
 		// the last *complete* bars, by interval  // TODO map index by interval?!
 		const BarFullRef& last1min;
-		const BarRef& last5min;
-		const BarRef& last15min;
+		const BarFullRef& last5min;
+		const BarFullRef& last15min;
 		const BarRef& hourly;
 		//Bar daily;  // TODO ? prev_daily?
 		//Bar weekly;  // TODO ?
