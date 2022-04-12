@@ -5,6 +5,8 @@
 #include <tuple>
 #include <algorithm>
 
+#include <ta_libc.h>
+
 #include <xtensor/xarray.hpp>
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xfixed.hpp>
@@ -118,6 +120,111 @@ inline void run_preprocess(xtensor_processed_interval& data_processed, xtensor_o
 	}
 }
 
+inline int run_alts(xtensor_raw_interval& data_raw, const Symbol& symbol, const int interval, const xtensor_ts_interval& ts_raw)
+{
+	const size_t n_len = data_raw.shape().at(0);
+
+	const auto row_shape = xt::col(data_raw, ColPos::In::high).shape();
+
+	// copy for input (in reverse order) for TALib
+	xt::xarray<real_t> r_tmp = xt::zeros<real_t>(row_shape);
+	xt::xarray<real_t> r_high = xt::zeros<real_t>(row_shape);
+	xt::xarray<real_t> r_low = xt::zeros<real_t>(row_shape);
+	xt::xarray<real_t> r_close = xt::zeros<real_t>(row_shape);
+	auto v_high = xt::col(data_raw, ColPos::In::high);
+	auto v_low = xt::col(data_raw, ColPos::In::low);
+	auto v_close = xt::col(data_raw, ColPos::In::close);
+	std::copy(v_high.crbegin(), v_high.crend(), r_high.begin());
+	std::copy(v_low.crbegin(), v_low.crend(), r_low.begin());
+	std::copy(v_close.crbegin(), v_close.crend(), r_close.begin());
+
+	//// copy for input to TALib
+	//const auto r_high = xt::xarray<real_t>(xt::col(data_raw, ColPos::In::high));
+	//const auto r_low = xt::xarray<real_t>(xt::col(data_raw, ColPos::In::low));
+	//const auto r_close = xt::xarray<real_t>(xt::col(data_raw, ColPos::In::close));
+
+	// MA3
+	{
+		int taLookback = TA_MA_Lookback(3, TA_MAType_SMA);
+		std::vector<double> vals(n_len + std::max(1, taLookback));
+		int outBegIdx = 0;
+		int outNBElement = 0;
+		std::fill(vals.begin(), vals.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+		const TA_RetCode retCode = TA_MA(0, n_len, r_close.data(), 3, TA_MAType_SMA, &outBegIdx, &outNBElement, vals.data() + taLookback);
+#else
+		const TA_RetCode retCode = TA_S_MA(0, n_len, r_close.data(), 3, TA_MAType_SMA, &outBegIdx, &outNBElement, vals.data() + taLookback);
+		//const TA_RetCode retCode = TA_S_MA(n_len - 1, n_len - 1, r_close.data(), 3, TA_MAType_SMA, &outBegIdx, &outNBElement, vals.data() + n_len - 1);
+#endif
+		if (retCode != TA_SUCCESS)
+		{
+			std::cout << "SMA3 error: " << retCode << std::endl;
+			return retCode;  // TODO
+		}
+
+		//std::copy(vals.cbegin(), vals.cend() - std::max(1, taLookback), xt::col(data_raw, ColPos::In::alt1).begin());
+		std::copy(vals.cbegin(), vals.cend() - std::max(1, taLookback), r_tmp.begin());
+		std::copy(r_tmp.crbegin(), r_tmp.crend(), xt::col(data_raw, ColPos::In::alt1).begin());
+
+		//std::cout << "r_close" << std::endl << r_close << std::endl;
+		//std::cout << "sma3" << std::endl << r_tmp << std::endl;
+		//exit(0);
+	}
+
+	// EMA9
+	{
+		int taLookback = TA_MA_Lookback(9, TA_MAType_EMA);
+		std::vector<double> vals(n_len + std::max(1, taLookback));
+		int outBegIdx = 0;
+		int outNBElement = 0;
+		std::fill(vals.begin(), vals.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+		const TA_RetCode retCode = TA_MA(0, n_len, r_close.data(), 9, TA_MAType_EMA, &outBegIdx, &outNBElement, vals.data() + taLookback);
+#else
+		const TA_RetCode retCode = TA_S_MA(0, n_len, r_close.data(), 9, TA_MAType_EMA, &outBegIdx, &outNBElement, vals.data() + taLookback);
+#endif
+		if (retCode != TA_SUCCESS)
+		{
+			std::cout << "EMA9 error: " << retCode << std::endl;
+			return retCode;  // TODO
+		}
+
+		//std::copy(vals.cbegin(), vals.cend() - std::max(1, taLookback), xt::col(data_raw, ColPos::In::alt2).begin());
+		std::copy(vals.cbegin(), vals.cend() - std::max(1, taLookback), r_tmp.begin());
+		std::copy(r_tmp.crbegin(), r_tmp.crend(), xt::col(data_raw, ColPos::In::alt2).begin());
+	}
+
+	// Average True Range(ATR)
+	{
+		int taLookback = TA_ATR_Lookback(14);
+		std::vector<double> vals(n_len + std::max(1, taLookback));
+		int outBegIdx = 0;
+		int outNBElement = 0;
+		std::fill(vals.begin(), vals.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+		TA_RetCode retCode = TA_ATR(0, n_len, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, vals.data() + taLookback);
+#else
+		TA_RetCode retCode = TA_S_ATR(0, n_len, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, vals.data() + taLookback);
+#endif
+		if (retCode != TA_SUCCESS)
+		{
+			std::cout << "ATR error: " << retCode << std::endl;
+			return retCode;  // TODO
+		}
+		//std::copy(vals.cbegin(), vals.cend() - std::max(1, taLookback), xt::col(data_raw, ColPos::In::alt3).begin());
+		std::copy(vals.cbegin(), vals.cend() - std::max(1, taLookback), r_tmp.begin());
+		std::copy(r_tmp.crbegin(), r_tmp.crend(), xt::col(data_raw, ColPos::In::alt3).begin());
+	}
+
+	//std::cout << "ts_raw: " << xt::col(ts_raw, ColPos::In::timestamp) << std::endl;
+	//std::cout << "r_close: " << r_close << std::endl;
+	//std::cout << "SMA3: " << xt::col(data_raw, ColPos::In::alt1) << std::endl;
+	//std::cout << "EMA9: " << xt::col(data_raw, ColPos::In::alt2) << std::endl;
+	//std::cout << "ATR: " << xt::col(data_raw, ColPos::In::alt3) << std::endl;
+
+	return 0;
+}
+
 
 constexpr ptrdiff_t ROW_POS = 0;
 
@@ -158,17 +265,17 @@ DataController::DataController(const AGMode mode, const fn_snapshot on_snapshot,
 	// TODO some form of latest_* initialization that dynamically handles different MAX_ACTIVE_SYMBOLS sizes?
 	latest_1min_({
 		BarFullRef{
-			{ (*symbols_ts_1min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[0](ROW_POS, ColPos::In::open), (*symbols_1min_)[0](ROW_POS, ColPos::In::high), (*symbols_1min_)[0](ROW_POS, ColPos::In::low), (*symbols_1min_)[0](ROW_POS, ColPos::In::close), (*symbols_1min_)[0](ROW_POS, ColPos::In::volume) },
+			{ (*symbols_ts_1min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[0](ROW_POS, ColPos::In::open), (*symbols_1min_)[0](ROW_POS, ColPos::In::high), (*symbols_1min_)[0](ROW_POS, ColPos::In::low), (*symbols_1min_)[0](ROW_POS, ColPos::In::close), (*symbols_1min_)[0](ROW_POS, ColPos::In::volume), (*symbols_1min_)[0](ROW_POS, ColPos::In::alt1), (*symbols_1min_)[0](ROW_POS, ColPos::In::alt2), (*symbols_1min_)[0](ROW_POS, ColPos::In::alt3) },
 			(*symbols_1min_)[0](ROW_POS, ColPos::In::bid), (*symbols_1min_)[0](ROW_POS, ColPos::In::bid_high), (*symbols_1min_)[0](ROW_POS, ColPos::In::bid_low),
 			(*symbols_1min_)[0](ROW_POS, ColPos::In::ask), (*symbols_1min_)[0](ROW_POS, ColPos::In::ask_high), (*symbols_1min_)[0](ROW_POS, ColPos::In::ask_low),
 			(*symbols_1min_)[0](ROW_POS, ColPos::In::bid_size), (*symbols_1min_)[0](ROW_POS, ColPos::In::ask_size) },
 		BarFullRef{
-			{ (*symbols_ts_1min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[1](ROW_POS, ColPos::In::open), (*symbols_1min_)[1](ROW_POS, ColPos::In::high), (*symbols_1min_)[1](ROW_POS, ColPos::In::low), (*symbols_1min_)[1](ROW_POS, ColPos::In::close), (*symbols_1min_)[1](ROW_POS, ColPos::In::volume) },
+			{ (*symbols_ts_1min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[1](ROW_POS, ColPos::In::open), (*symbols_1min_)[1](ROW_POS, ColPos::In::high), (*symbols_1min_)[1](ROW_POS, ColPos::In::low), (*symbols_1min_)[1](ROW_POS, ColPos::In::close), (*symbols_1min_)[1](ROW_POS, ColPos::In::volume), (*symbols_1min_)[1](ROW_POS, ColPos::In::alt1), (*symbols_1min_)[1](ROW_POS, ColPos::In::alt2), (*symbols_1min_)[1](ROW_POS, ColPos::In::alt3) },
 			(*symbols_1min_)[1](ROW_POS, ColPos::In::bid), (*symbols_1min_)[1](ROW_POS, ColPos::In::bid_high), (*symbols_1min_)[1](ROW_POS, ColPos::In::bid_low),
 			(*symbols_1min_)[1](ROW_POS, ColPos::In::ask), (*symbols_1min_)[1](ROW_POS, ColPos::In::ask_high), (*symbols_1min_)[1](ROW_POS, ColPos::In::ask_low),
 			(*symbols_1min_)[1](ROW_POS, ColPos::In::bid_size), (*symbols_1min_)[1](ROW_POS, ColPos::In::ask_size) },
 		BarFullRef{
-			{ (*symbols_ts_1min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[2](ROW_POS, ColPos::In::open), (*symbols_1min_)[2](ROW_POS, ColPos::In::high), (*symbols_1min_)[2](ROW_POS, ColPos::In::low), (*symbols_1min_)[2](ROW_POS, ColPos::In::close), (*symbols_1min_)[2](ROW_POS, ColPos::In::volume) },
+			{ (*symbols_ts_1min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1min_)[2](ROW_POS, ColPos::In::open), (*symbols_1min_)[2](ROW_POS, ColPos::In::high), (*symbols_1min_)[2](ROW_POS, ColPos::In::low), (*symbols_1min_)[2](ROW_POS, ColPos::In::close), (*symbols_1min_)[2](ROW_POS, ColPos::In::volume), (*symbols_1min_)[2](ROW_POS, ColPos::In::alt1), (*symbols_1min_)[2](ROW_POS, ColPos::In::alt2), (*symbols_1min_)[2](ROW_POS, ColPos::In::alt3) },
 			(*symbols_1min_)[2](ROW_POS, ColPos::In::bid), (*symbols_1min_)[2](ROW_POS, ColPos::In::bid_high), (*symbols_1min_)[2](ROW_POS, ColPos::In::bid_low),
 			(*symbols_1min_)[2](ROW_POS, ColPos::In::ask), (*symbols_1min_)[2](ROW_POS, ColPos::In::ask_high), (*symbols_1min_)[2](ROW_POS, ColPos::In::ask_low),
 			(*symbols_1min_)[2](ROW_POS, ColPos::In::bid_size), (*symbols_1min_)[2](ROW_POS, ColPos::In::ask_size) } }),
@@ -181,21 +288,21 @@ DataController::DataController(const AGMode mode, const fn_snapshot on_snapshot,
 		BarRef{ (*symbols_ts_15min_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[1](ROW_POS, ColPos::In::open), (*symbols_15min_)[1](ROW_POS, ColPos::In::high), (*symbols_15min_)[1](ROW_POS, ColPos::In::low), (*symbols_15min_)[1](ROW_POS, ColPos::In::close), (*symbols_15min_)[1](ROW_POS, ColPos::In::volume) },
 		BarRef{ (*symbols_ts_15min_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_15min_)[2](ROW_POS, ColPos::In::open), (*symbols_15min_)[2](ROW_POS, ColPos::In::high), (*symbols_15min_)[2](ROW_POS, ColPos::In::low), (*symbols_15min_)[2](ROW_POS, ColPos::In::close), (*symbols_15min_)[2](ROW_POS, ColPos::In::volume) } }),
 	latest_1hr_({
-		BarRef{ (*symbols_ts_1hr_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[0](ROW_POS, ColPos::In::open), (*symbols_1hr_)[0](ROW_POS, ColPos::In::high), (*symbols_1hr_)[0](ROW_POS, ColPos::In::low), (*symbols_1hr_)[0](ROW_POS, ColPos::In::close), (*symbols_1hr_)[0](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_ts_1hr_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[1](ROW_POS, ColPos::In::open), (*symbols_1hr_)[1](ROW_POS, ColPos::In::high), (*symbols_1hr_)[1](ROW_POS, ColPos::In::low), (*symbols_1hr_)[1](ROW_POS, ColPos::In::close), (*symbols_1hr_)[1](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_ts_1hr_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[2](ROW_POS, ColPos::In::open), (*symbols_1hr_)[2](ROW_POS, ColPos::In::high), (*symbols_1hr_)[2](ROW_POS, ColPos::In::low), (*symbols_1hr_)[2](ROW_POS, ColPos::In::close), (*symbols_1hr_)[2](ROW_POS, ColPos::In::volume) } }),
+		BarRef{ (*symbols_ts_1hr_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[0](ROW_POS, ColPos::In::open), (*symbols_1hr_)[0](ROW_POS, ColPos::In::high), (*symbols_1hr_)[0](ROW_POS, ColPos::In::low), (*symbols_1hr_)[0](ROW_POS, ColPos::In::close), (*symbols_1hr_)[0](ROW_POS, ColPos::In::volume), (*symbols_1hr_)[0](ROW_POS, ColPos::In::alt1), (*symbols_1hr_)[0](ROW_POS, ColPos::In::alt2), (*symbols_1hr_)[0](ROW_POS, ColPos::In::alt3) },
+		BarRef{ (*symbols_ts_1hr_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[1](ROW_POS, ColPos::In::open), (*symbols_1hr_)[1](ROW_POS, ColPos::In::high), (*symbols_1hr_)[1](ROW_POS, ColPos::In::low), (*symbols_1hr_)[1](ROW_POS, ColPos::In::close), (*symbols_1hr_)[1](ROW_POS, ColPos::In::volume), (*symbols_1hr_)[1](ROW_POS, ColPos::In::alt1), (*symbols_1hr_)[1](ROW_POS, ColPos::In::alt2), (*symbols_1hr_)[1](ROW_POS, ColPos::In::alt3) },
+		BarRef{ (*symbols_ts_1hr_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1hr_)[2](ROW_POS, ColPos::In::open), (*symbols_1hr_)[2](ROW_POS, ColPos::In::high), (*symbols_1hr_)[2](ROW_POS, ColPos::In::low), (*symbols_1hr_)[2](ROW_POS, ColPos::In::close), (*symbols_1hr_)[2](ROW_POS, ColPos::In::volume), (*symbols_1hr_)[2](ROW_POS, ColPos::In::alt1), (*symbols_1hr_)[2](ROW_POS, ColPos::In::alt2), (*symbols_1hr_)[2](ROW_POS, ColPos::In::alt3) } }),
 	latest_4hr_({
-		BarRef{ (*symbols_ts_4hr_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[0](ROW_POS, ColPos::In::open), (*symbols_4hr_)[0](ROW_POS, ColPos::In::high), (*symbols_4hr_)[0](ROW_POS, ColPos::In::low), (*symbols_4hr_)[0](ROW_POS, ColPos::In::close), (*symbols_4hr_)[0](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_ts_4hr_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[1](ROW_POS, ColPos::In::open), (*symbols_4hr_)[1](ROW_POS, ColPos::In::high), (*symbols_4hr_)[1](ROW_POS, ColPos::In::low), (*symbols_4hr_)[1](ROW_POS, ColPos::In::close), (*symbols_4hr_)[1](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_ts_4hr_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[2](ROW_POS, ColPos::In::open), (*symbols_4hr_)[2](ROW_POS, ColPos::In::high), (*symbols_4hr_)[2](ROW_POS, ColPos::In::low), (*symbols_4hr_)[2](ROW_POS, ColPos::In::close), (*symbols_4hr_)[2](ROW_POS, ColPos::In::volume) } }),
+		BarRef{ (*symbols_ts_4hr_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[0](ROW_POS, ColPos::In::open), (*symbols_4hr_)[0](ROW_POS, ColPos::In::high), (*symbols_4hr_)[0](ROW_POS, ColPos::In::low), (*symbols_4hr_)[0](ROW_POS, ColPos::In::close), (*symbols_4hr_)[0](ROW_POS, ColPos::In::volume), (*symbols_4hr_)[0](ROW_POS, ColPos::In::alt1), (*symbols_4hr_)[0](ROW_POS, ColPos::In::alt2), (*symbols_4hr_)[0](ROW_POS, ColPos::In::alt3) },
+		BarRef{ (*symbols_ts_4hr_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[1](ROW_POS, ColPos::In::open), (*symbols_4hr_)[1](ROW_POS, ColPos::In::high), (*symbols_4hr_)[1](ROW_POS, ColPos::In::low), (*symbols_4hr_)[1](ROW_POS, ColPos::In::close), (*symbols_4hr_)[1](ROW_POS, ColPos::In::volume), (*symbols_4hr_)[1](ROW_POS, ColPos::In::alt1), (*symbols_4hr_)[1](ROW_POS, ColPos::In::alt2), (*symbols_4hr_)[1](ROW_POS, ColPos::In::alt3) },
+		BarRef{ (*symbols_ts_4hr_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_4hr_)[2](ROW_POS, ColPos::In::open), (*symbols_4hr_)[2](ROW_POS, ColPos::In::high), (*symbols_4hr_)[2](ROW_POS, ColPos::In::low), (*symbols_4hr_)[2](ROW_POS, ColPos::In::close), (*symbols_4hr_)[2](ROW_POS, ColPos::In::volume), (*symbols_4hr_)[2](ROW_POS, ColPos::In::alt1), (*symbols_4hr_)[2](ROW_POS, ColPos::In::alt2), (*symbols_4hr_)[2](ROW_POS, ColPos::In::alt3) } }),
 	latest_1d_({
-		BarRef{ (*symbols_ts_1d_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[0](ROW_POS, ColPos::In::open), (*symbols_1d_)[0](ROW_POS, ColPos::In::high), (*symbols_1d_)[0](ROW_POS, ColPos::In::low), (*symbols_1d_)[0](ROW_POS, ColPos::In::close), (*symbols_1d_)[0](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_ts_1d_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[1](ROW_POS, ColPos::In::open), (*symbols_1d_)[1](ROW_POS, ColPos::In::high), (*symbols_1d_)[1](ROW_POS, ColPos::In::low), (*symbols_1d_)[1](ROW_POS, ColPos::In::close), (*symbols_1d_)[1](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_ts_1d_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[2](ROW_POS, ColPos::In::open), (*symbols_1d_)[2](ROW_POS, ColPos::In::high), (*symbols_1d_)[2](ROW_POS, ColPos::In::low), (*symbols_1d_)[2](ROW_POS, ColPos::In::close), (*symbols_1d_)[2](ROW_POS, ColPos::In::volume) } }),
+		BarRef{ (*symbols_ts_1d_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[0](ROW_POS, ColPos::In::open), (*symbols_1d_)[0](ROW_POS, ColPos::In::high), (*symbols_1d_)[0](ROW_POS, ColPos::In::low), (*symbols_1d_)[0](ROW_POS, ColPos::In::close), (*symbols_1d_)[0](ROW_POS, ColPos::In::volume), (*symbols_1d_)[0](ROW_POS, ColPos::In::alt1), (*symbols_1d_)[0](ROW_POS, ColPos::In::alt2), (*symbols_1d_)[0](ROW_POS, ColPos::In::alt3) },
+		BarRef{ (*symbols_ts_1d_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[1](ROW_POS, ColPos::In::open), (*symbols_1d_)[1](ROW_POS, ColPos::In::high), (*symbols_1d_)[1](ROW_POS, ColPos::In::low), (*symbols_1d_)[1](ROW_POS, ColPos::In::close), (*symbols_1d_)[1](ROW_POS, ColPos::In::volume), (*symbols_1d_)[1](ROW_POS, ColPos::In::alt1), (*symbols_1d_)[1](ROW_POS, ColPos::In::alt2), (*symbols_1d_)[1](ROW_POS, ColPos::In::alt3) },
+		BarRef{ (*symbols_ts_1d_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1d_)[2](ROW_POS, ColPos::In::open), (*symbols_1d_)[2](ROW_POS, ColPos::In::high), (*symbols_1d_)[2](ROW_POS, ColPos::In::low), (*symbols_1d_)[2](ROW_POS, ColPos::In::close), (*symbols_1d_)[2](ROW_POS, ColPos::In::volume), (*symbols_1d_)[2](ROW_POS, ColPos::In::alt1), (*symbols_1d_)[2](ROW_POS, ColPos::In::alt2), (*symbols_1d_)[2](ROW_POS, ColPos::In::alt3) } }),
 	latest_1w_({
-		BarRef{ (*symbols_ts_1w_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[0](ROW_POS, ColPos::In::open), (*symbols_1w_)[0](ROW_POS, ColPos::In::high), (*symbols_1w_)[0](ROW_POS, ColPos::In::low), (*symbols_1w_)[0](ROW_POS, ColPos::In::close), (*symbols_1w_)[0](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_ts_1w_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[1](ROW_POS, ColPos::In::open), (*symbols_1w_)[1](ROW_POS, ColPos::In::high), (*symbols_1w_)[1](ROW_POS, ColPos::In::low), (*symbols_1w_)[1](ROW_POS, ColPos::In::close), (*symbols_1w_)[1](ROW_POS, ColPos::In::volume) },
-		BarRef{ (*symbols_ts_1w_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[2](ROW_POS, ColPos::In::open), (*symbols_1w_)[2](ROW_POS, ColPos::In::high), (*symbols_1w_)[2](ROW_POS, ColPos::In::low), (*symbols_1w_)[2](ROW_POS, ColPos::In::close), (*symbols_1w_)[2](ROW_POS, ColPos::In::volume) } }),
+		BarRef{ (*symbols_ts_1w_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[0](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[0](ROW_POS, ColPos::In::open), (*symbols_1w_)[0](ROW_POS, ColPos::In::high), (*symbols_1w_)[0](ROW_POS, ColPos::In::low), (*symbols_1w_)[0](ROW_POS, ColPos::In::close), (*symbols_1w_)[0](ROW_POS, ColPos::In::volume), (*symbols_1w_)[0](ROW_POS, ColPos::In::alt1), (*symbols_1w_)[0](ROW_POS, ColPos::In::alt2), (*symbols_1w_)[0](ROW_POS, ColPos::In::alt3) },
+		BarRef{ (*symbols_ts_1w_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[1](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[1](ROW_POS, ColPos::In::open), (*symbols_1w_)[1](ROW_POS, ColPos::In::high), (*symbols_1w_)[1](ROW_POS, ColPos::In::low), (*symbols_1w_)[1](ROW_POS, ColPos::In::close), (*symbols_1w_)[1](ROW_POS, ColPos::In::volume), (*symbols_1w_)[1](ROW_POS, ColPos::In::alt1), (*symbols_1w_)[1](ROW_POS, ColPos::In::alt2), (*symbols_1w_)[1](ROW_POS, ColPos::In::alt3) },
+		BarRef{ (*symbols_ts_1w_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[2](ROW_POS, ColPos::In::timestamp), (*symbols_1w_)[2](ROW_POS, ColPos::In::open), (*symbols_1w_)[2](ROW_POS, ColPos::In::high), (*symbols_1w_)[2](ROW_POS, ColPos::In::low), (*symbols_1w_)[2](ROW_POS, ColPos::In::close), (*symbols_1w_)[2](ROW_POS, ColPos::In::volume), (*symbols_1w_)[2](ROW_POS, ColPos::In::alt1), (*symbols_1w_)[2](ROW_POS, ColPos::In::alt2), (*symbols_1w_)[2](ROW_POS, ColPos::In::alt3) } }),
 
 	// TODO some form of snapshots_ initialization that dynamically handles different MAX_ACTIVE_SYMBOLS sizes?
 	snapshots_({
@@ -491,6 +598,9 @@ void DataController::do_update(const ShiftTriggers& triggers, const size_t& pos)
 		// TODO only update outputs if on_update_outputs_ is bound?
 		auto& symbol_outputs = (*symbols_outputs_)[pos];
 
+		// TODO run_alts on all timeframes???
+		run_alts((*symbols_1min_)[pos], symbol, 1, (*symbols_ts_1min_)[pos]);
+
 		// preprocess all timeframes now...
 		// process data (returned in ASC order, opposite of input):
 		run_preprocess((*proc_symbols_1min_)[pos], symbol_outputs, symbol, 1, (*symbols_ts_1min_)[pos], (*symbols_1min_)[pos]);
@@ -656,11 +766,11 @@ inline void update_open_close(BarRef& bar, const real_t& price)
 	}
 }
 
-inline void populate_full_bar(BarFullRef& bar, const int interval_seconds, const timestamp_us_t& next_ts, const timestamp_us_t& ts, const real_t& price, const uint32_t vol, const real_t& prev_bid, const real_t& prev_ask, const uint32_t prev_bid_size, const uint32_t prev_ask_size)
 {
 	const timestamp_us_t interval_us = static_cast<timestamp_us_t>(interval_seconds) * SEC_TO_US;
 	// reset this bar
 	bar.timestamp = (ts / interval_us) * interval_us;  // TODO verify
+	bar.ts_real = static_cast<real_t>(bar.timestamp / SEC_TO_US);
 	//bar.timestamp = next_ts;
 	if (bar.timestamp != next_ts && next_ts > interval_us) {
 		std::cout << "populate_full_bar() Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
@@ -676,6 +786,11 @@ inline void populate_full_bar(BarFullRef& bar, const int interval_seconds, const
 	// TODO Note: leave ask/bid and ask_size/bid_size the same ??
 	bar.bid_size = prev_bid_size;
 	bar.ask_size = prev_ask_size;
+
+	/*// copy alts
+	bar.alt1 = prev_alts[0];
+	bar.alt2 = prev_alts[1];
+	bar.alt3 = prev_alts[2];*/
 }
 
 inline void populate_bar(BarRef& bar, const int interval_seconds, const timestamp_us_t& next_ts, const timestamp_us_t& ts, const real_t& price, const uint32_t vol)
@@ -683,6 +798,7 @@ inline void populate_bar(BarRef& bar, const int interval_seconds, const timestam
 	const timestamp_us_t interval_us = static_cast<timestamp_us_t>(interval_seconds) * SEC_TO_US;
 	// reset this bar
 	bar.timestamp = (ts / interval_us) * interval_us;  // TODO verify
+	bar.ts_real = static_cast<real_t>(bar.timestamp / SEC_TO_US);
 	//bar.timestamp = next_ts;
 	if (bar.timestamp != next_ts && next_ts > interval_us) {
 		std::cout << "populate_bar() Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
@@ -747,6 +863,7 @@ void DataController::process_trade_finish(const size_t& pos, const json& conds, 
 		const real_t prev_ask = bar_1min.ask;
 		const real_t prev_bid_size = bar_1min.bid_size;
 		const real_t prev_ask_size = bar_1min.ask_size;
+		//const std::array<real_t, 3> prev_alts = { 0, 0, 0 };  // { bar_1min.alt1, bar_1min.alt2, bar_1min.alt3 };
 
 		// shift bars
 		// Note: this introduces delay to the flush routine (by waiting for next timestamp before processing previous)
@@ -786,6 +903,11 @@ void DataController::process_trade_finish(const size_t& pos, const json& conds, 
 			populate_bar(bar_1d, interval_seconds * 5, next_ts, ts, price, vol);
 		if (triggers.flush1w)
 			populate_bar(bar_1w, interval_seconds * 5, next_ts, ts, price, vol);*/
+
+		if (triggers.flush10sec && next_ts > interval_us) {  //triggers.flush1min // if result was shifted, must update alts now...
+			// Must run_alts now, that-way alt1-3 is available for snapshofts
+			run_alts((*symbols_1min_)[pos], symbols_pos_rev_[pos], 1, (*symbols_ts_1min_)[pos]);
+		}
 
 		ts_step = bar_1min.timestamp;  // next_ts;
 	}
@@ -908,6 +1030,7 @@ inline void populate_next_full_bar(BarFullRef& bar, const timestamp_us_t& interv
 {
 	// reset this bar
 	bar.timestamp = static_cast<timestamp_us_t>(ts / interval_us) * interval_us;  // TODO verify
+	bar.ts_real = static_cast<real_t>(bar.timestamp / SEC_TO_US);
 	//bar.timestamp = next_ts;
 	if (bar.timestamp != next_ts && next_ts > interval_us) {
 		std::cout << "populate_next_full_bar() Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
@@ -920,12 +1043,18 @@ inline void populate_next_full_bar(BarFullRef& bar, const timestamp_us_t& interv
 	bar.bid = bar.bid_high = bar.bid_low = bid;
 	bar.ask_size = ask_size;
 	bar.bid_size = bid_size;
+
+	/*// copy alts
+	bar.alt1 = prev_alts[0];
+	bar.alt2 = prev_alts[1];
+	bar.alt3 = prev_alts[2];*/
 }
 
 inline void populate_next_bar(BarRef& bar, const timestamp_us_t& interval_us, const timestamp_us_t& next_ts, const timestamp_us_t& ts, const real_t& price)
 {
 	// reset this bar
 	bar.timestamp = static_cast<timestamp_us_t>(ts / interval_us) * interval_us;  // TODO verify
+	bar.ts_real = static_cast<real_t>(bar.timestamp / SEC_TO_US);
 	//bar.timestamp = next_ts;
 	if (bar.timestamp != next_ts && next_ts > interval_us) {
 		std::cout << "populate_next_bar() Skip timestamp " << next_ts << " (to " << bar.timestamp << ")" << std::endl;
@@ -999,6 +1128,7 @@ void DataController::process_quote_finish(const size_t& pos, const timestamp_us_
 	{
 		// copy last close price into new bars
 		const real_t price = bar_1min.close;
+		//const std::array<real_t, 3> prev_alts = {0, 0, 0};  // { bar_1min.alt1, bar_1min.alt2, bar_1min.alt3 };
 
 		const ShiftTriggers triggers(next_ts);
 
@@ -1037,7 +1167,13 @@ void DataController::process_quote_finish(const size_t& pos, const timestamp_us_
 			populate_next_bar(bar_1d, interval_us, next_ts, ts, price);
 		if (triggers.flush1w)
 			populate_next_bar(bar_1w, interval_us, next_ts, ts, price);*/
-		
+
+		if (triggers.flush10sec && next_ts > interval_us) {  //triggers.flush1min // if result was shifted, must update alts now...
+			// Must run_alts now, that-way alt1-3 is available for snapshofts
+			// Note: since this functions at this point, maybe do not copy prev_alts?
+			run_alts((*symbols_1min_)[pos], symbols_pos_rev_[pos], 1, (*symbols_ts_1min_)[pos]);
+		}
+
 		ts_step = bar_1min.timestamp;  // next_ts;
 	}
 	else

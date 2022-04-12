@@ -16,7 +16,7 @@ namespace agpred {
 
 	using id_t = unsigned int;  // TODO size_t?
 	
-	constexpr int NUM_RAW_COLUMNS = 14;
+	constexpr int NUM_RAW_COLUMNS = 17;
 	constexpr int NUM_TRADE_COLUMNS = 6;  // ts, price, size, cond1, cond2, cond3
 	constexpr int NUM_QUOTE_COLUMNS = 8;  // ts, bid, ask, bid_size, ask_size, cond1, cond2, cond3
 	constexpr int RT_MAX_TIMESTEPS = 255;

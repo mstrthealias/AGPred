@@ -101,6 +101,9 @@ std::ostream& operator<< (std::ostream& out, const BarFullRef& bar)
 	out << '\t' << "bid_low: " << bar.bid_low << std::endl;
 	out << '\t' << "bid: " << bar.bid << std::endl;
 	out << '\t' << "bid_size: " << bar.bid_size << std::endl;
+	out << '\t' << "MA3: " << bar.alt1 << std::endl;
+	out << '\t' << "EMA9: " << bar.alt2 << std::endl;
+	out << '\t' << "ATR: " << bar.alt3 << std::endl;
 	out << '}' << std::endl;
 	return out;
 }
@@ -114,6 +117,9 @@ std::ostream& operator<< (std::ostream& out, const BarRef& bar)
 	out << '\t' << "low: " << bar.low << std::endl;
 	out << '\t' << "close: " << bar.close << std::endl;
 	out << '\t' << "volume: " << bar.volume << std::endl;
+	out << '\t' << "MA3: " << bar.alt1 << std::endl;
+	out << '\t' << "EMA9: " << bar.alt2 << std::endl;
+	out << '\t' << "ATR: " << bar.alt3 << std::endl;
 	out << '}' << std::endl;
 	return out;
 }

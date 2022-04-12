@@ -347,11 +347,16 @@ struct bar_ref_t
 	using volume_type = Volume;
 
 	Time& timestamp;
+	Real& ts_real;
 	Real& open;
 	Real& high;
 	Real& low;
 	Real& close;
 	Volume& volume;
+
+	Real& alt1;
+	Real& alt2;
+	Real& alt3;
 };
 
 template <typename Real, typename Volume, typename Time, typename Size>
@@ -447,6 +452,9 @@ public:
 		// these are not included in processed
 		ask_size = 12,
 		bid_size = 13,
+		alt1 = 14,
+		alt2 = 15,
+		alt3 = 16,
 	};
 
 	static constexpr ptrdiff_t _DEP_NUM_COLS = 4;
