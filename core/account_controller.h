@@ -161,7 +161,7 @@ namespace agpred {
 					if (algo_exit != nullptr && algo_result_map[algo_exit->algo_.id_])
 					{
 						// loop all entries for this symbol that do not have a position/have not been filled
-						if (symbol_pending_entries_.count(symbol))
+						if (symbol_pending_entries_.contains(symbol))
 						{
 							for (auto& p : symbol_pending_entries_.at(symbol))
 							{
@@ -227,7 +227,7 @@ namespace agpred {
 			bool is_exit = false;
 			bool is_long = false;
 
-			if (pending_exits_.count(order_id))
+			if (pending_exits_.contains(order_id))
 			{
 				is_exit = true;
 				const PendingExit& exit = pending_exits_.at(order_id);
@@ -235,7 +235,7 @@ namespace agpred {
 				onExitFill(symbol, exit, filled, avg_price);
 			}
 
-			if (pending_entries_.count(order_id))
+			if (pending_entries_.contains(order_id))
 			{
 				is_entry = true;
 				const PendingEntry& entry = pending_entries_.at(order_id);
@@ -278,7 +278,7 @@ namespace agpred {
 		
 		bool hasPosition(const id_t& position_id) const
 		{
-			return static_cast<bool>(positions_.count(position_id));
+			return positions_.contains(position_id);
 		}
 
 
@@ -296,7 +296,7 @@ namespace agpred {
 			std::cout << "enterPosition(" << symbol.symbol << ", " << (is_long ? "LONG" : "SHORT") << ", " << entry.order_id << ") " << (is_long ? "BUY " : "SELL ") << entry_data.size << " @ $" << entry_data.limit_price << std::endl;
 
 			pending_entries_.emplace(std::pair<id_t, PendingEntry>(entry.order_id, entry));
-			if (!symbol_pending_entries_.count(symbol))
+			if (!symbol_pending_entries_.contains(symbol))
 				symbol_pending_entries_.emplace(std::pair<Symbol, std::map<id_t, PendingEntry>>(symbol, {}));
 			symbol_pending_entries_.at(symbol).emplace(std::pair<id_t, PendingEntry>(entry.order_id, entry));
 			
@@ -320,7 +320,7 @@ namespace agpred {
 			pending_exits_.emplace(std::pair<id_t, PendingExit>(exit.order_id, exit));
 			
 			// TODO check pending_entries_ for pending entry that should be canceled/removed
-			if (pending_entries_.count(position.id()))
+			if (pending_entries_.contains(position.id()))
 			{
 				// cancel unfilled order...
 				cancelPendingPosition(position.symbol(), position.id());

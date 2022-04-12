@@ -1,9 +1,89 @@
 #include "util.h"
 
+#include <set>
+#include <tuple>
 #include <xtensor/xindex_view.hpp>
 #include <xtensor/xview.hpp>
 #include <xtensor/xmanipulation.hpp>
 #include <xtensor/xio.hpp>
+
+
+
+const std::set<std::tuple<const int, const int, const int>> HOLIDAYS = {
+	std::make_tuple<>(2021, 1, 1),
+	std::make_tuple<>(2021, 1, 18),
+	std::make_tuple<>(2021, 2, 15),
+	std::make_tuple<>(2021, 5, 31),
+	std::make_tuple<>(2021, 7, 4),
+	std::make_tuple<>(2021, 9, 6),
+	std::make_tuple<>(2021, 10, 11),
+	std::make_tuple<>(2021, 11, 11),
+	std::make_tuple<>(2021, 11, 25),
+	std::make_tuple<>(2021, 12, 24),
+	std::make_tuple<>(2021, 12, 25),
+	std::make_tuple<>(2022, 1, 1),
+	std::make_tuple<>(2022, 1, 17),
+	std::make_tuple<>(2022, 2, 21),
+
+	// these days fail to retreive data from the API:
+	std::make_tuple<>(2022, 3, 2),
+};
+
+
+/*
+* zellersAlgorithm:
+*   0=Saturday, 1=Sunday, ..., 6=Friday
+*/
+int day_of_week(int day, int month, int year)
+{
+	int mon;
+	if (month > 2)
+		mon = month; //for march to december month code is same as month
+	else {
+		mon = (12 + month); //for Jan and Feb, month code will be 13 and 14
+		year--; //decrease year for month Jan and Feb
+	}
+	int y = year % 100; //last two digit
+	int c = year / 100; //first two digit
+	int w = (day + floor((13 * (mon + 1)) / 5) + y + floor(y / 4) + floor(c / 4) + (5 * c));
+	return w % 7;
+}
+
+
+bool is_trading_day(int day, int month, int year)
+{
+	int dow = day_of_week(day, month, year);
+	if (dow <= 1)
+		return false;
+	// true of not a holiday...
+	return HOLIDAYS.find(std::make_tuple<>(year, month, day)) == HOLIDAYS.end();
+}
+
+bool is_trading_day(std::chrono::system_clock::time_point tp)
+{
+	using namespace std::chrono;
+	time_t tt = system_clock::to_time_t(tp);
+	tm local_tm;
+	localtime_s(&local_tm, &tt);
+
+	return is_trading_day(local_tm.tm_mday, local_tm.tm_mon + 1, local_tm.tm_year + 1900);
+}
+
+
+std::chrono::system_clock::time_point to_time_point(int year, int mon, int day, int hour, int min, int is_dst)
+{
+	using namespace std::chrono;
+	std::tm tm{};  // zero initialise
+	tm.tm_year = year - 1900;
+	tm.tm_mon = mon - 1;
+	tm.tm_mday = day;
+	tm.tm_hour = hour;
+	tm.tm_min = min;
+	tm.tm_isdst = is_dst != 0 ? 1 : 0;
+	std::time_t tt = std::mktime(&tm);
+	return system_clock::from_time_t(tt);
+}
+
 
 
 bool _xt_check_2d_sort(const xt::xarray<real_t>& a_vals, const ptrdiff_t& sort_index, const bool force)

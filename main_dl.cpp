@@ -9,6 +9,7 @@
 #include <ta_libc.h>
 
 #include "core/data_controller.h"
+#include "src/util.h"
 
 #include "adapters/polygon_io.h"  // TODO not directly include this?
 #include "sim/downloader.h"  // TODO not directly include this?
@@ -17,6 +18,9 @@
 using json = nlohmann::json;
 
 using namespace agpred;
+
+
+constexpr bool REVERSE = false;
 
 
 int get_aggregate_history(const char* symbol, unsigned int interval, timestamp_t startTs, timestamp_t endTs, bool adjusted, unsigned int limit)
@@ -57,26 +61,11 @@ int get_aggregate_history(const char* symbol, unsigned int interval, timestamp_t
 }
 
 
-std::chrono::system_clock::time_point to_time_point(int year, int mon, int day, int hour, int min, int is_dst = 0)
-{
-    using namespace std::chrono;
-    std::tm tm{};  // zero initialise
-    tm.tm_year = year - 1900;
-    tm.tm_mon = mon - 1;
-    tm.tm_mday = day;
-    tm.tm_hour = hour;
-    tm.tm_min = min;
-    tm.tm_isdst = is_dst != 0 ? 1 : 0;
-    std::time_t tt = std::mktime(&tm);
-    return system_clock::from_time_t(tt);
-}
-
-
 void run_sim(const std::string& symbol_str, int year, int mon, int day) 
 {
     int day_of_year = (mon - 1) * 30 + day;
-    int hour = day_of_year > 71 && day_of_year < 311 ? 6 : 7;
-    auto start_tp = to_time_point(year, mon, day, hour, 50);
+    auto is_dst = (day_of_year > 71 && day_of_year < 311 ? 1 : 0);
+    auto start_tp = to_time_point(year, mon, day, 7, 50, is_dst);
     auto trading_start = std::chrono::duration_cast<std::chrono::seconds>(start_tp.time_since_epoch());
     std::chrono::minutes back_test_duration(5 * 60);
 
@@ -121,6 +110,40 @@ void run_sim(const std::string& symbol_str, int year, int mon, int day)
     downloader.onSimComplete(symbol);
 }
 
+void run_symbol_date(json& obj)
+{
+    auto symbol = obj["symbol"].get<std::string>();
+    auto date = obj["date"].get<std::string>();
+
+    /*if (std::strcmp(symbol.c_str(), "SPY") == 0)
+        return;  // skip SPY for now
+    else if (std::strcmp(symbol.c_str(), "QQQ") == 0)
+        return;  // skip QQQ for now
+    else if (std::strcmp(symbol.c_str(), "IWM") == 0)
+        return;  // skip IWM for now
+    //else if (std::strcmp(symbol.c_str(), "AAPL") == 0)
+    //    return;
+    else if (std::strcmp(symbol.c_str(), "BA") == 0)
+        return;
+    else if (std::strcmp(symbol.c_str(), "MSFT") == 0)
+        return;*/
+
+    auto yr = std::stoi(date.substr(0, 4));
+    auto mon = std::stoi(date.substr(5, 2));
+    auto day = std::stoi(date.substr(8, 2));
+
+    namespace fs = std::filesystem;
+
+    std::string file = "E:/_data/_v3/" + symbol + "." + std::to_string(yr) + "-" + std::to_string(mon) + "-" + std::to_string(day) + ".0.exports.npy";
+    if (fs::exists(file))
+        return;
+    file = "E:/_data/_v3.e/" + symbol + "." + std::to_string(yr) + "-" + std::to_string(mon) + "-" + std::to_string(day) + ".0.exports.npy";
+    if (fs::exists(file))
+        return;
+
+    run_sim(symbol, yr, mon, day);
+}
+
 int main(int argc, char* argv[])
 {
     TA_RetCode retCode = TA_Initialize();
@@ -142,37 +165,18 @@ int main(int argc, char* argv[])
     
     std::ifstream ifs("pyfiles/train_symbol_dates_main.json");
     json jf = json::parse(ifs);
-    for (json obj : jf) {
-        auto symbol = obj["symbol"].get<std::string>();
-        auto date = obj["date"].get<std::string>();
 
-        /*if (std::strcmp(symbol.c_str(), "SPY") == 0)
-            continue;  // skip SPY for now
-        else if (std::strcmp(symbol.c_str(), "QQQ") == 0)
-            continue;  // skip QQQ for now
-        else if (std::strcmp(symbol.c_str(), "IWM") == 0)
-            continue;  // skip IWM for now
-        else if (std::strcmp(symbol.c_str(), "BA") == 0)
-            continue;  // skip BA for now
-        else if (std::strcmp(symbol.c_str(), "AAPL") == 0)
-            continue;
-        else if (std::strcmp(symbol.c_str(), "MSFT") == 0)
-            continue;*/
-
-        auto yr = std::stoi(date.substr(0, 4));
-        auto mon = std::stoi(date.substr(5, 2));
-        auto day = std::stoi(date.substr(8, 2));
-
-
-        namespace fs = std::filesystem;
-
-        std::string file = "E:/_data/_v3/" + symbol + "." + std::to_string(yr) + "-" + std::to_string(mon) + "-" + std::to_string(day) + ".0.exports.npy";
-        if (fs::exists(file))
-            continue;
-
-        run_sim(symbol, yr, mon, day);
+    if constexpr (REVERSE)
+    {
+        for (json::reverse_iterator o = jf.rbegin(); o < jf.rend(); ++o) {
+            run_symbol_date(*o);
+        }
     }
-
+    else {
+        for (json obj : jf) {
+            run_symbol_date(obj);
+        }
+    }
 
     /*
     timestamp_t endTs = 1632628800;

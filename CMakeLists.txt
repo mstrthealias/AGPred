@@ -1,13 +1,14 @@
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.18)
 project(agpred LANGUAGES CXX CUDA)
 
 
 if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_CRT_SECURE_NO_WARNINGS")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:__cplusplus")
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_PREFIX_PATH c:/share/xtensor;C:/src/tensorflow/bazel-bin;C:/ta-lib/c/lib;C:/share/OpenSSL-Win64-1.1.1l;C:/share/stldate)
 # ;C:/share/curl-7.79.1  # Note: cpr includes zlib/curl
