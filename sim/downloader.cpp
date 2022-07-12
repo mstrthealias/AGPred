@@ -93,7 +93,7 @@ void agpred::Downloader::onUpdate(const Symbol& symbol, const Snapshot& snapshot
 			std::copy(outputs_last_valid.cbegin(), outputs_last_valid.cend(), stage_outputs.begin());
 		}
 		else {
-			auto tmp_outputs_last_valid = xt::view(outputs_last_valid, xt::range(1, NUM_COLUMNS));
+			const auto tmp_outputs_last_valid = xt::view(outputs_last_valid, xt::range(1, NUM_COLUMNS));
 			std::copy(tmp_outputs_last_valid.cbegin(), tmp_outputs_last_valid.cend(), stage_outputs.begin());
 		}
 	}
@@ -108,7 +108,7 @@ void agpred::Downloader::onUpdate(const Symbol& symbol, const Snapshot& snapshot
 			std::copy(cur_quotes.cbegin(), cur_quotes.cend(), stage_quotes.begin());
 		}
 		else {
-			auto tmp_cur_quotes = xt::view(cur_quotes, xt::all(), xt::range(1, NUM_QUOTE_COLUMNS));
+			const auto tmp_cur_quotes = xt::view(cur_quotes, xt::all(), xt::range(1, NUM_QUOTE_COLUMNS));
 			std::copy(tmp_cur_quotes.cbegin(), tmp_cur_quotes.cend(), stage_quotes.begin());
 		}
 	}
@@ -123,7 +123,7 @@ void agpred::Downloader::onUpdate(const Symbol& symbol, const Snapshot& snapshot
 			std::copy(cur_trades.cbegin(), cur_trades.cend(), stage_trades.begin());
 		}
 		else {
-			auto tmp_cur_trades = xt::view(cur_trades, xt::all(), xt::range(1, NUM_TRADE_COLUMNS));
+			const auto tmp_cur_trades = xt::view(cur_trades, xt::all(), xt::range(1, NUM_TRADE_COLUMNS));
 			std::copy(tmp_cur_trades.cbegin(), tmp_cur_trades.cend(), stage_trades.begin());
 		}
 	}
@@ -136,7 +136,7 @@ void agpred::Downloader::onUpdate(const Symbol& symbol, const Snapshot& snapshot
 		}
 		else {
 			// create view without timestamps, copy from it...
-			auto tmp_data_processed = xt::view(data_processed, xt::all(), xt::all(), xt::range(1, NUM_COLUMNS));
+			const auto tmp_data_processed = xt::view(data_processed, xt::all(), xt::all(), xt::range(1, NUM_COLUMNS));
 			std::copy(tmp_data_processed.cbegin(), tmp_data_processed.cend(), stage_processed.begin());
 		}
 	}
@@ -178,10 +178,10 @@ void agpred::Downloader::do_flush(const Symbol& symbol)
 		if (!fout.is_open())
 			throw std::runtime_error("Unable to open file " + file);
 
-		auto export_processed = xt::view(staged_proccessed, xt::range(0, last_stage), xt::all(), xt::all(), xt::all());
-		auto export_trades = xt::view(staged_trades, xt::range(0, last_stage), xt::all(), xt::all());
-		auto export_quotes = xt::view(staged_quotes, xt::range(0, last_stage), xt::all(), xt::all());
-		auto export_outputs = xt::view(staged_outputs, xt::range(0, last_stage), xt::all());
+		const auto export_processed = xt::view(staged_proccessed, xt::range(0, last_stage), xt::all(), xt::all(), xt::all());
+		const auto export_trades = xt::view(staged_trades, xt::range(0, last_stage), xt::all(), xt::all());
+		const auto export_quotes = xt::view(staged_quotes, xt::range(0, last_stage), xt::all(), xt::all());
+		const auto export_outputs = xt::view(staged_outputs, xt::range(0, last_stage), xt::all());
 
 		xt::detail::dump_npy_stream(fout, export_processed);
 		xt::detail::dump_npy_stream(fout, export_trades);
@@ -191,19 +191,19 @@ void agpred::Downloader::do_flush(const Symbol& symbol)
 
 	// shift the not-exported records to the front
 	{
-		auto adtl_processed = xt::view(staged_proccessed, xt::range(last_stage, staged_size), xt::all(), xt::all(), xt::all());
+		const auto adtl_processed = xt::view(staged_proccessed, xt::range(last_stage, staged_size), xt::all(), xt::all(), xt::all());
 		std::copy(adtl_processed.cbegin(), adtl_processed.cend(), staged_proccessed.begin());
 	}
 	{
-		auto adtl_trades = xt::view(staged_trades, xt::range(last_stage, staged_size), xt::all(), xt::all());
+		const auto adtl_trades = xt::view(staged_trades, xt::range(last_stage, staged_size), xt::all(), xt::all());
 		std::copy(adtl_trades.cbegin(), adtl_trades.cend(), staged_trades.begin());
 	}
 	{
-		auto adtl_quotes = xt::view(staged_quotes, xt::range(last_stage, staged_size), xt::all(), xt::all());
+		const auto adtl_quotes = xt::view(staged_quotes, xt::range(last_stage, staged_size), xt::all(), xt::all());
 		std::copy(adtl_quotes.cbegin(), adtl_quotes.cend(), staged_quotes.begin());
 	}
 	{
-		auto adtl_outputs = xt::view(staged_outputs, xt::range(last_stage, staged_size), xt::all());  // TODO can skip this since it will be overwritten...
+		const auto adtl_outputs = xt::view(staged_outputs, xt::range(last_stage, staged_size), xt::all());  // TODO can skip this since it will be overwritten...
 		std::copy(adtl_outputs.cbegin(), adtl_outputs.cend(), staged_outputs.begin());
 	}
 
