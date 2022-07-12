@@ -557,7 +557,7 @@ size_t PolygonIoAdapter::getQuoteHistoryBefore(std::queue<QuoteData>& quotes, co
 	std::cout << "getQuoteHistoryBefore() end_ts: " << tmp_str;  //  << std::endl
 
 	// Note: using the vX version of endpoint here, since it handles desc order with max timestamp:
-	const std::string url = POLYGON_BASE_URI + "vX/quotes/" + std::string(symbol);
+	const std::string url = POLYGON_BASE_URI + "v3/quotes/" + std::string(symbol);
 	cpr::Response r = cpr::Get(
 		cpr::Url{ url },  // see note above
 		cpr_ssl_opts,
@@ -627,7 +627,7 @@ size_t PolygonIoAdapter::getTradeHistoryBefore(std::queue<TradeData>& trades, co
 	if (limit > MAX_LIMIT)
 		throw std::logic_error("limit must be <= MAX_LIMIT");
 
-	const std::string url = POLYGON_BASE_URI + "vX/trades/" + std::string(symbol);
+	const std::string url = POLYGON_BASE_URI + "v3/trades/" + std::string(symbol);
 
 	char tmp_str[26];
 	time_t tmp_time;
@@ -720,7 +720,7 @@ size_t PolygonIoAdapter::getQuoteHistoryAfter(std::queue<QuoteData>& quotes, con
 	}
 
 	// Note: using the vX version of endpoint here
-	const std::string url = POLYGON_BASE_URI + "vX/quotes/" + std::string(symbol);
+	const std::string url = POLYGON_BASE_URI + "v3/quotes/" + std::string(symbol);
 	cpr::Response r = cpr::Get(
 		cpr::Url{ url },  // cpr::Url{ url },  // see note above
 		cpr_ssl_opts,
@@ -788,7 +788,7 @@ size_t PolygonIoAdapter::getQuoteHistoryBetween(std::queue<QuoteData>& quotes, c
 	const size_t limit = 50000;  // TODO static constant?
 
 	// Note: using the vX version of endpoint here
-	const std::string url = POLYGON_BASE_URI + "vX/quotes/" + std::string(symbol);
+	const std::string url = POLYGON_BASE_URI + "v3/quotes/" + std::string(symbol);
 
 	// download quotes in range start_ts -> end_ts
 
@@ -882,7 +882,7 @@ size_t PolygonIoAdapter::getTradeHistoryBetween(std::queue<TradeData>& trades, c
 {
 	const size_t limit = 50000;  // TODO static constant?
 
-	const std::string url = POLYGON_BASE_URI + "vX/trades/" + std::string(symbol);
+	const std::string url = POLYGON_BASE_URI + "v3/trades/" + std::string(symbol);
 	
 	// download trades in range start_ts -> end_ts
 
