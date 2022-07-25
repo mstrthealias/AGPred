@@ -31,6 +31,8 @@ using real_t = float;
 #endif
 
 
+//using interval_t = unsigned int;  // minutes
+////using interval_m_t = unsigned int;  // TODO?
 
 
 using dfs_map_t = std::map<int, xt::xarray<real_t>>;
@@ -62,6 +64,21 @@ std::ostream& operator<< (std::ostream& out, const xt::xshape<N...>& v)
 	std::copy(v.cbegin(), v.cend(), std::ostream_iterator<real_t>(out, ", "));
 	out << "\b\b)";
 	return out;
+}
+
+
+std::string st_red_s(const std::string& txt);
+std::string st_green_s(const std::string& txt);
+std::string st_real_clr(const real_t& val, const real_t& threshold = 0.0);
+
+template <typename T>
+std::string st_green(const T& v) {
+	return st_green(std::to_string(v));
+}
+
+template <typename T>
+std::string st_red(const T& v) {
+	return st_red(std::to_string(v));
 }
 
 

@@ -1,6 +1,31 @@
 #include "common.h"
 
 
+
+
+std::string st_red_s(const std::string& txt) {
+	std::stringstream stream;
+	stream << "\x1B[31m" << txt << "\033[0m";
+	return stream.str();
+}
+
+std::string st_green_s(const std::string& txt) {
+	std::stringstream stream;
+	stream << "\x1B[32m" << txt << "\033[0m";
+	return stream.str();
+}
+
+std::string st_real_clr(const real_t& val, const real_t& threshold) {
+	std::stringstream stream;
+	if (val < threshold)
+		stream << "\x1B[31m";
+	else
+		stream << "\x1B[32m";
+	stream << val << "\033[0m";
+	return stream.str();
+}
+
+
 std::ostream& operator<< (std::ostream& out, const std::vector<real_t>& v)
 {
     out << '[';  // (std::is_floating_point<T>::value ? '[' : '(');

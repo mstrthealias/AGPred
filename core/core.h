@@ -20,7 +20,7 @@ namespace agpred {
 	constexpr int NUM_TRADE_COLUMNS = 6;  // ts, price, size, cond1, cond2, cond3
 	constexpr int NUM_QUOTE_COLUMNS = 8;  // ts, bid, ask, bid_size, ask_size, cond1, cond2, cond3
 	constexpr int RT_MAX_TIMESTEPS = 255;
-	constexpr int RT_REPORT_TIMESTEPS = 11;  // TODO NUM_TIMESTEMPS ?
+	constexpr int RT_REPORT_TIMESTEPS = NUM_TIMESTEMPS;  // 11;  // TODO NUM_TIMESTEMPS ?
 
 	// this is how much raw data is tracked for each symbol; note that not all timestamps fill 255 rows
 	using shape_ts_interval_255_t = xt::xshape<RT_MAX_TIMESTEPS, 1>;  // (timesteps, 1)

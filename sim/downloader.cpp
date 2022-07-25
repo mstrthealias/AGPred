@@ -18,11 +18,13 @@ constexpr size_t STAGED_DELAY_OFFSET = 8;
 constexpr size_t STAGED_COL_ADJ = STAGED_INCLUDE_TIMESTAMPS ? 0 : 1;
 
 
+using shape_staged_raw_t = xt::xshape<STAGED_SIZE, RT_REPORT_TIMESTEPS, ColPos::_IN_NUM_COLS>;
 using shape_staged_processed_t = xt::xshape<STAGED_SIZE, NUM_INTERVALS, NUM_TIMESTEMPS, NUM_COLUMNS - STAGED_COL_ADJ>;  // TODO move NUM_INTERVALS to end?
 using shape_staged_trades_t = xt::xshape<STAGED_SIZE, NUM_TRADES, NUM_TRADE_COLUMNS - STAGED_COL_ADJ>;  // (stages, timesteps, cols)
 using shape_staged_quotes_t = xt::xshape<STAGED_SIZE, NUM_QUOTES, NUM_QUOTE_COLUMNS - STAGED_COL_ADJ>;  // (stages, timesteps, cols)
 using shape_staged_outputs_t = xt::xshape<STAGED_SIZE, ColPos::_OUTPUT_NUM_COLS - STAGED_COL_ADJ>;
 
+using xtensor_staged_raw = xt::xtensor_fixed<real_t, shape_staged_raw_t>;
 using xtensor_staged_processed = xt::xtensor_fixed<real_t, shape_staged_processed_t>;
 using xtensor_staged_trades = xt::xtensor_fixed<real_t, shape_staged_trades_t>;
 using xtensor_staged_quotes = xt::xtensor_fixed<real_t, shape_staged_quotes_t>;
@@ -31,6 +33,7 @@ using xtensor_staged_outputs = xt::xtensor_fixed<real_t, shape_staged_outputs_t>
 xtensor_quotes cur_quotes;
 xtensor_trades cur_trades;
 
+xtensor_staged_raw staged_raw = xt::zeros<real_t>(shape_staged_raw_t());
 xtensor_staged_processed staged_proccessed = xt::zeros<real_t>(shape_staged_processed_t());
 xtensor_staged_trades staged_trades = xt::zeros<real_t>(shape_staged_trades_t());
 xtensor_staged_quotes staged_quotes = xt::zeros<real_t>(shape_staged_quotes_t());
@@ -45,7 +48,7 @@ void agpred::Downloader::onSimComplete(const Symbol& symbol)
 	}
 	else {
 		{
-			std::string file = "E:/_data/_v3.e/" + file_prefix_ + "." + std::to_string(cur_stage_) + ".exports" + (STAGED_INCLUDE_TIMESTAMPS ? ".ts" : "") + ".npy";
+			std::string file = "E:/_data/_v4.e/" + file_prefix_ + "." + std::to_string(cur_stage_) + ".exports" + (STAGED_INCLUDE_TIMESTAMPS ? ".ts" : "") + ".npy";
 
 			std::ofstream fout(file, std::ios::binary);
 			if (!fout.is_open())
@@ -128,6 +131,13 @@ void agpred::Downloader::onUpdate(const Symbol& symbol, const Snapshot& snapshot
 		}
 	}
 
+	// copy raw data into staging array
+	{
+		auto stage_raw = xt::view(staged_raw, cur_pos_, xt::all(), xt::all());
+		const auto tmp_data = xt::squeeze(xt::view(data, Timeframes::_1min, xt::all(), xt::range(0, ColPos::_IN_NUM_COLS)));
+		std::copy(tmp_data.cbegin(), tmp_data.cend(), stage_raw.begin());
+	}
+	
 	// copy processed data into staging array
 	{
 		auto stage_processed = xt::view(staged_proccessed, cur_pos_, xt::all(), xt::all(), xt::all());
@@ -150,9 +160,13 @@ void agpred::Downloader::onUpdate(const Symbol& symbol, const Snapshot& snapshot
 			//std::cout << "stage_proc_avo_1min_last TS: " << static_cast<timestamp_t>(stage_proc_at_valid_output(0, NUM_TIMESTEMPS - 1, 0)) << std::endl;
 
 			// Note outputs copied into this row: (cur_pos_ - STAGED_DELAY_OFFSET)
-			//auto stage_outputs = xt::view(staged_outputs, cur_pos_ - STAGED_DELAY_OFFSET, xt::all());
-			//std::cout << "stage_outputs.shape() " << xt::xarray<real_t>(stage_outputs).shape() << std::endl;
-			//std::cout << "stage_outputs TS: " << static_cast<timestamp_t>(stage_outputs(0)) << std::endl;
+			auto stage_outputs = xt::view(staged_outputs, cur_pos_ - STAGED_DELAY_OFFSET, xt::all());
+			std::cout << "stage_outputs.shape() " << xt::xarray<real_t>(stage_outputs).shape() << std::endl;
+			std::cout << "stage_outputs TS: " << static_cast<timestamp_t>(stage_outputs(0)) << std::endl;
+
+			auto stage_raw = xt::view(staged_raw, cur_pos_ - STAGED_DELAY_OFFSET, xt::all(), xt::all());
+			std::cout << "stage_raw.shape() " << xt::xarray<real_t>(stage_raw).shape() << std::endl;
+			std::cout << "stage_raw TS: " << static_cast<timestamp_t>(stage_raw(0, 0)) << std::endl;
 		}
 	}
 
@@ -172,17 +186,19 @@ void agpred::Downloader::do_flush(const Symbol& symbol)
 	auto staged_size = std::min(cur_pos_, STAGED_SIZE);
 	auto last_stage = staged_size - STAGED_DELAY_OFFSET;
 	{
-		std::string file = "E:/_data/_v3/" + file_prefix_ + "." + std::to_string(cur_stage_) + ".exports" + (STAGED_INCLUDE_TIMESTAMPS ? ".ts" : "") + ".npy";
+		std::string file = "E:/_data/_v4/" + file_prefix_ + "." + std::to_string(cur_stage_) + ".exports" + (STAGED_INCLUDE_TIMESTAMPS ? ".ts" : "") + ".npy";
 
 		std::ofstream fout(file, std::ios::binary);
 		if (!fout.is_open())
 			throw std::runtime_error("Unable to open file " + file);
 
+		const auto export_raw = xt::view(staged_raw, xt::range(0, last_stage), xt::all(), xt::all());
 		const auto export_processed = xt::view(staged_proccessed, xt::range(0, last_stage), xt::all(), xt::all(), xt::all());
 		const auto export_trades = xt::view(staged_trades, xt::range(0, last_stage), xt::all(), xt::all());
 		const auto export_quotes = xt::view(staged_quotes, xt::range(0, last_stage), xt::all(), xt::all());
 		const auto export_outputs = xt::view(staged_outputs, xt::range(0, last_stage), xt::all());
 
+		xt::detail::dump_npy_stream(fout, export_raw);
 		xt::detail::dump_npy_stream(fout, export_processed);
 		xt::detail::dump_npy_stream(fout, export_trades);
 		xt::detail::dump_npy_stream(fout, export_quotes);
@@ -190,6 +206,10 @@ void agpred::Downloader::do_flush(const Symbol& symbol)
 	}
 
 	// shift the not-exported records to the front
+	{
+		const auto adtl_raw = xt::view(staged_raw, xt::range(last_stage, staged_size), xt::all(), xt::all());
+		std::copy(adtl_raw.cbegin(), adtl_raw.cend(), staged_raw.begin());
+	}
 	{
 		const auto adtl_processed = xt::view(staged_proccessed, xt::range(last_stage, staged_size), xt::all(), xt::all(), xt::all());
 		std::copy(adtl_processed.cbegin(), adtl_processed.cend(), staged_proccessed.begin());
