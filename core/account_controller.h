@@ -53,15 +53,18 @@ namespace agpred {
 	};
 
 	
-	template <size_t Algos, size_t Entries, size_t Exits>
+	template <size_t Algos, size_t Entries, size_t Exits, size_t MaxSignals>
 	class AccountController {
+	public:
+		static constexpr size_t max_signal_size = MaxSignals;
+
 	private:
 		AccountAdapter& adapter_;
 
 		const AGMode mode_;
 		
-		const std::array<AlgoBase* const, Algos> algos_;
-		const std::array<EntryBase* const, Entries> entries_;
+		const std::array<AlgoBase2<max_signal_size>* const, Algos> algos_;
+		const std::array<EntryBase<max_signal_size>* const, Entries> entries_;
 		const std::array<ExitBase* const, Exits> exits_;
 
 		std::optional<AccountStatusRequest> pending_status_;
@@ -77,16 +80,19 @@ namespace agpred {
 		real_t total_pl = 0.0;
 		size_t total_trades = 0;
 
+		real_t max_trade_loss_ = 0.0;
+		real_t max_daily_loss_ = 0.0;
+
 		fn_symbol_positions_closed on_positions_closed_;
 
 	public:
-		AccountController(AccountAdapter& adapter, const AGMode mode, const std::array<AlgoBase* const, Algos>& algos, const std::array<EntryBase* const, Entries>& entries, const std::array<ExitBase* const, Exits>& exits)
+		AccountController(AccountAdapter& adapter, const AGMode mode, const std::array<AlgoBase2<max_signal_size>* const, Algos>& algos, const std::array<EntryBase<max_signal_size>* const, Entries>& entries, const std::array<ExitBase* const, Exits>& exits)
 			: adapter_(adapter), mode_(mode), algos_(algos), entries_(entries), exits_(exits), internal_stoploss_exit_("_internal_stoploss_ exit")
 		{
 			adapter.setCallbacks(
-				[AccountPtr = this](id_t order_id, const Symbol& symbol, OrderStatus status, size_t filled, size_t remaining, real_t avg_price)
+				[AccountPtr = this](const timestamp_us_t& ts, id_t order_id, const Symbol& symbol, OrderStatus status, size_t filled, size_t remaining, real_t avg_price)
 				{
-					AccountPtr->onOrderStatus(order_id, symbol, status, filled, remaining, avg_price);
+					AccountPtr->onOrderStatus(ts, order_id, symbol, status, filled, remaining, avg_price);
 				},
 				[AccountPtr = this](id_t request_id, const AccountStatus& status)
 				{
@@ -177,7 +183,7 @@ namespace agpred {
 					}
 
 					// loop snapshot exists and call to check for exit
-					std::map<size_t, const AlgoBase*> algo_map;
+					std::map<size_t, const AlgoBase2<max_signal_size>*> algo_map;
 					for (const ExitBase* exit : exits_)
 					{
 						// TODO using dynamic_cast to determine sub-class; maybe track the exits separately...
@@ -194,41 +200,47 @@ namespace agpred {
 			}
 		}
 		
-		void onUpdate(const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades)
+		void onUpdate(const Symbol& symbol, const Snapshot& snapshot, const xtensor_ts_interval& data_ts, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades)
 		{
 			onUpdateLog(symbol, snapshot, data, data_processed);
 
 			// TODO loop positions, only perform exit logic when a position exists...
 
+			// loop exits and entries to track unique algos
+			std::map<size_t, const AlgoBase2<max_signal_size>*> algo_map;
+			// loop exits to track unique algos
+			for (const ExitBase* exit : exits_)
+			{
+				// TODO using dynamic_cast to determine sub-class; maybe track the exits separately...
+				const AlgoExitBase<max_signal_size>* algo_exit = dynamic_cast<const AlgoExitBase<max_signal_size>*>(exit);
+				if (algo_exit != nullptr)
+				{
+					algo_map[algo_exit->algo_.id()] = &(algo_exit->algo_);
+				}
+			}
+			// loop entries to track unique algos
+			for (const auto entry : entries_)
+			{
+				algo_map[entry->algo_.id()] = &(entry->algo_);
+			}
+
+			// loop unique algos, run algo/map result by algo id
+			std::map<size_t, std::array<bool, max_signal_size>> algo_result_map;
+			for (const auto& pair : algo_map)
+			{
+				algo_result_map[pair.first] = pair.second->operator()(snapshot, data, data_processed, quotes, trades);
+			}
+			
 			// handle algo exits
 			{
-				// loop exits to track unique algos
-				std::map<size_t, const AlgoBase*> algo_map;
-				for (const ExitBase* exit : exits_)
-				{
-					// TODO using dynamic_cast to determine sub-class; maybe track the exits separately...
-					const AlgoExitBase* algo_exit = dynamic_cast<const AlgoExitBase*>(exit);
-					if (algo_exit != nullptr)
-					{
-						algo_map[algo_exit->algo_.id_] = &(algo_exit->algo_);
-					}
-				}
-
-				// loop unique algos, map result by algo id
-				std::map<size_t, bool> algo_result_map;
-				for (const auto& pair : algo_map)
-				{
-					algo_result_map[pair.first] = pair.second->operator()(snapshot, data, data_processed, quotes, trades);
-				}
-
 				// loop exits, check if algo result was true
 				for (const ExitBase* exit : exits_)
 				{
 
 					// TODO move PositionType:type into ExitBase?
 
-					const AlgoExitBase* algo_exit = dynamic_cast<const AlgoExitBase*>(exit);
-					if (algo_exit != nullptr && algo_result_map[algo_exit->algo_.id_])
+					const AlgoExitBase<max_signal_size>* algo_exit = dynamic_cast<const AlgoExitBase<max_signal_size>*>(exit);
+					if (algo_exit != nullptr && algo_result_map[algo_exit->algo_.id()][algo_exit->pos()])
 					{
 						// exit algo evaluated true: exit 
 						
@@ -264,24 +276,10 @@ namespace agpred {
 
 			// handle algo entries
 			{
-				// loop entries to track unique algos
-				std::map<size_t, const AlgoBase*> algo_map;
-				for (const auto entry : entries_)
-				{
-					algo_map[entry->algo_.id_] = &(entry->algo_);
-				}
-
-				// loop unique algos, map result by algo id
-				std::map<size_t, bool> algo_result_map;
-				for (const auto& pair : algo_map)
-				{
-					algo_result_map[pair.first] = pair.second->operator()(snapshot, data, data_processed, quotes, trades);
-				}
-
 				// loop entries, check if algo result was true
 				for (const auto entry : entries_)
 				{
-					if (algo_result_map[entry->algo_.id_])
+					if (algo_result_map[entry->algo_.id()][entry->pos()])
 					{
 						// algo result true, do entry...
 						EntryData entry_data = (*entry)(symbol, snapshot);
@@ -314,6 +312,8 @@ namespace agpred {
 
 			std::cout << "onAccountStatus() " << request_id << ", balance $" << status.account_balance << std::endl;
 
+			max_daily_loss_ = status.max_daily_loss;
+			max_trade_loss_ = status.max_trade_loss;
 			// TODO
 
 		}
@@ -322,7 +322,7 @@ namespace agpred {
 		/**
 		 * @param order_id A unique order ID, set by client when creating the order (fe. next_order_id)
 		 */
-		void onOrderStatus(id_t order_id, const Symbol& symbol, OrderStatus status, size_t filled, size_t remaining, real_t avg_price)
+		void onOrderStatus(const timestamp_us_t& ts, id_t order_id, const Symbol& symbol, OrderStatus status, size_t filled, size_t remaining, real_t avg_price)
 		{
 			// TODO
 			bool is_entry = false;
@@ -334,7 +334,7 @@ namespace agpred {
 				is_exit = true;
 				const PendingExit& exit = pending_exits_.at(order_id);
 				is_long = exit.exit_data.type == PositionType::LONG;
-				onExitFill(symbol, exit, filled, avg_price);
+				onExitFill(ts, symbol, exit, filled, avg_price);
 			}
 
 			if (pending_entries_.contains(order_id))
@@ -342,7 +342,7 @@ namespace agpred {
 				is_entry = true;
 				const PendingEntry& entry = pending_entries_.at(order_id);
 				is_long = entry.entry_data.type == PositionType::LONG;
-				onEntryFill(symbol, entry, filled, avg_price);
+				onEntryFill(ts, symbol, entry, filled, avg_price);
 			}
 
 			if (!is_exit && !is_entry)
@@ -411,10 +411,15 @@ namespace agpred {
 			}
 		}
 
-		void entryBlocked(const Symbol& symbol, const EntryData& entry_data)
+		void entryBlocked(const Symbol& symbol, const EntryData& entry_data, const bool is_daily_loss)
 		{
 			const bool is_long = entry_data.type == PositionType::LONG;  // position is long, not the exit...
-			std::cout << "entryBlocked(" << symbol.symbol << ", " << (is_long ? "LONG" : "SHORT") << ") BLOCKED " << entry_data.size << std::endl;
+			if (is_daily_loss) {
+				std::cout << "entryBlocked(" << symbol.symbol << ", " << (is_long ? "LONG" : "SHORT") << ") DAILY LOSS EXCEEDED " << entry_data.size << std::endl;
+			}
+			else {
+				std::cout << "entryBlocked(" << symbol.symbol << ", " << (is_long ? "LONG" : "SHORT") << ") BLOCKED " << entry_data.size << std::endl;
+			}
 		}
 
 		void enterPosition(const Symbol& symbol, const EntryData& entry_data)
@@ -426,9 +431,13 @@ namespace agpred {
 			const OrderType order_type = is_long ? OrderType::BUY : OrderType::SELL;
 			const PendingEntry entry = PendingEntry::fromEntryData(entry_data);
 
+			if (total_pl < -max_daily_loss_) {
+				entryBlocked(symbol, entry_data, true);
+				return;
+			}
 			if (!adapter_.allowEntry(symbol, entry_data, positions_))
 			{
-				entryBlocked(symbol, entry_data);
+				entryBlocked(symbol, entry_data, false);
 				return;
 			}
 			std::cout << "enterPosition(" << symbol.symbol << ", " << (is_long ? "LONG" : "SHORT") << ", " << entry.order_id << ") " << (is_long ? "BUY " : "SELL ") << entry_data.size << " @ $" << entry_data.limit_price << std::endl;
@@ -491,7 +500,7 @@ namespace agpred {
 		 * TODO price is average of all fills for order_id
 		 * Note: handling as num_shares = total # of filled shares, and price is average of all filled shares...
 		 */
-		void onEntryFill(const Symbol& symbol, const PendingEntry& pending_entry, const size_t& num_shares, const real_t& price)
+		void onEntryFill(const timestamp_us_t& ts, const Symbol& symbol, const PendingEntry& pending_entry, const size_t& num_shares, const real_t& price)
 		{
 			// TODO
 
@@ -499,13 +508,13 @@ namespace agpred {
 			if (!hasPosition(pending_entry.order_id))
 			{
 				// create new position/add position to the positions array
-				positions_.emplace(std::pair<id_t, Position>(pending_entry.order_id, Position( pending_entry.order_id, symbol, pending_entry.entry_data )));
+				positions_.emplace(std::pair<id_t, Position>(pending_entry.order_id, Position{ pending_entry.order_id, symbol, pending_entry.entry_data, ts }));  // Position(
 			}
 
 			// have a partially or fully filled entry
 			Position& position = getPosition(pending_entry.order_id);
 
-			position.onFill(num_shares, price);
+			position.onFill(num_shares, price, ts);
 
 			if (position.isFilled())
 			{
@@ -516,7 +525,7 @@ namespace agpred {
 			//else {}  // have a partially filled entry
 		}
 
-		void onExitFill(const Symbol& symbol, const PendingExit& pending_exit, const size_t& num_shares, const real_t& price)
+		void onExitFill(const timestamp_us_t& ts, const Symbol& symbol, const PendingExit& pending_exit, const size_t& num_shares, const real_t& price)
 		{
 			if (!hasPosition(pending_exit.position_id))
 				throw std::logic_error("position for exit does not exist");
@@ -526,7 +535,7 @@ namespace agpred {
 			if (static_cast<int64_t>(position.num_shares_filled()) - static_cast<int64_t>(num_shares) < 0)
 				throw std::logic_error("too many exit shares filled...");
 
-			position.onExitFill(num_shares, price);
+			position.onExitFill(num_shares, price, ts);
 
 			if (position.isClosed())
 			{
@@ -539,11 +548,7 @@ namespace agpred {
 				const real_t pl = position.getClosedPL(price);
 				total_pl += pl;
 				total_trades++;
-				if (pl < 0)
-					std::cout << "  onExitFill(" << symbol.symbol << ") closed PL $" << "\x1B[31m" << pl << "\033[0m" << std::endl;
-				else
-					std::cout << "  onExitFill(" << symbol.symbol << ") closed PL $" << "\x1B[32m" << pl << "\033[0m" << std::endl;
-
+				std::cout << "  onExitFill(" << symbol.symbol << ") closed PL $" << st_real_clr(pl) << std::endl;
 
 				if (on_positions_closed_ && (positions_.empty() || !getSymbolPositionCnt(symbol)))
 				{
@@ -554,7 +559,6 @@ namespace agpred {
 				}
 			}
 		}
-
 
 	};
 }

@@ -92,7 +92,7 @@ std::chrono::system_clock::time_point to_time_point(int year, int mon, int day, 
 	tm.tm_mday = day;
 	tm.tm_hour = hour;
 	tm.tm_min = min;
-	tm.tm_isdst = is_dst != 0 ? 1 : 0;
+	tm.tm_isdst = is_dst ? -1 : 1;
 	std::time_t tt = std::mktime(&tm);
 	return system_clock::from_time_t(tt);
 }

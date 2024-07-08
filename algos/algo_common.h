@@ -9,8 +9,8 @@ namespace agpred {
 
 
 	constexpr real_t PROFIT_MULTIPLIER = 1.777;
-	constexpr real_t STOPLOSS_MULTIPLIER = 1;
-	constexpr real_t MULTIPLIER_ADJ = 0.5;
+	constexpr real_t STOPLOSS_MULTIPLIER = 1.0;
+	constexpr real_t MULTIPLIER_ADJ = 1.07;
 
 
 	class TakeProfitExit final : public SnapshotExitBase {
@@ -49,6 +49,30 @@ namespace agpred {
 			return ExitData{ position.type(), 0.0 };
 		}
 	};
+
+
+	class TimeExit final : public SnapshotExitBase {
+	public:
+		explicit TimeExit(const std::string& name, const timestamp_us_t& max_time) : SnapshotExitBase(name), max_time_(max_time)
+		{
+		}
+		~TimeExit() = default;
+
+		bool call(const Position& position, const Snapshot& snapshot) const override
+		{
+			return snapshot.nbbo.timestamp >= position.ts_created() + max_time_;
+		}
+
+		ExitData operator() (const Position& position, const Symbol& symbol, const Snapshot& snapshot) const override
+		{
+			std::cout << "TimeExit: ExitData CALL()" << std::endl;
+			return ExitData{ position.type(), 0.0 };
+		}
+
+	private:
+		const timestamp_us_t max_time_;
+	};
+
 
 }
 

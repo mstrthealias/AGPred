@@ -11,6 +11,17 @@
 
 namespace agpred {
 
+	/*struct TradeConfiguration
+	{
+		const real_t long_margin_ratio;
+		const real_t short_margin_ratio;
+		const real_t cost_per_order;  // per 11 shares...
+	};
+
+	const TradeConfiguration TRADE_CONFIG_BIGCAP = { 4.0, 2.0, 1.0 };
+	const TradeConfiguration TRADE_CONFIG_SMALLCAP = { 1.0, 0.25, 1.0 };*/
+
+
 	struct SymbolSimMarket
 	{
 		real_t price;
@@ -66,8 +77,11 @@ namespace agpred {
 		bool allowEntry(const Symbol& symbol, const EntryData& entry_data, const std::map<id_t, Position>& positions)
 		{
 			// TODO
-			return positions.size() < 1;
-			//return true; // positions.size() <= 2;
+			//return true;
+			//return positions.size() < 1;  // allow up to 1 position
+			return positions.size() < 2;  // allow up to 2 positions
+			//return positions.size() < 12;  // allow up to 12 positions (~4x margin use on 100k account for 325$ stock)
+			//return positions.size() < 3;  // allow up to 3 positions
 		}
 
 		void initSymbol(const Symbol& symbol)
@@ -99,9 +113,9 @@ namespace agpred {
 				for (WaitingOrder& order : pending_limit_orders_)
 				{
 					if (order.order_type == OrderType::BUY && market.ask <= order.limit_price)
-						simFillOrder(symbol, order, false);
+						simFillOrder(symbol, order, false, snapshot.nbbo.timestamp);
 					else if (order.order_type == OrderType::SELL && market.bid >= order.limit_price)
-						simFillOrder(symbol, order, false);
+						simFillOrder(symbol, order, false, snapshot.nbbo.timestamp);
 				}
 
 				// remove limit orders that were filled
@@ -129,7 +143,7 @@ namespace agpred {
 				// attempt to fill all market orders
 				for (WaitingOrder& order : pending_market_orders_)
 				{
-					simFillOrder(symbol, order, true);
+					simFillOrder(symbol, order, true, snapshot.nbbo.timestamp);
 				}
 
 				// remove market orders that were filled
@@ -196,6 +210,8 @@ namespace agpred {
 			// TODO anything else needed here?
 			// TODO implement and verify logic mentioned at 'TODO canceled order fill
 
+			// TODO onOrderCanceled callback?
+
 			if (!pending_limit_orders_.empty())
 			{
 				// remove limit orders matching this id...
@@ -230,7 +246,7 @@ namespace agpred {
 
 	private:
 
-		void simFillOrder(const Symbol& symbol, WaitingOrder& order, const bool is_market)
+		void simFillOrder(const Symbol& symbol, WaitingOrder& order, const bool is_market, const timestamp_us_t& ts)
 		{
 			const SymbolSimMarket& market = symbols_market_[symbol.symbol];
 
@@ -288,7 +304,7 @@ namespace agpred {
 
 			// TODO need to track this
 			
-			on_order_status_(order.order_id, symbol, status, order.filled_size, order.remaining_size, order.filled_avg);
+			on_order_status_(ts, order.order_id, symbol, status, order.filled_size, order.remaining_size, order.filled_avg);
 		}
 
 	private:

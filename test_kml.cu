@@ -73,12 +73,11 @@ bool generate_pred_inputs(DataGenerator& data_gen, GPUMatrix<float>& inputs)
 	return true;
 }
 
-
 int main(int argc, char* argv[])
 {
 	json config = {
 		{"loss", {
-			{"otype", "L2"}
+			{"otype", "MAPE"}
 		}},
 		{"optimizer", {
 			{"otype", "Adam"},

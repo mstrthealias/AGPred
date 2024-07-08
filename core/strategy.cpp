@@ -4,4 +4,4 @@
 using namespace agpred;
 
 
-size_t AlgoBase::next_algo_id_ = 1;
+size_t AlgoBaseBase::next_algo_id_ = 1;
