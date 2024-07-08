@@ -141,11 +141,11 @@ add_custom_command(TARGET agpred_process POST_BUILD        # Adds a post-build e
     COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
         "${CURL_BINARY_DIR}/lib/libcurl.dll"
         $<TARGET_FILE_DIR:agpred_process>)
-add_custom_command(TARGET agpred_process POST_BUILD        # Adds a post-build event to agpred_process
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
-        "${zlib_BINARY_DIR}/zlib.dll"
-        $<TARGET_FILE_DIR:agpred_process>)
-# TODO libcrypto-1_1-x64.dll libssl-1_1-x64.dll cacert.pem
+#add_custom_command(TARGET agpred_process POST_BUILD        # Adds a post-build event to agpred_process
+#    COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
+#        "${zlib_BINARY_DIR}/zlib.dll"
+#        $<TARGET_FILE_DIR:agpred_process>)
+# TODO libcrypto-1_1-x64.dll libssl-1_1-x64.dll cacert.pem tensorflow.dll
 
 
 
