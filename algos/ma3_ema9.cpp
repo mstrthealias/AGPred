@@ -52,14 +52,15 @@ int agpred::calc_raw_signal(const xtensor_raw& raw)
 
 	// MA3
 	{
-		std::vector<double> vals(n_len + 1);
+		int taLookback = TA_MA_Lookback(3, TA_MAType_SMA);
+		std::vector<double> vals(n_len + std::max(1, taLookback));
 		int outBegIdx = 0;
 		int outNBElement = 0;
 		std::fill(vals.begin(), vals.end(), NAN);
 #ifdef AGPRED_DOUBLE_P
-		const TA_RetCode retCode = TA_MA(0, n_len, r_close.data(), 3, TA_MAType_SMA, &outBegIdx, &outNBElement, vals.data() + TA_MA_Lookback(3, TA_MAType_SMA));
+		const TA_RetCode retCode = TA_MA(0, n_len, r_close.data(), 3, TA_MAType_SMA, &outBegIdx, &outNBElement, vals.data() + taLookback);
 #else
-		const TA_RetCode retCode = TA_S_MA(0, n_len, r_close.data(), 3, TA_MAType_SMA, &outBegIdx, &outNBElement, vals.data() + TA_MA_Lookback(3, TA_MAType_SMA));
+		const TA_RetCode retCode = TA_S_MA(0, n_len, r_close.data(), 3, TA_MAType_SMA, &outBegIdx, &outNBElement, vals.data() + taLookback);
 #endif
 		if (retCode != TA_SUCCESS)
 		{
@@ -77,14 +78,15 @@ int agpred::calc_raw_signal(const xtensor_raw& raw)
 
 	// EMA9
 	{
-		std::vector<double> vals(n_len + 1);
+		int taLookback = TA_MA_Lookback(9, TA_MAType_EMA);
+		std::vector<double> vals(n_len + std::max(1, taLookback));
 		int outBegIdx = 0;
 		int outNBElement = 0;
 		std::fill(vals.begin(), vals.end(), NAN);
 #ifdef AGPRED_DOUBLE_P
-		const TA_RetCode retCode = TA_MA(0, n_len, r_close.data(), 9, TA_MAType_EMA, &outBegIdx, &outNBElement, vals.data() + TA_MA_Lookback(9, TA_MAType_EMA));
+		const TA_RetCode retCode = TA_MA(0, n_len, r_close.data(), 9, TA_MAType_EMA, &outBegIdx, &outNBElement, vals.data() + taLookback);
 #else
-		const TA_RetCode retCode = TA_S_MA(0, n_len, r_close.data(), 9, TA_MAType_EMA, &outBegIdx, &outNBElement, vals.data() + TA_MA_Lookback(9, TA_MAType_EMA));
+		const TA_RetCode retCode = TA_S_MA(0, n_len, r_close.data(), 9, TA_MAType_EMA, &outBegIdx, &outNBElement, vals.data() + taLookback);
 #endif
 		if (retCode != TA_SUCCESS)
 		{

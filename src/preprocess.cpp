@@ -870,13 +870,29 @@ void apply_candles(const char* symbol, xt::xarray<real_t>& o_results, const xt::
 	const auto& rows_close = r_close.data();
 	const auto& o_shape = r_close.shape();
 
+	int taLookback = 0;
 	TA_RetCode retCode;
 	int outBegIdx = 0;
 	int outNBElement = 0;
 
+	// determine the max taLookup
+	for (auto& func : CANDLE_FUNCTIONS1)
+	{
+		const auto lookback = std::get<1>(func)();
+		if (lookback > taLookback)
+			taLookback = lookback;
+	}
+	for (auto& func : CANDLE_FUNCTIONS2)
+	{
+		const auto lookback = std::get<1>(func)(0.0);
+		if (lookback > taLookback)
+			taLookback = lookback;
+	}
+
+	// 
 	// TODO real_t[] or std::vector ???
-	//real_t col_data[n_len + 1];
-	std::vector<int> candle_data(n_len + 1);
+	//real_t col_data[n_len + std::max(1, taLookback)];
+	std::vector<int> candle_data(n_len + std::max(1, taLookback));
 	int pos = static_cast<int>(ColPos::Candle::_2CROWS);
 	for (auto &func : CANDLE_FUNCTIONS1)
 	{
@@ -908,7 +924,8 @@ void apply_candles(const char* symbol, xt::xarray<real_t>& o_results, const xt::
 			std::cout << "TA-Lib CDL func error: " << retCode << std::endl;
 			continue;
 		}
-		std::copy(candle_data.cbegin(), std::prev(candle_data.cend()), xt::row(o_results, pos++).begin());
+		//xt::row(o_results, pos++) = xt::adapt(candle_data, o_shape);
+		std::copy(candle_data.cbegin(), candle_data.cend() - std::max(1, taLookback), xt::row(o_results, pos++).begin());
 		xt::row(o_results, pos - 1) = vec_mk_divide_by_160(xt::row(o_results, pos - 1));
 	}
 
@@ -944,7 +961,8 @@ void apply_candles(const char* symbol, xt::xarray<real_t>& o_results, const xt::
 			std::cout << "TA-Lib CDL func error: " << retCode << std::endl;
 			continue;
 		}
-		std::copy(candle_data.cbegin(), std::prev(candle_data.cend()), xt::row(o_results, pos++).begin());
+		//xt::row(o_results, pos++) = xt::adapt(candle_data, o_shape);
+		std::copy(candle_data.cbegin(), candle_data.cend() - std::max(1, taLookback), xt::row(o_results, pos++).begin());
 		xt::row(o_results, pos - 1) = vec_mk_divide_by_160(xt::row(o_results, pos - 1));
 	}
 }
@@ -1050,21 +1068,22 @@ TA_RetCode do_dep_columns(xt::xarray<real_t>& o_results, const bool training)
 
 	// Average True Range(ATR)
 	{
-		std::vector<double> atr(n_len + 1);
+		int taLookback = TA_ATR_Lookback(14);
+		std::vector<double> atr(n_len + std::max(1, taLookback));
 		int outBegIdx = 0;
 		int outNBElement = 0;
 		std::fill(atr.begin(), atr.end(), NAN);
 #ifdef AGPRED_DOUBLE_P
-		TA_RetCode retCode = TA_ATR(0, n_len, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, atr.data() + TA_ATR_Lookback(14));
+		TA_RetCode retCode = TA_ATR(0, n_len, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, atr.data() + taLookback);
 #else
-		TA_RetCode retCode = TA_S_ATR(0, n_len, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, atr.data() + TA_ATR_Lookback(14));
+		TA_RetCode retCode = TA_S_ATR(0, n_len, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, atr.data() + taLookback);
 #endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "ATR error: " << retCode << std::endl;
 			return retCode;
 		}
-		std::copy(atr.cbegin(), std::prev(atr.cend()), xt::row(o_results, ColPos::Dep::atr).begin());  //:atr
+		std::copy(atr.cbegin(), atr.cend() - std::max(1, taLookback), xt::row(o_results, ColPos::Dep::atr).begin());  //:atr
 	}
 
 	// past_range
@@ -1105,40 +1124,44 @@ TA_RetCode add_regr(xt::xarray<real_t>& o_results, const unsigned int interval)
 
 	int outBegIdx = 0;
 	int outNBElement = 0;
+	int taLookback;
 	TA_RetCode retCode;
-	std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + 1);
 
 	// Linear regression
 	{
+		taLookback = TA_LINEARREG_Lookback(regrPeriod);
+		std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
 		std::fill(taResult.begin(), taResult.end(), NAN);
 #ifdef AGPRED_DOUBLE_P
-		retCode = TA_LINEARREG(0, n_rows, r_close.data(), regrPeriod, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_Lookback(regrPeriod));
+		retCode = TA_LINEARREG(0, n_rows, r_close.data(), regrPeriod, &outBegIdx, &outNBElement, taResult.data() + taLookback);
 #else
-		retCode = TA_S_LINEARREG(0, n_rows, r_close.data(), regrPeriod, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_Lookback(regrPeriod));
+		retCode = TA_S_LINEARREG(0, n_rows, r_close.data(), regrPeriod, &outBegIdx, &outNBElement, taResult.data() + taLookback);
 #endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "LINEARREG error: " << retCode << std::endl;
 			return retCode;
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::Regr::regr).begin());  //:regr
+		std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), xt::row(o_results, ColPos::Regr::regr).begin());  //:regr
 	}
 
 	// Standard Deviation
 	{
 		const real_t numDeviations = 1;
+		taLookback = TA_STDDEV_Lookback(regrPeriod, numDeviations);
+		std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
 		std::fill(taResult.begin(), taResult.end(), NAN);
 #ifdef AGPRED_DOUBLE_P
-		retCode = TA_STDDEV(0, n_rows, r_close.data(), regrPeriod, numDeviations, &outBegIdx, &outNBElement, taResult.data() + TA_STDDEV_Lookback(regrPeriod, numDeviations));
+		retCode = TA_STDDEV(0, n_rows, r_close.data(), regrPeriod, numDeviations, &outBegIdx, &outNBElement, taResult.data() + taLookback);
 #else
-		retCode = TA_S_STDDEV(0, n_rows, r_close.data(), regrPeriod, numDeviations, &outBegIdx, &outNBElement, taResult.data() + TA_STDDEV_Lookback(regrPeriod, numDeviations));
+		retCode = TA_S_STDDEV(0, n_rows, r_close.data(), regrPeriod, numDeviations, &outBegIdx, &outNBElement, taResult.data() + taLookback);
 #endif
 		if (retCode != TA_SUCCESS)
 		{
 			std::cout << "STDDEV error: " << retCode << std::endl;
 			return retCode;
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::Regr::stddev).begin());  //:stddev
+		std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), xt::row(o_results, ColPos::Regr::stddev).begin());  //:stddev
 	}
 	return TA_SUCCESS;
 }
@@ -1165,7 +1188,7 @@ TA_RetCode do_ta(xt::xarray<real_t>& o_results)
 	int outBegIdx = 0;
 	int outNBElement = 0;
 	TA_RetCode retCode;
-	std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + 1);
+	int taLookback;
 	xt::xarray<real_t> taTmp1 = xt::zeros<real_t>(r_high.shape());
 	xt::xarray<real_t> taTmp2 = xt::zeros<real_t>(r_high.shape());
 
@@ -1175,57 +1198,73 @@ TA_RetCode do_ta(xt::xarray<real_t>& o_results)
 		//taTmp1 = vec_norm_10x_n_stddevs(r_close, r_regr, r_stddev);  //close_norm
 		taTmp1 = r_close;
 		
-		std::fill(taResult.begin(), taResult.end(), NAN);
-#ifdef AGPRED_DOUBLE_P
-		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 5, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(5));
-#else
-		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 5, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(5));
-#endif
-		if (retCode != TA_SUCCESS)
 		{
-			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
-			return retCode;
+			taLookback = TA_LINEARREG_SLOPE_Lookback(5);
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+			retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 5, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#else
+			retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 5, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#endif
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), xt::row(o_results, ColPos::TA::trend5).begin());  //:trend5
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::trend5).begin());  //:trend5
 
-		std::fill(taResult.begin(), taResult.end(), NAN);
-#ifdef AGPRED_DOUBLE_P
-		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 9, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(9));
-#else
-		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 9, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(9));
-#endif
-		if (retCode != TA_SUCCESS)
 		{
-			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
-			return retCode;
+			taLookback = TA_LINEARREG_SLOPE_Lookback(9);
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+			retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 9, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#else
+			retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 9, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#endif
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), xt::row(o_results, ColPos::TA::trend9).begin());  //:trend9
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::trend9).begin());  //:trend9
 
-		std::fill(taResult.begin(), taResult.end(), NAN);
-#ifdef AGPRED_DOUBLE_P
-		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
-#else
-		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
-#endif
-		if (retCode != TA_SUCCESS)
 		{
-			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
-			return retCode;
+			taLookback = TA_LINEARREG_SLOPE_Lookback(20);
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+			retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#else
+			retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#endif
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), xt::row(o_results, ColPos::TA::trend20).begin());  //:trend20
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::trend20).begin());  //:trend20
 
-		std::fill(taResult.begin(), taResult.end(), NAN);
-#ifdef AGPRED_DOUBLE_P
-		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(50));
-#else
-		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(50));
-#endif
-		if (retCode != TA_SUCCESS)
 		{
-			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
-			return retCode;
+			taLookback = TA_LINEARREG_SLOPE_Lookback(50);
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+			retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#else
+			retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#endif
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), xt::row(o_results, ColPos::TA::trend50).begin());  //:trend50
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::trend50).begin());  //:trend50
 	}
 
 	// Split volume into volume_percent_buy, volume_percent_sell
@@ -1245,46 +1284,58 @@ TA_RetCode do_ta(xt::xarray<real_t>& o_results)
 	
 	// On Balance Volume Indicator (OBV) trends
 	{
-		std::fill(taResult.begin(), taResult.end(), NAN);
-#ifdef AGPRED_DOUBLE_P
-		retCode = TA_OBV(0, n_rows, r_close.data(), r_volume.data(), &outBegIdx, &outNBElement, taResult.data() + TA_OBV_Lookback());
-#else
-		retCode = TA_S_OBV(0, n_rows, r_close.data(), r_volume.data(), &outBegIdx, &outNBElement, taResult.data() + TA_OBV_Lookback());
-#endif
-		if (retCode != TA_SUCCESS)
 		{
-			std::cout << "OBV error: " << retCode << std::endl;
-			return retCode;
+			taLookback = TA_OBV_Lookback();
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+			retCode = TA_OBV(0, n_rows, r_close.data(), r_volume.data(), &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#else
+			retCode = TA_S_OBV(0, n_rows, r_close.data(), r_volume.data(), &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#endif
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "OBV error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), taTmp1.begin());  // obv
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), taTmp1.begin());  // obv
 		
 		// OBV trend (20 and 50 period)
 		
-		std::fill(taResult.begin(), taResult.end(), NAN);
-#ifdef AGPRED_DOUBLE_P
-		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
-#else
-		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
-#endif
-		if (retCode != TA_SUCCESS)
 		{
-			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
-			return retCode;
+			taLookback = TA_LINEARREG_SLOPE_Lookback(20);
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+			retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#else
+			retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#endif
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), xt::row(o_results, ColPos::TA::obv_trend20).begin());  //:obv_trend20
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::obv_trend20).begin());  //:obv_trend20
 
-		std::fill(taResult.begin(), taResult.end(), NAN);
-#ifdef AGPRED_DOUBLE_P
-		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(50));
-#else
-		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(50));
-#endif
-		if (retCode != TA_SUCCESS)
 		{
-			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
-			return retCode;
+			taLookback = TA_LINEARREG_SLOPE_Lookback(50);
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+			retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#else
+			retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#endif
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), xt::row(o_results, ColPos::TA::obv_trend50).begin());  //:obv_trend50
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::obv_trend50).begin());  //:obv_trend50
 	}
 
 	// Accumulation/Distribution Index (ADI)
@@ -1295,166 +1346,206 @@ TA_RetCode do_ta(xt::xarray<real_t>& o_results)
 
 		// ADI trend (20 and 50 period)
 
-		std::fill(taResult.begin(), taResult.end(), NAN);
-#ifdef AGPRED_DOUBLE_P
-		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp2.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
-#else
-		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp2.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
-#endif
-		if (retCode != TA_SUCCESS)
 		{
-			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
-			return retCode;
+			taLookback = TA_LINEARREG_SLOPE_Lookback(20);
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+			retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp2.data(), 20, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#else
+			retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp2.data(), 20, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#endif
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), xt::row(o_results, ColPos::TA::adi_trend20).begin());  //:adi_trend20
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::adi_trend20).begin());  //:adi_trend20
 
-		std::fill(taResult.begin(), taResult.end(), NAN);
-#ifdef AGPRED_DOUBLE_P
-		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp2.data(), 50, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(50));
-#else
-		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp2.data(), 50, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(50));
-#endif
-		if (retCode != TA_SUCCESS)
 		{
-			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
-			return retCode;
+			taLookback = TA_LINEARREG_SLOPE_Lookback(50);
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+			retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp2.data(), 50, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#else
+			retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp2.data(), 50, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#endif
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), xt::row(o_results, ColPos::TA::adi_trend50).begin());  //:adi_trend50
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::adi_trend50).begin());  //:adi_trend50
 
 		//xt::row(o_results, ColPos::TA::adi_obv_ratio) = vec_adi_obv_ratio(xt::row(o_results, ColPos::TA::obv), taTmp2);  // adi_obv_ratio
 	}
 
 	// Relative Strength Index (RSI)
 	{
-		std::fill(taResult.begin(), taResult.end(), NAN);
-#ifdef AGPRED_DOUBLE_P
-		retCode = TA_RSI(0, n_rows, r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + TA_RSI_Lookback(14));
-#else
-		retCode = TA_S_RSI(0, n_rows, r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + TA_RSI_Lookback(14));
-#endif
-		if (retCode != TA_SUCCESS)
 		{
-			std::cout << "RSI error: " << retCode << std::endl;
-			return retCode;
+			taLookback = TA_RSI_Lookback(14);
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+			retCode = TA_RSI(0, n_rows, r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#else
+			retCode = TA_S_RSI(0, n_rows, r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#endif
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "RSI error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), xt::row(o_results, ColPos::TA::rsi).begin());  //:rsi
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), taTmp1.begin());  // rsi
+			xt::row(o_results, ColPos::TA::rsi_indicator) = vec_rsi_indicator(taTmp1);  //:rsi_indicator
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::rsi).begin());  //:rsi
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), taTmp1.begin());  // rsi
-		xt::row(o_results, ColPos::TA::rsi_indicator) = vec_rsi_indicator(taTmp1);  //:rsi_indicator
 		
 		// RSI trend (20 and 50 period)
 
-		std::fill(taResult.begin(), taResult.end(), NAN);
-#ifdef AGPRED_DOUBLE_P
-		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
-#else
-		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(20));
-#endif
-		if (retCode != TA_SUCCESS)
 		{
-			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
-			return retCode;
+			taLookback = TA_LINEARREG_SLOPE_Lookback(20);
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+			retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#else
+			retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 20, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#endif
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), xt::row(o_results, ColPos::TA::rsi_trend20).begin());  //:rsi_trend20
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::rsi_trend20).begin());  //:rsi_trend20
 
-		std::fill(taResult.begin(), taResult.end(), NAN);
-#ifdef AGPRED_DOUBLE_P
-		retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(50));
-#else
-		retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_SLOPE_Lookback(50));
-#endif
-		if (retCode != TA_SUCCESS)
 		{
-			std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
-			return retCode;
+			taLookback = TA_LINEARREG_SLOPE_Lookback(50);
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+			retCode = TA_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#else
+			retCode = TA_S_LINEARREG_SLOPE(0, n_rows, taTmp1.data(), 50, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#endif
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "TA_LINEARREG_SLOPE error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), xt::row(o_results, ColPos::TA::rsi_trend50).begin());  //:rsi_trend50
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::rsi_trend50).begin());  //:rsi_trend50
 	}
 
 	// Note: using PPO instead of MACD, as it's the same thing except PPO uses percentages
 	// Percentage Price Oscillator (PPO)
 	{
-		std::fill(taResult.begin(), taResult.end(), NAN);
-#ifdef AGPRED_DOUBLE_P
-		retCode = TA_PPO(0, n_rows, r_close.data(), 12, 26, TA_MAType_EMA, &outBegIdx, &outNBElement, taResult.data() + TA_PPO_Lookback(12, 26, TA_MAType_EMA));
-#else
-		retCode = TA_S_PPO(0, n_rows, r_close.data(), 12, 26, TA_MAType_EMA, &outBegIdx, &outNBElement, taResult.data() + TA_PPO_Lookback(12, 26, TA_MAType_EMA));
-#endif
-		if (retCode != TA_SUCCESS)
 		{
-			std::cout << "PPO error: " << retCode << std::endl;
-			return retCode;
+			taLookback = TA_PPO_Lookback(12, 26, TA_MAType_EMA);
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+			retCode = TA_PPO(0, n_rows, r_close.data(), 12, 26, TA_MAType_EMA, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#else
+			retCode = TA_S_PPO(0, n_rows, r_close.data(), 12, 26, TA_MAType_EMA, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#endif
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "PPO error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), xt::row(o_results, ColPos::TA::ppo).begin());  //:ppo
+			xt::row(o_results, ColPos::TA::ppo) = vec_cleanup_float_errs(xt::nan_to_num(xt::row(o_results, ColPos::TA::ppo)));
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::ppo).begin());  //:ppo
-		xt::row(o_results, ColPos::TA::ppo) = vec_cleanup_float_errs(xt::nan_to_num(xt::row(o_results, ColPos::TA::ppo)));
 		
-		// 'ppo_diff'
-		// PPO SIGNAL = _ema(self._ppo, self._window_sign, self._fillna)
-		// PPO HIST = self._ppo - self._ppo_signal
-		// copy PPO for EMA
-		auto r_tmp = xt::xarray<real_t>(xt::nan_to_num(xt::row(o_results, ColPos::TA::ppo)));
-		auto windowSign = 9;
-		std::fill(taResult.begin(), taResult.end(), NAN);
-#ifdef AGPRED_DOUBLE_P
-		retCode = TA_EMA(0, n_rows, r_tmp.data(), windowSign, &outBegIdx, &outNBElement, taResult.data() + TA_EMA_Lookback(windowSign));
-#else
-		retCode = TA_S_EMA(0, n_rows, r_tmp.data(), windowSign, &outBegIdx, &outNBElement, taResult.data() + TA_EMA_Lookback(windowSign));
-#endif
-		if (retCode != TA_SUCCESS)
 		{
-			std::cout << "EMA error: " << retCode << std::endl;
-			return retCode;
-		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), r_tmp.begin());
+			// 'ppo_diff'
+			// PPO SIGNAL = _ema(self._ppo, self._window_sign, self._fillna)
+			// PPO HIST = self._ppo - self._ppo_signal
+			// copy PPO for EMA
+			xt::xarray<real_t> r_tmp = xt::row(o_results, ColPos::TA::ppo);
+			auto windowSign = 9;
+			taLookback = TA_EMA_Lookback(windowSign);
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+			retCode = TA_EMA(0, n_rows, r_tmp.data(), windowSign, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#else
+			retCode = TA_S_EMA(0, n_rows, r_tmp.data(), windowSign, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#endif
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "EMA error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), r_tmp.begin());
 
-		xt::row(o_results, ColPos::TA::ppo_diff) = vec_subtract(xt::row(o_results, ColPos::TA::ppo), r_tmp);  //:ppo_diff
+			xt::row(o_results, ColPos::TA::ppo_diff) = vec_subtract(xt::row(o_results, ColPos::TA::ppo), r_tmp);  //:ppo_diff
+		}
 	}
 
 	// Average Directional Movement Index (ADX)
 	{
-		std::fill(taResult.begin(), taResult.end(), NAN);
-#ifdef AGPRED_DOUBLE_P
-		retCode = TA_ADX(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + TA_ADX_Lookback(14));
-#else
-		retCode = TA_S_ADX(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + TA_ADX_Lookback(14));
-#endif
-		if (retCode != TA_SUCCESS)
 		{
-			std::cout << "ADX error: " << retCode << std::endl;
-			return retCode;
+			taLookback = TA_ADX_Lookback(14);
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+			retCode = TA_ADX(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#else
+			retCode = TA_S_ADX(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#endif
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "ADX error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), xt::row(o_results, ColPos::TA::adx).begin());  //:adx
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), xt::row(o_results, ColPos::TA::adx).begin());  //:adx
 
 		// ADX trend signals (@see vec_adx_indicator)
 		
-		// adx_pos
-		std::fill(taResult.begin(), taResult.end(), NAN);
-#ifdef AGPRED_DOUBLE_P
-		retCode = TA_PLUS_DI(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + TA_PLUS_DI_Lookback(14));
-#else
-		retCode = TA_S_PLUS_DI(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + TA_PLUS_DI_Lookback(14));
-#endif
-		if (retCode != TA_SUCCESS)
 		{
-			std::cout << "PLUS_DI error: " << retCode << std::endl;
-			return retCode;
-		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), taTmp1.begin());
-
-		// adx_neg
-		std::fill(taResult.begin(), taResult.end(), NAN);
+			taLookback = TA_PLUS_DI_Lookback(14);
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			// adx_pos
+			std::fill(taResult.begin(), taResult.end(), NAN);
 #ifdef AGPRED_DOUBLE_P
-		retCode = TA_MINUS_DI(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + TA_MINUS_DI_Lookback(14));
+			retCode = TA_PLUS_DI(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + taLookback);
 #else
-		retCode = TA_S_MINUS_DI(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + TA_MINUS_DI_Lookback(14));
+			retCode = TA_S_PLUS_DI(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + taLookback);
 #endif
-		if (retCode != TA_SUCCESS)
-		{
-			std::cout << "MINUS_DI error: " << retCode << std::endl;
-			return retCode;
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "PLUS_DI error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), taTmp1.begin());
 		}
-		std::copy(taResult.cbegin(), std::prev(taResult.cend()), taTmp2.begin());
 
-		xt::row(o_results, ColPos::TA::adx_indicator) = vec_adx_indicator(xt::row(o_results, ColPos::TA::adx), taTmp1, taTmp2);  //:adx_indicator
+		{
+			taLookback = TA_MINUS_DI_Lookback(14);
+			std::vector<double> taResult(static_cast<std::vector<real_t>::size_type>(n_rows) + std::max(1, taLookback));
+			// adx_neg
+			std::fill(taResult.begin(), taResult.end(), NAN);
+#ifdef AGPRED_DOUBLE_P
+			retCode = TA_MINUS_DI(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#else
+			retCode = TA_S_MINUS_DI(0, n_rows, r_high.data(), r_low.data(), r_close.data(), 14, &outBegIdx, &outNBElement, taResult.data() + taLookback);
+#endif
+			if (retCode != TA_SUCCESS)
+			{
+				std::cout << "MINUS_DI error: " << retCode << std::endl;
+				return retCode;
+			}
+			std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), taTmp2.begin());
+
+			xt::row(o_results, ColPos::TA::adx_indicator) = vec_adx_indicator(xt::row(o_results, ColPos::TA::adx), taTmp1, taTmp2);  //:adx_indicator
+		}
 	}
 	return TA_SUCCESS;
 }
@@ -1518,17 +1609,19 @@ void apply_regr(xt::xarray<real_t>& o_results, const unsigned int interval)
 		
 		int outBegIdx = 0;
 		int outNBElement = 0;
+		int taLookback;
 		TA_RetCode retCode;
 		bool hlc3ok = true;
-		std::vector<double> taResult(n_rows + 1);
 
 		// Linear regression (hlc3)
 		{
+			taLookback = TA_LINEARREG_Lookback(regrPeriod);
+			std::vector<double> taResult(n_rows + std::max(1, taLookback));
 			std::fill(taResult.begin(), taResult.end(), NAN);
 #ifdef AGPRED_DOUBLE_P
-			retCode = TA_LINEARREG(0, n_rows, r_hlc3.data(), regrPeriod, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_Lookback(regrPeriod));
+			retCode = TA_LINEARREG(0, n_rows, r_hlc3.data(), regrPeriod, &outBegIdx, &outNBElement, taResult.data() + taLookback);
 #else
-			retCode = TA_S_LINEARREG(0, n_rows, r_hlc3.data(), regrPeriod, &outBegIdx, &outNBElement, taResult.data() + TA_LINEARREG_Lookback(regrPeriod));
+			retCode = TA_S_LINEARREG(0, n_rows, r_hlc3.data(), regrPeriod, &outBegIdx, &outNBElement, taResult.data() + taLookback);
 #endif
 			if (retCode != TA_SUCCESS)
 			{
@@ -1537,18 +1630,20 @@ void apply_regr(xt::xarray<real_t>& o_results, const unsigned int interval)
 			}
 			else
 			{
-				std::copy(taResult.cbegin(), std::prev(taResult.cend()), hlc3regr.begin());
+				std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), hlc3regr.begin());
 			}
 		}
 
 		// Standard Deviation (hlc3)
 		{
 			const real_t numDeviations = 1;
+			taLookback = TA_STDDEV_Lookback(regrPeriod, numDeviations);
+			std::vector<double> taResult(n_rows + std::max(1, taLookback));
 			std::fill(taResult.begin(), taResult.end(), NAN);
 #ifdef AGPRED_DOUBLE_P
-			retCode = TA_STDDEV(0, n_rows, r_hlc3.data(), regrPeriod, numDeviations, &outBegIdx, &outNBElement, taResult.data() + TA_STDDEV_Lookback(regrPeriod, numDeviations));
+			retCode = TA_STDDEV(0, n_rows, r_hlc3.data(), regrPeriod, numDeviations, &outBegIdx, &outNBElement, taResult.data() + taLookback);
 #else
-			retCode = TA_S_STDDEV(0, n_rows, r_hlc3.data(), regrPeriod, numDeviations, &outBegIdx, &outNBElement, taResult.data() + TA_STDDEV_Lookback(regrPeriod, numDeviations));
+			retCode = TA_S_STDDEV(0, n_rows, r_hlc3.data(), regrPeriod, numDeviations, &outBegIdx, &outNBElement, taResult.data() + taLookback);
 #endif
 			if (retCode != TA_SUCCESS)
 			{
@@ -1557,7 +1652,7 @@ void apply_regr(xt::xarray<real_t>& o_results, const unsigned int interval)
 			}
 			else
 			{
-				std::copy(taResult.cbegin(), std::prev(taResult.cend()), hlc3stddev.begin());
+				std::copy(taResult.cbegin(), taResult.cend() - std::max(1, taLookback), hlc3stddev.begin());
 			}
 		}
 		if (!hlc3ok)
