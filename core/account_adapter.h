@@ -7,7 +7,7 @@
 
 namespace agpred {
 
-	using fn_order_status = std::function<void(id_t order_id, const Symbol& symbol, OrderStatus status, size_t filled, size_t remaining, real_t avg_price)>;
+	using fn_order_status = std::function<void(const timestamp_us_t& ts, id_t order_id, const Symbol& symbol, OrderStatus status, size_t filled, size_t remaining, real_t avg_price)>;
 	using fn_account_status = std::function<void(id_t request_id, const AccountStatus& status)>;
 
 

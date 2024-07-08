@@ -93,11 +93,12 @@ void run_range(const std::string& symbol_str, int start_yr, int start_mon, int s
                 SimPtr->onSnapshot(symbol, snapshot);
                 AccountPtr->onSnapshot(symbol, snapshot);
             },
-            [AccountPtr = &account](const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades)
+            [AccountPtr = &account](const Symbol& symbol, const Snapshot& snapshot, const xtensor_ts_interval& data_ts, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades)
             {
                 AccountPtr->onUpdate(
                     symbol, 
                     snapshot, 
+                    data_ts,
                     data,  // TODO // vec_cleanup_float_errs(data),  //remove float / double conversion issues
                     data_processed, 
                     quotes,
@@ -125,8 +126,8 @@ void run_range(const std::string& symbol_str, int start_yr, int start_mon, int s
             //using std::date::operator<<;
             //std::cout << sys_time<std::chrono::minutes>(trading_day) << ":" << std::endl;
             //std::cout << trading_day.time_since_epoch() << ":" << std::endl;
-            std::cout << "Day #" << ++(*DayNo) << ":" << std::endl;
-            std::cout << "  Daily Profit Loss: $" << AccountPtr->getProfitLoss() << std::endl;
+            std::cout << "Day #" << (AccountPtr->getProfitLoss() < 0 ? st_red_s : st_green_s)(std::to_string(++(*DayNo))) << ":" << std::endl;
+            std::cout << "  Daily Profit Loss: $" << st_real_clr(AccountPtr->getProfitLoss() - 2 * AccountPtr->getNumTrades()) << std::endl;
             std::cout << "  Daily Number of Trades: " << AccountPtr->getNumTrades() << std::endl;
 
             *TotalProfitLoss += AccountPtr->getProfitLoss();
@@ -142,10 +143,11 @@ void run_range(const std::string& symbol_str, int start_yr, int start_mon, int s
 
     // TODO handle async callback condition?
 
-    std::cout << "Back-Test date range complete:" << std::endl;
-    std::cout << "  Profit Loss: $" << totalProfitLoss << std::endl;
+    std::cout << (totalProfitLoss < 0 ? st_red_s : st_green_s)("Back-Test date range complete:") << std::endl;
+    std::cout << "  Profit Loss: $" << st_real_clr(totalProfitLoss) << std::endl;
     std::cout << "  Number of Trades: " << totalTrades << std::endl;
-    std::cout << "  Account Balance: $" << account_balance << std::endl;
+    std::cout << "  Commissions: $" << (2 * totalTrades) << std::endl;
+    std::cout << "  Account Balance: $" << st_real_clr(account_balance - 2 * totalTrades, INITIAL_BALANCE) << std::endl;
 
 }
 
@@ -172,9 +174,9 @@ void run_day(const std::string& symbol_str, int yr, int mon, int day) {
             SimPtr->onSnapshot(symbol, snapshot);
             AccountPtr->onSnapshot(symbol, snapshot);
         },
-        [AccountPtr = &account](const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades)
+        [AccountPtr = &account](const Symbol& symbol, const Snapshot& snapshot, const xtensor_ts_interval& data_ts, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades)
         {
-            AccountPtr->onUpdate(symbol, snapshot, data, data_processed, quotes, trades);
+            AccountPtr->onUpdate(symbol, snapshot, data_ts, data, data_processed, quotes, trades);
         }
     );
 
@@ -198,9 +200,10 @@ void run_day(const std::string& symbol_str, int yr, int mon, int day) {
         *AccountBalance += AccountPtr->getProfitLoss();
 
         std::cout << "Back-Test complete." << std::endl;
-        std::cout << "  Profit Loss: $" << AccountPtr->getProfitLoss() << std::endl;
+        std::cout << "  Profit Loss: $" << st_real_clr(AccountPtr->getProfitLoss()) << std::endl;
         std::cout << "  Number of Trades: " << AccountPtr->getNumTrades() << std::endl;
-        std::cout << "  Account Balance: $" << *AccountBalance << std::endl;
+        std::cout << "  Commissions: " << (2 * AccountPtr->getNumTrades()) << std::endl;
+        std::cout << "  Account Balance: $" << st_real_clr(*AccountBalance - 2 * AccountPtr->getNumTrades(), INITIAL_BALANCE) << std::endl;
     });
 
     // call simulator snapshot once to close MARKET orders
@@ -220,7 +223,8 @@ int main(int argc, char* argv[])
     std::cout << "TA-Lib initialized.\n";
 
     // initialize tensorflow
-    LongLowAlgo::initStatics();
+    //LongLowAlgo::initStatics();
+    TFModelAlgo::initStatics();
     std::cout << "Tensorflow initialized.\n";
 
     /*if (SetConsoleCtrlHandler(CtrlHandler, TRUE))
@@ -231,10 +235,15 @@ int main(int argc, char* argv[])
     //// print numbers with 9 digit precision
     //std::cout.precision(9);
 
-    //run_day("HPQ", 2022, 4, 7);
-    run_day("MSFT", 2022, 4, 8);
+    //run_day("MSFT", 2022, 4, 7);
+    //run_day("MSFT", 2022, 4, 8);
+    //run_day("MSFT", 2022, 4, 21);
     //run_day("PDD");
     //run_day("SOFI");
+
+    //run_range("MSFT", 2021, 1, 4, 2021, 5, 5);
+    //run_range("MSFT", 2022, 1, 3, 2022, 5, 2);
+    run_range("MSFT", 2021, 9, 1, 2021, 10, 1);
 
     //run_day("PLAN", 2022, 3, 21);
 

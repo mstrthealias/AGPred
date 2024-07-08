@@ -18,12 +18,14 @@ constexpr size_t STAGED_DELAY_OFFSET = 8;
 constexpr size_t STAGED_COL_ADJ = STAGED_INCLUDE_TIMESTAMPS ? 0 : 1;
 
 
+using shape_staged_ts_t = xt::xshape<STAGED_SIZE, 1>;
 using shape_staged_raw_t = xt::xshape<STAGED_SIZE, RT_REPORT_TIMESTEPS, ColPos::_IN_NUM_COLS>;
 using shape_staged_processed_t = xt::xshape<STAGED_SIZE, NUM_INTERVALS, NUM_TIMESTEMPS, NUM_COLUMNS - STAGED_COL_ADJ>;  // TODO move NUM_INTERVALS to end?
 using shape_staged_trades_t = xt::xshape<STAGED_SIZE, NUM_TRADES, NUM_TRADE_COLUMNS - STAGED_COL_ADJ>;  // (stages, timesteps, cols)
 using shape_staged_quotes_t = xt::xshape<STAGED_SIZE, NUM_QUOTES, NUM_QUOTE_COLUMNS - STAGED_COL_ADJ>;  // (stages, timesteps, cols)
 using shape_staged_outputs_t = xt::xshape<STAGED_SIZE, ColPos::_OUTPUT_NUM_COLS - STAGED_COL_ADJ>;
 
+using xtensor_staged_ts = xt::xtensor_fixed<timestamp_us_t, shape_staged_ts_t>;
 using xtensor_staged_raw = xt::xtensor_fixed<real_t, shape_staged_raw_t>;
 using xtensor_staged_processed = xt::xtensor_fixed<real_t, shape_staged_processed_t>;
 using xtensor_staged_trades = xt::xtensor_fixed<real_t, shape_staged_trades_t>;
@@ -33,6 +35,7 @@ using xtensor_staged_outputs = xt::xtensor_fixed<real_t, shape_staged_outputs_t>
 xtensor_quotes cur_quotes;
 xtensor_trades cur_trades;
 
+xtensor_staged_ts staged_ts = xt::zeros<timestamp_us_t>(xtensor_staged_ts());
 xtensor_staged_raw staged_raw = xt::zeros<real_t>(shape_staged_raw_t());
 xtensor_staged_processed staged_proccessed = xt::zeros<real_t>(shape_staged_processed_t());
 xtensor_staged_trades staged_trades = xt::zeros<real_t>(shape_staged_trades_t());
@@ -58,7 +61,7 @@ void agpred::Downloader::onSimComplete(const Symbol& symbol)
 	}
 }
 
-void agpred::Downloader::onUpdate(const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades, const xtensor_outputs_interval& outputs)
+void agpred::Downloader::onUpdate(const Symbol& symbol, const Snapshot& snapshot, const xtensor_ts_interval& data_ts, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades, const xtensor_outputs_interval& outputs)
 {
 	//(NUM_INTERVALS, NUM_TIMESTEMPS, NUM_COLUMNS)
 
@@ -131,6 +134,16 @@ void agpred::Downloader::onUpdate(const Symbol& symbol, const Snapshot& snapshot
 		}
 	}
 
+	// copy timestamps into staging array
+	{
+
+		auto stage_ts = xt::view(staged_ts, cur_pos_, xt::all());
+		//std::cout << "stage_ts.shape() " << xt::xarray<real_t>(stage_ts).shape() << std::endl;
+		const auto tmp_ts = xt::view(data_ts, 0, xt::all());
+		//std::cout << "tmp_ts.shape() " << xt::xarray<real_t>(tmp_ts).shape() << std::endl;
+		std::copy(tmp_ts.cbegin(), tmp_ts.cend(), stage_ts.begin());
+	}
+
 	// copy raw data into staging array
 	{
 		auto stage_raw = xt::view(staged_raw, cur_pos_, xt::all(), xt::all());
@@ -192,12 +205,14 @@ void agpred::Downloader::do_flush(const Symbol& symbol)
 		if (!fout.is_open())
 			throw std::runtime_error("Unable to open file " + file);
 
+		const auto export_ts = xt::view(staged_ts, xt::range(0, last_stage), xt::all());
 		const auto export_raw = xt::view(staged_raw, xt::range(0, last_stage), xt::all(), xt::all());
 		const auto export_processed = xt::view(staged_proccessed, xt::range(0, last_stage), xt::all(), xt::all(), xt::all());
 		const auto export_trades = xt::view(staged_trades, xt::range(0, last_stage), xt::all(), xt::all());
 		const auto export_quotes = xt::view(staged_quotes, xt::range(0, last_stage), xt::all(), xt::all());
 		const auto export_outputs = xt::view(staged_outputs, xt::range(0, last_stage), xt::all());
 
+		xt::detail::dump_npy_stream(fout, export_ts);
 		xt::detail::dump_npy_stream(fout, export_raw);
 		xt::detail::dump_npy_stream(fout, export_processed);
 		xt::detail::dump_npy_stream(fout, export_trades);
@@ -206,6 +221,10 @@ void agpred::Downloader::do_flush(const Symbol& symbol)
 	}
 
 	// shift the not-exported records to the front
+	{
+		const auto adtl_ts = xt::view(staged_ts, xt::range(last_stage, staged_size), xt::all());
+		std::copy(adtl_ts.cbegin(), adtl_ts.cend(), staged_ts.begin());
+	}
 	{
 		const auto adtl_raw = xt::view(staged_raw, xt::range(last_stage, staged_size), xt::all(), xt::all());
 		std::copy(adtl_raw.cbegin(), adtl_raw.cend(), staged_raw.begin());

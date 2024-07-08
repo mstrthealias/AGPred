@@ -5,7 +5,7 @@ using namespace agpred;
 
 
 
-/*AccountController::AccountController(const AGMode mode, const std::array<AlgoBase* const, 2>, const std::array<EntryBase* const, 2>, const std::array<ExitBase* const, 2>)
+/*AccountController::AccountController(const AGMode mode, const std::array<AlgoBase2<MaxSignals>* const, 2>, const std::array<EntryBase* const, 2>, const std::array<ExitBase* const, 2>)
 	: mode_(mode), algos_(algos)
 {
 }*/

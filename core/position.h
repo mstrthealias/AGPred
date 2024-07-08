@@ -30,6 +30,9 @@ namespace agpred {
 		const PositionType type_;  // TODO type and orderType??
 		const OrderType order_type_;  // TODO type and orderType??
 
+		const timestamp_us_t created_;
+		timestamp_us_t filled_;
+
 		PositionState state_;
 
 		size_t num_shares_;
@@ -39,12 +42,13 @@ namespace agpred {
 
 	public:
 
-		explicit Position(const id_t& order_id, const Symbol& symbol, const EntryData& entry_data)
+		explicit Position(const id_t& order_id, const Symbol& symbol, const EntryData& entry_data, const timestamp_us_t& ts)
 			: id_(order_id),
 			symbol_(symbol),
 			entry_data_(entry_data),
 			type_(entry_data.type),
 			order_type_(entry_data.type == PositionType::LONG ? OrderType::BUY : OrderType::SELL),
+			created_(ts), filled_(0),
 			state_(PositionState::INITIAL),
 			num_shares_(0), num_shares_filled_(0), avg_price_(0),  // TODO default avg_price to -1?
 			exiting_(false)
@@ -103,12 +107,22 @@ namespace agpred {
 			return entry_data_;
 		}
 
+		const timestamp_us_t& ts_created() const
+		{
+			return created_;
+		}
+
+		const timestamp_us_t& ts_filled() const
+		{
+			return filled_;
+		}
+
 		/**
 		 * TODO num_shares is total # of filled shares for order_id
 		 * TODO price is average of all fills for order_id
 		 * Note: handling as size = total # of filled shares, and price is average of all filled shares...
 		 */
-		void onFill(const size_t size, const real_t price)
+		void onFill(const size_t size, const real_t price, const timestamp_us_t& ts)
 		{
 			if (!size)
 				throw std::logic_error("onFill() invalid size");
@@ -119,10 +133,13 @@ namespace agpred {
 			num_shares_ = size;
 			avg_price_ = price;
 
-			if (num_shares_ >= entry_data_.size)
+			if (num_shares_ >= entry_data_.size) {
 				state_ = PositionState::FILLED;
-			else
+				filled_ = ts;
+			}
+			else {
 				state_ = PositionState::PARTIAL_FILLED;
+			}
 		}
 
 		/**
@@ -130,7 +147,7 @@ namespace agpred {
 		 * TODO price is average of all fills for order_id
 		 * Note: handling as size = total # of filled shares, and price is average of all filled shares...
 		 */
-		void onExitFill(const size_t size, const real_t price)
+		void onExitFill(const size_t size, const real_t price, const timestamp_us_t& ts)
 		{
 			if (!size)
 				throw std::logic_error("onExitFill() invalid size");

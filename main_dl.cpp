@@ -90,9 +90,9 @@ void run_dl(const std::string& symbol_str, std::chrono::system_clock::time_point
         {
             DlPtr->onSnapshot(symbol, snapshot);
         },
-        [DlPtr = &downloader](const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades, const xtensor_outputs_interval& outputs)
+        [DlPtr = &downloader](const Symbol& symbol, const Snapshot& snapshot, const xtensor_ts_interval& data_ts, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades, const xtensor_outputs_interval& outputs)
         {
-            DlPtr->onUpdate(symbol, snapshot, data, data_processed, quotes, trades, outputs);
+            DlPtr->onUpdate(symbol, snapshot, data_ts, data, data_processed, quotes, trades, outputs);
         }
     );
 
@@ -159,12 +159,21 @@ void run_dl_date_range(const std::string& symbol, int start_yr, int start_mon, i
     size_t totalTrades = 0;
     size_t day_no = 0;
 
-    for (auto trading_day = start_tp; trading_day <= end_tp; trading_day += std::chrono::days(1))
+    std::chrono::system_clock::time_point trading_day = start_tp;
+    while (trading_day <= end_tp)
     {
-        if (!is_trading_day(trading_day))
-            continue;
+        if (is_trading_day(trading_day)) {
+            // run the download for all valid trading days
+            run_dl(symbol, trading_day);
+        }
 
-        run_dl(symbol, trading_day);
+        // increment trading_day by 1 day
+        auto tt = std::chrono::system_clock::to_time_t(trading_day);
+        auto tm_day = tm();
+        localtime_s(&tm_day, &tt);  // Note: formatting day only, so assuming string localtime will match ET tz
+        tm_day.tm_mday += 1;  // add one day
+        tm_day.tm_isdst = -1;  // handle unknown DST
+        trading_day = std::chrono::system_clock::from_time_t(mktime(&tm_day));
     }
 }
 

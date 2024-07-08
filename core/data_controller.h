@@ -12,8 +12,8 @@ namespace agpred {
 	// fixed maximum number of symbols that may be tracked at any time:
 	constexpr unsigned int MAX_ACTIVE_SYMBOLS = 3;
 
-	using fn_update = std::function<void(const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades)>;
-	using fn_update_outputs = std::function<void(const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades, const xtensor_outputs_interval& outputs)>;
+	using fn_update = std::function<void(const Symbol& symbol, const Snapshot& snapshot, const xtensor_ts_interval& data_ts, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades)>;
+	using fn_update_outputs = std::function<void(const Symbol& symbol, const Snapshot& snapshot, const xtensor_ts_interval& data_ts, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades, const xtensor_outputs_interval& outputs)>;
 	using fn_snapshot = std::function<void(const Symbol& symbol, const Snapshot& snapshot)>;
 
 
@@ -99,7 +99,7 @@ namespace agpred {
 		std::array<xtensor_ts_interval, MAX_ACTIVE_SYMBOLS>* symbols_ts_1d_ = nullptr;  // loaded in initSymbol/not kept up-to-date
 		std::array<xtensor_ts_interval, MAX_ACTIVE_SYMBOLS>* symbols_ts_1w_ = nullptr;  // loaded in initSymbol/not kept up-to-date
 
-		// track the raw candle data in xtensor arrays in ascending order
+		// track the raw candle data in xtensor arrays in descending order
 		std::array<xtensor_raw_interval, MAX_ACTIVE_SYMBOLS>* symbols_1min_ = nullptr;
 		std::array<xtensor_raw_interval, MAX_ACTIVE_SYMBOLS>* symbols_5min_ = nullptr;
 		std::array<xtensor_raw_interval, MAX_ACTIVE_SYMBOLS>* symbols_15min_ = nullptr;

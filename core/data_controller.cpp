@@ -672,12 +672,12 @@ void DataController::do_update(const ShiftTriggers& triggers, const size_t& pos)
 			//std::cout << "data_processed.shape: " << data_processed.shape() << std::endl;
 
 			if (on_update_outputs_)
-				on_update_outputs_(symbol, snapshots_[pos], data, data_processed, (*latest_quotes_)[pos], (*latest_trades_)[pos], symbol_outputs);
+				on_update_outputs_(symbol, snapshots_[pos], (*symbols_ts_1min_)[pos], data, data_processed, (*latest_quotes_)[pos], (*latest_trades_)[pos], symbol_outputs);
 			else
-				on_update_(symbol, snapshots_[pos], data, data_processed, (*latest_quotes_)[pos], (*latest_trades_)[pos]);
+				on_update_(symbol, snapshots_[pos], (*symbols_ts_1min_)[pos], data, data_processed, (*latest_quotes_)[pos], (*latest_trades_)[pos]);
 		}
 
-		// TODO remove save for verification
+		/* // TODO remove save for verification
 		if (triggers.flush15min)
 		{
 			xt::dump_npy("pyfiles/_out.AAPL.1min.npy", (*symbols_1min_)[pos]);
@@ -685,7 +685,7 @@ void DataController::do_update(const ShiftTriggers& triggers, const size_t& pos)
 			xt::dump_npy("pyfiles/_out.AAPL.15min.npy", (*symbols_15min_)[pos]);
 			xt::dump_npy("pyfiles/_out.AAPL.1hr.npy", (*symbols_1hr_)[pos]);
 			xt::dump_npy("pyfiles/_out.AAPL.4hr.npy", (*symbols_4hr_)[pos]);
-		}
+		}*/
 	}
 }
 
@@ -1053,7 +1053,7 @@ inline void update_bid_ask(BarFullRef& bar, const real_t& bid, const real_t& ask
 	bar.bid_size = bid_size;
 }
 
-inline void populate_next_full_bar(BarFullRef& bar, const timestamp_us_t& interval_us, const timestamp_us_t& next_ts, const timestamp_us_t& ts, const real_t& price, const real_t& bid, const real_t& ask, const uint32_t bid_size, const uint32_t ask_size)
+inline void populate_next_full_bar(BarFullRef& bar, const timestamp_us_t& interval_us, const timestamp_us_t& next_ts, const timestamp_us_t& ts, const real_t& price, const real_t& bid, const real_t& ask, const uint32_t bid_size, const uint32_t ask_size/*, const std::array<real_t, 3>& prev_alts*/)
 {
 	// reset this bar
 	bar.timestamp = static_cast<timestamp_us_t>(ts / interval_us) * interval_us;  // TODO verify

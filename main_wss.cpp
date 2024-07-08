@@ -34,13 +34,13 @@ MA3EMA9Exit exit_ma("ma3_ema9 exit", algo_ma_below);
 //StopLossExit exit_stop_loss("stop_loss exit");
 
 
-const std::array<AlgoBase* const, 2> algos({ &algo_ma_above, &algo_ma_below });
+const std::array<AlgoBase2<1>* const, 2> algos({ &algo_ma_above, &algo_ma_below });
 
-const std::array<EntryBase* const, 1> entries({ &entry_ma });
+const std::array<EntryBase<1>* const, 1> entries({ &entry_ma });
 const std::array<ExitBase* const, 2> exits({ &exit_ma });
 
 
-using Ctrl = AccountController<algos.size(), entries.size(), exits.size()>;
+using Ctrl = AccountController<algos.size(), entries.size(), exits.size(), 1>;
 
 
 
@@ -136,9 +136,9 @@ int main(int argc, char* argv[])
         {
             AccountPtr->onSnapshot(symbol, snapshot);
         },
-        [AccountPtr = &account](const Symbol& symbol, const Snapshot& snapshot, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades)
+        [AccountPtr = &account](const Symbol& symbol, const Snapshot& snapshot, const xtensor_ts_interval& data_ts, const xtensor_raw& data, const xtensor_processed& data_processed, const quotes_queue& quotes, const trades_queue& trades)
         {
-            AccountPtr->onUpdate(symbol, snapshot, data, data_processed, quotes, trades);
+            AccountPtr->onUpdate(symbol, snapshot, data_ts, data, data_processed, quotes, trades);
         }
     );
     
