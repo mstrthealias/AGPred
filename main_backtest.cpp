@@ -20,31 +20,27 @@ using namespace agpred;
 
 const real_t INITIAL_BALANCE = 100000.0f;
 const real_t MAX_LOSS_PER_TRADE = 175.0;
-const real_t MAX_LOSS_DAILY = 350.0;
+const real_t MAX_LOSS_DAILY = 350.0f;  // 1200.0f;  //350.0;
 static real_t account_balance = INITIAL_BALANCE;
 
 
 TakeProfitExit exit_take_profit("take_profit exit");
 
-LongLowAlgo algo_long_low("profit_low", false);
-LongLowEntry entry_long_low("profit_low entry", 1, algo_long_low);
+TFModelAlgo algo_tf_model("tf_model");
+TFModelLongEntry entry_long0("profit0 entry", 1, algo_tf_model, 0);
+TFModelShortEntry entry_short0("short0 entry", 1, algo_tf_model, 1);
+TFModelLongExit exit_long0("profit0 exit", algo_tf_model, 3);
+TFModelShortExit exit_short0("short0 exit", algo_tf_model, 2);
+TimeExit exit_both("time exit", 9 * MIN_TO_US);
 
-const std::array<AlgoBase* const, 1> algos({ &algo_long_low });
-const std::array<EntryBase* const, 1> entries({ &entry_long_low });
-const std::array<ExitBase* const, 1> exits({ &exit_take_profit });
 
-
-//LongLowAlgo algo_short_high("short_high", true);
-//ShortHighEntry entry_short_high("short_high entry", 1, algo_short_high);
-//
-//const std::array<AlgoBase* const, 1> algos({ &algo_short_high });
-//const std::array<EntryBase* const, 1> entries({ &entry_short_high });
+const std::array<AlgoBase2<MAX_ALGOS>* const, 1> algos({ &algo_tf_model });
+//const std::array<EntryBase<MAX_ALGOS>* const, 1> entries({ &entry_long0 });
+const std::array<EntryBase<MAX_ALGOS>* const, 2> entries({ &entry_long0, &entry_short0 });
 //const std::array<ExitBase* const, 1> exits({ &exit_take_profit });
+const std::array<ExitBase* const, 4> exits({ &exit_take_profit, &exit_long0, &exit_short0, &exit_both });
 
-
-//const std::array<AlgoBase* const, 2> algos({ &algo_long_low , &algo_short_high });
-//const std::array<EntryBase* const, 2> entries({ &entry_short_high, &entry_long_low });
-//const std::array<ExitBase* const, 1> exits({ &exit_take_profit });
+using Ctrl = AccountController<algos.size(), entries.size(), exits.size(), MAX_ALGOS>;
 
 
 //MA3EMA9Algo algo_ma_above("ma3_ema9", false);
@@ -52,13 +48,12 @@ const std::array<ExitBase* const, 1> exits({ &exit_take_profit });
 //MA3EMA9Entry entry_ma("ma3_ema9 entry", 1, algo_ma_above);
 //MA3EMA9Exit exit_ma("ma3_ema9 exit", algo_ma_below);
 //
-//const std::array<AlgoBase* const, 2> algos({ &algo_ma_above, &algo_ma_below });
-//const std::array<EntryBase* const, 1> entries({ &entry_ma });
-//const std::array<ExitBase* const, 2> exits({ &exit_ma, &exit_take_profit });
+//const std::array<AlgoBase2<1>* const, 2> algos({ &algo_ma_above, &algo_ma_below });
+//const std::array<EntryBase<1>* const, 1> entries({ &entry_ma });
+//// const std::array<ExitBase* const, 2> exits({ &exit_ma, &exit_take_profit });
 //const std::array<ExitBase* const, 1> exits({ &exit_ma });
-
-
-using Ctrl = AccountController<algos.size(), entries.size(), exits.size()>;
+//
+//using Ctrl = AccountController<algos.size(), entries.size(), exits.size(), 1>;
 
 
 void run_range(const std::string& symbol_str, int start_yr, int start_mon, int start_day, int end_yr, int end_mon, int end_day)

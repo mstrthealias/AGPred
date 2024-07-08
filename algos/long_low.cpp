@@ -29,8 +29,27 @@ constexpr bool DEBUG_PRINT_SHAPES = false;
 constexpr bool DEBUG_PRINT_PREDICTIONS = false;
 
 constexpr bool MODEL_OUTPUT_LOGITS = false;
-constexpr real_t PREDICTION_THRESHHOLD_LONG = 0.51f;
-constexpr real_t PREDICTION_THRESHHOLD_SHORT = 0.51f;
+//constexpr real_t PREDICTION_THRESHHOLD_LONG = 0.55f;
+//constexpr real_t PREDICTION_THRESHHOLD_SHORT = 0.55f;
+//constexpr real_t PREDICTION_THRESHHOLD_LONG3 = 0.91f;
+//constexpr real_t PREDICTION_THRESHHOLD_SHORT3 = 0.91f;
+constexpr real_t PREDICTION_THRESHHOLD_LONG = 0.61f;
+constexpr real_t PREDICTION_THRESHHOLD_SHORT = 0.61f;
+constexpr real_t PREDICTION_THRESHHOLD_LONG3 = 0.91f;
+constexpr real_t PREDICTION_THRESHHOLD_SHORT3 = 0.91f;
+
+constexpr timestamp_us_t X0_BLOCK_US = 5 * MIN_TO_US;
+constexpr timestamp_us_t X3_BLOCK_US = 3 * MIN_TO_US;
+constexpr timestamp_us_t X3_BOOST_US = 3 * MIN_TO_US;
+
+
+
+timestamp_us_t TFModelAlgo::last_ts = 0;
+timestamp_us_t TFModelAlgo::block_long_til_ts = 0;
+timestamp_us_t TFModelAlgo::block_short_til_ts = 0;
+timestamp_us_t TFModelAlgo::boost_long_til_ts = 0;
+timestamp_us_t TFModelAlgo::boost_short_til_ts = 0;
+
 
 
 xtensor_quotes cur_quotes;
@@ -67,27 +86,13 @@ real_t mk_vec_prediction(real_t p, real_t t) {
 const auto vec_sigmoid = xt::vectorize(mk_vec_sigmoid);
 const auto vec_prediction = xt::vectorize(mk_vec_prediction);
 
-const std::string MODEL_DIR = "pyfiles/model_long.bc";
+const std::string MODEL_DIR = "pyfiles/model";
+//const std::string MODEL_DIR = "pyfiles/model_long.bc";
 const std::string MODEL_DIR_SHORT = "pyfiles/model_short.bc";
-//const std::string MODEL_DIR_LONG = "pyfiles/model_long";
+//const std::string MODEL_DIR_LONG = "pyfiles/model_long.bc";
 
 std::unique_ptr<tensorflow::SavedModelBundle> bundle;
 std::unique_ptr<tensorflow::SignatureDef> sig_def;
-/*const auto inputs_features = sig_def.inputs().at("features");
-const auto inputs_candles = sig_def.inputs().at("candles");
-const auto inputs_trades = sig_def.inputs().at("trades");
-const auto inputs_quotes = sig_def.inputs().at("quotes");
-const auto outputs_long_low = sig_def.outputs().at((LongLowAlgo::SINGLE_BEAR_OUTPUT ? "short_high" : "profit_low"));
-const auto outputs_short_high = sig_def.outputs().at((LongLowAlgo::DUAL_OUTPUT || LongLowAlgo::SINGLE_BEAR_OUTPUT ? "short_high" : "profit_low"));  // TODO use macro? */
-/*struct ModelSig {
-    tensorflow::SignatureDef sig_def;
-    tensorflow::TensorInfo inputs_features;
-    tensorflow::TensorInfo inputs_candles;
-    tensorflow::TensorInfo inputs_trades;
-    tensorflow::TensorInfo inputs_quotes;
-    tensorflow::TensorInfo outputs_long_low;
-    tensorflow::TensorInfo outputs_short_high;
-};*/
 
 static tensorflow::Tensor t_features(tensorflow::DT_FLOAT, tensorflow::TensorShape({ 1, NUM_INTERVALS, NUM_TIMESTEMPS, NUM_COLUMNS - 61 - 1 }));  // 105 - 61
 static tensorflow::Tensor t_candles(tensorflow::DT_FLOAT, tensorflow::TensorShape({ 1, NUM_INTERVALS, NUM_TIMESTEMPS, 61 }));
@@ -97,7 +102,7 @@ static tensorflow::Tensor t_quotes(tensorflow::DT_FLOAT, tensorflow::TensorShape
 static std::vector<tensorflow::Tensor> out;
 
 
-void LongLowAlgo::initStatics() {
+void TFModelAlgo::initStatics() {
     bundle = std::make_unique<tensorflow::SavedModelBundle>();
     sig_def = std::make_unique<tensorflow::SignatureDef>(setup_bundle(*bundle));
 }
@@ -110,7 +115,7 @@ const tensorflow::SignatureDef agpred::setup_bundle(tensorflow::SavedModelBundle
     tensorflow::SessionOptions session_options;  // fe. set CPU:0/GPU:0
     tensorflow::RunOptions run_options;  // https://www.tensorflow.org/api_docs/python/tf/compat/v1/RunOptions
 
-    const auto model_dir = (LongLowAlgo::SINGLE_BEAR_OUTPUT ? MODEL_DIR_SHORT : MODEL_DIR);
+    const auto model_dir = MODEL_DIR;
     if (!tensorflow::MaybeSavedModelDirectory(model_dir)) {
         std::cerr << "Invalid model directory: " << model_dir << std::endl;
         throw std::logic_error("invalid model directory");
@@ -135,21 +140,28 @@ const tensorflow::SignatureDef agpred::setup_bundle(tensorflow::SavedModelBundle
 
 
 
-LongLowAlgo::LongLowAlgo(const std::string& name, bool inverse)
-    : AlgoBase(name),
-        inverse_(inverse)
+
+std::array<bool, TFModelAlgo::signal_size> TFModelAlgo::operator() (const Snapshot& snapshot, const xtensor_raw& raw, const xtensor_processed& processed, const quotes_queue& quotes, const trades_queue& trades) const
 {
-}
+    auto ret_false = []() -> std::array<bool, signal_size> {
+        if constexpr (signal_size > 3)
+            return { false, false, false, false };
+        else if constexpr (signal_size > 2)
+            return { false, false, false };
+        else if constexpr (signal_size > 1)
+            return { false, false };
+        else
+            return { false };
+    };
 
+    // track timestamp of latest nbbo
+    last_ts = snapshot.nbbo.timestamp;
 
-
-int LongLowAlgo::calc_prediction_signal(const xtensor_raw& raw, const xtensor_processed& processed, const quotes_queue& quotes, const trades_queue& trades) const
-{
     // skip if nan/infinite values found
     auto nan_sum = xt::sum(!xt::isfinite(raw))(0) + xt::sum(!xt::isfinite(processed))(0);
     if (nan_sum > 0) {
         std::cout << "SKIP calc_prediction_signal() " << nan_sum << " nan/infinite value(s) found" << std::endl;
-        return 0;
+        return ret_false();
     }
 
     //const auto atr = raw(0, 0, ColPos::In::alt3);
@@ -179,7 +191,7 @@ int LongLowAlgo::calc_prediction_signal(const xtensor_raw& raw, const xtensor_pr
 
                 auto x_numeric_1min = xt::view(processed, Timeframes::_1min, xt::all(), i);
                 //std::cout << "x_numeric_1min[" << i << "].shape: " << x_numeric_1min.shape() << std::endl;
-                
+
                 auto x_min = xt::amin(x_numeric_1min)(0);
                 if (x_min <= 0) {
                     //std::cout << "x_numeric_1min " << x_numeric_1min << std::endl;
@@ -227,7 +239,7 @@ int LongLowAlgo::calc_prediction_signal(const xtensor_raw& raw, const xtensor_pr
         auto invalid_sum = xt::sum(!xt::isfinite(cur_trades))(0);
         if (invalid_sum > 0) {
             std::cout << "SKIP calc_prediction_signal() " << invalid_sum << " nan/infinite trade value(s) found" << std::endl;
-            return 0;
+            return ret_false();
         }
 
         auto x_trades = xt::view(cur_trades, xt::newaxis(), xt::all(), xt::range(1, 6));  //(1, 15000, 5)
@@ -246,7 +258,7 @@ int LongLowAlgo::calc_prediction_signal(const xtensor_raw& raw, const xtensor_pr
         auto invalid_sum = xt::sum(!xt::isfinite(cur_quotes))(0);
         if (invalid_sum > 0) {
             std::cout << "SKIP calc_prediction_signal() " << invalid_sum << " nan/infinite quote value(s) found" << std::endl;
-            return 0;
+            return ret_false();
         }
 
         auto x_quotes = xt::view(cur_quotes, xt::newaxis(), xt::all(), xt::range(1, 8));  //(1, 15000, 7)
@@ -259,49 +271,70 @@ int LongLowAlgo::calc_prediction_signal(const xtensor_raw& raw, const xtensor_pr
     const auto inputs_candles = sig_def->inputs().at("candles");
     const auto inputs_trades = sig_def->inputs().at("trades");
     const auto inputs_quotes = sig_def->inputs().at("quotes");
-    const auto outputs_long_low = sig_def->outputs().at((LongLowAlgo::SINGLE_BEAR_OUTPUT ? "short_high" : "profit_low"));
-    const auto outputs_short_high = sig_def->outputs().at((LongLowAlgo::DUAL_OUTPUT || LongLowAlgo::SINGLE_BEAR_OUTPUT ? "short_high" : "profit_low"));  // TODO use macro? 
+    const auto outputs_long_low = sig_def->outputs().at("profit3");  // profit_low
 
     std::vector<std::string> output_tensor_names;
-    if constexpr (DUAL_OUTPUT) 
-    {
-        output_tensor_names = { outputs_long_low.name(), outputs_short_high.name() };
+    if constexpr (signal_size > 3) {
+        const auto outputs_short_high = sig_def->outputs().at("short_high");
+        const auto outputs_long3 = sig_def->outputs().at("profit3");
+        const auto outputs_short3 = sig_def->outputs().at("short3");
+        output_tensor_names = {
+            outputs_long_low.name(),
+            outputs_short_high.name(),
+            outputs_long3.name(),
+            outputs_short3.name()
+        };
     }
-    else if constexpr (SINGLE_BEAR_OUTPUT)
-    {
-        output_tensor_names = { outputs_short_high.name() };
+    else if constexpr (signal_size > 2) {
+        const auto outputs_short_high = sig_def->outputs().at("short_high");
+        const auto outputs_long3 = sig_def->outputs().at("profit3");
+        output_tensor_names = {
+            outputs_long_low.name(),
+            outputs_short_high.name(),
+            outputs_long3.name()
+        };
     }
-    else
-    {
-        output_tensor_names = { outputs_long_low.name() };
+    else if constexpr (signal_size > 1) {
+        const auto outputs_short_high = sig_def->outputs().at("short_high");
+        output_tensor_names = {
+            outputs_long_low.name(),
+            outputs_short_high.name()
+        };
+    }
+    else {
+        output_tensor_names = {
+            outputs_long_low.name()
+        };
     }
 
     TF_CHECK_OK(bundle->session->Run(
-        { 
-            { inputs_features.name(), t_features }, 
+        {
+            { inputs_features.name(), t_features },
             { inputs_candles.name(), t_candles },
             { inputs_trades.name(), t_trades },
             { inputs_quotes.name(), t_quotes } },
-        output_tensor_names,
+            output_tensor_names,
         {},
         &out));
 
-    if constexpr (false && DEBUG_PRINT_PREDICTIONS) 
+    if constexpr (false && DEBUG_PRINT_PREDICTIONS)
     {
-        if constexpr (DUAL_OUTPUT || SINGLE_BEAR_OUTPUT)
-        {
-            std::cout << "short_high: " << out[(SINGLE_BEAR_OUTPUT ? 0 : 1)].DebugString() << std::endl;
-        }
-        if constexpr (!SINGLE_BEAR_OUTPUT)
-        {
-            std::cout << "long_low: " << out[0].DebugString() << std::endl;
-        }
+        std::cout << "long0: " << out[0].DebugString() << std::endl;
+        std::cout << "short0: " << out[1].DebugString() << std::endl;
+        std::cout << "long3: " << out[2].DebugString() << std::endl;
+        std::cout << "short3: " << out[3].DebugString() << std::endl;
     }
 
-    auto dim = get_tensor_shape(out[0])[0];
-    xt::xarray<float> predictions_long = xt::zeros<float>({ dim });
-    xt::xarray<float> predictions_short = xt::zeros<float>({ dim });
-    if constexpr (!SINGLE_BEAR_OUTPUT)
+    const auto dim = get_tensor_shape(out[0])[0];
+    xt::xarray<float> predictions_l0 = xt::zeros<float>({ dim });
+    xt::xarray<float> predictions_s0 = xt::zeros<float>({ dim });
+    xt::xarray<float> predictions_l3 = xt::zeros<float>({ dim });
+    xt::xarray<float> predictions_s3 = xt::zeros<float>({ dim });
+    real_t l0_prob = 0.0f;
+    real_t s0_prob = 0.0f;
+    real_t l3_prob = 0.0f;
+    real_t s3_prob = 0.0f;
+    // long0
     {
         auto& res = out[0];
         auto shape = get_tensor_shape(res);
@@ -313,62 +346,166 @@ int LongLowAlgo::calc_prediction_signal(const xtensor_raw& raw, const xtensor_pr
 
         // we only care about the first dimension of shape
         for (int row = 0; row < shape[0]; ++row) {
-            predictions_long(row) = res.tensor<float, 2>()(row, 0);
+            predictions_l0(row) = res.tensor<float, 2>()(row, 0);
         }
 
         if constexpr (MODEL_OUTPUT_LOGITS) {
             // sigmoid: convert to probability
-            predictions_long = vec_sigmoid(predictions_long);
+            predictions_l0 = vec_sigmoid(predictions_l0);
         }
+        if constexpr (DEBUG_PRINT_PREDICTIONS && signal_size <= 1) {
+            std::cout << "long0 predictions: " << predictions_l0 << std::endl;
+        }
+        l0_prob = predictions_l0(0);
+
         // convert probability to 0/1
-        predictions_long = vec_prediction(predictions_long, PREDICTION_THRESHHOLD_LONG);
-        if constexpr (DEBUG_PRINT_PREDICTIONS) {
-            std::cout << "long_low predictions: " << predictions_long << std::endl;
-        }
+        predictions_l0 = vec_prediction(predictions_l0, PREDICTION_THRESHHOLD_LONG);
     }
-    if constexpr (DUAL_OUTPUT || SINGLE_BEAR_OUTPUT)
+    // short0
+    if constexpr (signal_size > 1)
     {
-        auto& res = out[(SINGLE_BEAR_OUTPUT ? 0 : 1)];
+        auto& res = out[1];
         auto shape = get_tensor_shape(res);
 
         assert(shape.size() == 2);
         assert(shape[0] == 1);
-        //std::cout << "short_high SHAPE SIZE: " << shape.size() << std::endl;
-        //std::cout << "short_high SHAPE[0]: " << shape[0] << std::endl;
 
         // we only care about the first dimension of shape
         for (int row = 0; row < shape[0]; ++row) {
-            predictions_short(row) = res.tensor<float, 2>()(row, 0);
+            predictions_s0(row) = res.tensor<float, 2>()(row, 0);
         }
 
         if constexpr (MODEL_OUTPUT_LOGITS) {
             // sigmoid: convert to probability
-            predictions_short = vec_sigmoid(predictions_short);
+            predictions_s0 = vec_sigmoid(predictions_s0);
         }
-        // convert probability to 0/1
-        predictions_short = vec_prediction(predictions_short, PREDICTION_THRESHHOLD_SHORT);
         if constexpr (DEBUG_PRINT_PREDICTIONS) {
-            std::cout << "short_high predictions: " << predictions_short << std::endl;
+            std::cout << "l0/s0 predictions: " << l0_prob << ", " << predictions_s0(0) << std::endl;
         }
+        s0_prob = predictions_s0(0);
+
+        // convert probability to 0/1
+        predictions_s0 = vec_prediction(predictions_s0, PREDICTION_THRESHHOLD_SHORT);
+    }
+    // long3
+    if constexpr (signal_size > 2)
+    {
+        auto& res = out[2];
+        auto shape = get_tensor_shape(res);
+
+        assert(shape.size() == 2);
+        assert(shape[0] == 1);
+
+        // we only care about the first dimension of shape
+        for (int row = 0; row < shape[0]; ++row) {
+            predictions_l3(row) = res.tensor<float, 2>()(row, 0);
+        }
+
+        if constexpr (MODEL_OUTPUT_LOGITS) {
+            // sigmoid: convert to probability
+            predictions_l3 = vec_sigmoid(predictions_l3);
+        }
+        if constexpr (DEBUG_PRINT_PREDICTIONS) {
+            //std::cout << "long3 predictions: " << predictions_l3 << std::endl;
+        }
+        l3_prob = predictions_l3(0);
+
+        // convert probability to 0/1
+        predictions_l3 = vec_prediction(predictions_l3, PREDICTION_THRESHHOLD_LONG3);
+    }
+    // short3
+    if constexpr (signal_size > 3)
+    {
+        auto& res = out[3];
+        auto shape = get_tensor_shape(res);
+
+        assert(shape.size() == 2);
+        assert(shape[0] == 1);
+
+        // we only care about the first dimension of shape
+        for (int row = 0; row < shape[0]; ++row) {
+            predictions_s3(row) = res.tensor<float, 2>()(row, 0);
+        }
+
+        if constexpr (MODEL_OUTPUT_LOGITS) {
+            // sigmoid: convert to probability
+            predictions_s3 = vec_sigmoid(predictions_s3);
+        }
+        if constexpr (DEBUG_PRINT_PREDICTIONS) {
+            //std::cout << "short3 predictions: " << predictions_s3 << std::endl;
+        }
+        s3_prob = predictions_s3(0);
+
+        // convert probability to 0/1
+        predictions_s3 = vec_prediction(predictions_s3, PREDICTION_THRESHHOLD_SHORT3);
     }
 
-    if constexpr (DUAL_OUTPUT)
-    {
-        if (predictions_long(0) > 0 && predictions_short(0) > 0)
-            return 0;
-        return predictions_long(0) > 0 ? 1
-            : predictions_short(0) > 0 ? -1
-            : 0;
+    if constexpr (signal_size > 3) {
+        //const auto l0 = predictions_l0(0) > 0;
+        //const auto s0 = predictions_s0(0) > 0;
+        //return { l0, s0, l0, s0 };
+
+
+        const auto l0 = l0_prob - s0_prob > 0.57f;  // predictions_l0(0) > 0;
+        const auto s0 = s0_prob - l0_prob > 0.57f;  // predictions_s0(0) > 0;
+        const auto l3 = predictions_l3(0) > 0;
+        const auto s3 = predictions_s3(0) > 0;
+
+        auto l0res = l0_prob - s0_prob > 0.79f;
+        auto s0res = s0_prob - l0_prob > 0.79f;
+        //auto l3res = l3_prob - s3_prob > 0.91f;
+        //auto s3res = s3_prob - l3_prob > 0.91f;
+        if (s0res || s3_prob > 0.97f) {
+            block_long_til_ts = last_ts + X0_BLOCK_US;
+        }
+        else if (l0res || l3_prob > 0.97f) {
+            block_short_til_ts = last_ts + X0_BLOCK_US;
+        }
+        if (l0 && block_long_til_ts && last_ts < block_long_til_ts) {
+            std::cout << "long0 BLOCKED" << std::endl;
+            l0res = false;
+        }
+        if (s0 && block_short_til_ts && last_ts < block_short_til_ts) {
+            std::cout << "short0 BLOCKED" << std::endl;
+            s0res = false;
+        }
+        return { l0res, s0res, (l0 || l3), (s0 || s3) };
+
+
+        //auto l0res = l0;
+        //auto s0res = s0;
+        //if (l0) {
+        //    block_short_til_ts = last_ts + X0_BLOCK_US;
+        //}
+        //if (l3) {
+        //    block_short_til_ts = last_ts + X3_BLOCK_US;
+        //    boost_short_til_ts = last_ts + X3_BOOST_US;
+        //}
+        //if (s0) {
+        //    block_long_til_ts = last_ts + X0_BLOCK_US;
+        //}
+        //if (s3) {
+        //    block_long_til_ts = last_ts + X3_BLOCK_US;
+        //    boost_long_til_ts = last_ts + X3_BOOST_US;
+        //}
+        //if (l0 && block_long_til_ts && last_ts < block_long_til_ts) {
+        //    std::cout << "long0 BLOCKED" << std::endl;
+        //    l0res = false;
+        //}
+        //if (s0 && block_short_til_ts && last_ts < block_short_til_ts) {
+        //    std::cout << "short0 BLOCKED" << std::endl;
+        //    s0res = false;
+        //}
+        ////return { l0, s0, l3, s3 };
+        //return { l0res, s0res, (l0 || l3), (s0 || s3) };
     }
-    else if constexpr (SINGLE_BEAR_OUTPUT)
-    {
-        return predictions_short(0) > 0 ? -1
-            : 0;
+    else if constexpr (signal_size > 2) {
+        return { predictions_l0(0) > 0, predictions_s0(0) > 0, predictions_l3(0) > 0 };
     }
-    else
-    {
-        return predictions_long(0) > 0 ? 1
-            : 0;
+    else if constexpr (signal_size > 1) {
+        return { predictions_l0(0) > 0, predictions_s0(0) > 0 };
+    }
+    else {
+        return { predictions_l0(0) > 0 };
     }
 }
-
