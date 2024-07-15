@@ -9,12 +9,12 @@
 #include "../core/core.h"
 
 
-#define USE_PROXY_CACHE
+// #define USE_PROXY_CACHE
 
 
 namespace agpred {
 
-	static const std::string POLYGON_API_KEY = "bEB2e26btlSKHLjRCw_k_HpH_0pglFyX";
+	static const std::string POLYGON_API_KEY = "YOUR_POLYGON_API_KEY";
 
 	static const std::string POLYGON_BASE_URI = "https://api.polygon.io/";
 
